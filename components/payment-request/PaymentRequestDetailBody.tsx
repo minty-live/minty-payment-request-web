@@ -30,6 +30,7 @@ import { formatAmount, formatMoney, isWithinAmountLimits, parseAmount } from "@m
 import { billStatusToDisplayLabel } from "@/lib/billStatusDisplay";
 import {
   billHasRemainingCountablePayments,
+  billLockedForRole,
   billStatusShouldRollbackWhenNoPayments,
 } from "@/lib/billStatusRollback";
 import { enrichAccountCodeWithOptions } from "@/lib/billFormSelectOptions";
@@ -1228,7 +1229,7 @@ export function PaymentRequestDetailBody({ onBillUpdated }: PaymentRequestDetail
       !bill ||
       isViewOnly ||
       bill.status === "void" ||
-      ((bill.status === "paid" || bill.status === "authorised") && !isElevated),
+      billLockedForRole(bill.status, isElevated),
     [loadingBill, bill, isViewOnly, isElevated],
   );
 
@@ -1350,7 +1351,7 @@ export function PaymentRequestDetailBody({ onBillUpdated }: PaymentRequestDetail
               isPublishing ||
               isViewOnly ||
               bill?.status === "void" ||
-              ((bill?.status === "paid" || bill?.status === "authorised") && !isElevated)
+              (!!bill && billLockedForRole(bill.status, isElevated))
             }
             publishDisabled={
               loadingBill || !bill || isViewOnly || bill?.status === "void" || !isElevated
@@ -1422,9 +1423,7 @@ export function PaymentRequestDetailBody({ onBillUpdated }: PaymentRequestDetail
               isSaving={isSaving}
               unpaidAmount={unpaidAmountDisplay}
               disabled={
-                !bill ||
-                bill?.status === "void" ||
-                ((bill?.status === "paid" || bill?.status === "authorised") && !isElevated)
+                !bill || bill?.status === "void" || billLockedForRole(bill.status, isElevated)
               }
               billNoError={isEditing ? billNoError : null}
               accountCodeError={

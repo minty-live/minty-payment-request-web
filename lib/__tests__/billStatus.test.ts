@@ -12,6 +12,7 @@ import { payment } from "@/lib/__fixtures__/bills";
 import { billStatusToDisplayLabel, statusDisplayBadgeClass } from "@/lib/billStatusDisplay";
 import {
   billHasRemainingCountablePayments,
+  billLockedForRole,
   billStatusShouldRollbackWhenNoPayments,
   normalizeBillStatusKey,
 } from "@/lib/billStatusRollback";
@@ -126,5 +127,20 @@ describe("billHasRemainingCountablePayments", () => {
 
   it("is false for no payments at all", () => {
     expect(billHasRemainingCountablePayments("bill-requested", [])).toBe(false);
+  });
+});
+
+describe("billLockedForRole (who may edit a bill and its attachments)", () => {
+  it("locks paid, partially paid and authorised bills for a non-elevated role, as the API does for paid-like ones", () => {
+    for (const status of ["paid", "partially_paid", "Partially-Paid", "authorised"])
+      expect(billLockedForRole(status, false)).toBe(true);
+  });
+  it("leaves them open to Accountant, Admin and Super Admin", () => {
+    for (const status of ["paid", "partially_paid", "authorised"])
+      expect(billLockedForRole(status, true)).toBe(false);
+  });
+  it("leaves every other status open to anyone", () => {
+    for (const status of ["draft", "submitted", "returned"])
+      expect(billLockedForRole(status, false)).toBe(false);
   });
 });
