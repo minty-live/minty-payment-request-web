@@ -4,6 +4,8 @@ import { useParams, useRouter } from "next/navigation";
 import type { CSSProperties } from "react";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useUserRole } from "@/lib/useUserRole";
+import { guardLeave, useLeaveGuard } from "@minty/shared/leaveGuard";
+import { LeaveDialog } from "@/features/subscription/components/InterruptedDialogs";
 import {
   ApiError,
   deleteBill,
@@ -260,6 +262,8 @@ export function PaymentRequestDetailBody({ onBillUpdated }: PaymentRequestDetail
 
   const [isEditing, setIsEditing] = useState(false);
   const [draft, setDraft] = useState<PaymentRequestDetailedInfoData | null>(null);
+  /** The draft as editing began: anything else is a change not saved yet (2026-11-17). */
+  const [editBaseline, setEditBaseline] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isSubmittingDraft, setIsSubmittingDraft] = useState(false);
@@ -667,10 +671,12 @@ export function PaymentRequestDetailBody({ onBillUpdated }: PaymentRequestDetail
   const handleEdit = useCallback(() => {
     if (!bill) return;
     const base = billToDetailedInfo(bill, decimals);
-    setDraft({
+    const started = {
       ...base,
       accountCode: enrichAccountCodeWithOptions(base.accountCode, accountOptions),
-    });
+    };
+    setDraft(started);
+    setEditBaseline(JSON.stringify(started));
     setIsEditing(true);
     setBillNoError(null);
     setAccountCodeError(null);
@@ -731,6 +737,18 @@ export function PaymentRequestDetailBody({ onBillUpdated }: PaymentRequestDetail
       }
     })();
   }, [requestId, bill, mapServerAttachmentsToPreviewItems, onBillUpdated]);
+
+  // Unsaved changes in edit mode (owner, 2026-11-17): a field changed since editing began, a file
+  // staged, or one of the request's files taken off. Then a link out (the sidebar, the list, Back),
+  // the browser's Back and Cancel ask "Leave without saving?" in the page; Discard puts it back.
+  const fieldsChanged = isEditing && draft !== null && JSON.stringify(draft) !== editBaseline;
+  const filesChanged =
+    isEditing &&
+    attachmentsReady &&
+    (attachments.some((a) => a.pendingUploadKey) ||
+      attachments.filter((a) => !a.pendingUploadKey).length !== (bill?.attachments?.length ?? 0));
+  const leave = useLeaveGuard(fieldsChanged || filesChanged, handleCancel);
+  const cancelEdit = useCallback(() => guardLeave(handleCancel), [handleCancel]);
 
   const handlePatch = useCallback((patch: Partial<PaymentRequestDetailedInfoData>) => {
     if (Object.prototype.hasOwnProperty.call(patch, "billNo")) {
@@ -1278,6 +1296,7 @@ export function PaymentRequestDetailBody({ onBillUpdated }: PaymentRequestDetail
 
   return (
     <>
+      {leave.open ? <LeaveDialog onDiscard={leave.discard} onStay={leave.stay} /> : null}
       <div className="mx-auto grid w-full min-w-0 max-w-[1920px] grid-cols-1 gap-4 px-4 pb-[max(2rem,env(safe-area-inset-bottom))] pt-1 sm:gap-5 sm:px-6 lg:grid-cols-2 lg:grid-rows-[auto_minmax(20rem,1fr)] lg:gap-x-6 lg:gap-y-4 lg:px-8 xl:gap-x-8 2xl:gap-x-10">
         <div className="min-w-0 max-lg:order-2 lg:order-none lg:col-start-1 lg:row-start-1">
           <InvoiceAttachmentToolbar
@@ -1373,7 +1392,7 @@ export function PaymentRequestDetailBody({ onBillUpdated }: PaymentRequestDetail
                 <>
                   <button
                     type="button"
-                    onClick={handleCancel}
+                    onClick={cancelEdit}
                     disabled={detailToolbarActionsDisabled || isSaving}
                     className={paymentRequestDetailCancelButtonClass}
                   >
@@ -1440,7 +1459,7 @@ export function PaymentRequestDetailBody({ onBillUpdated }: PaymentRequestDetail
               onRefetchEntityBillContacts={refetchEntityBillContacts}
               onPatchChange={isEditing ? handlePatch : undefined}
               onEdit={handleEdit}
-              onCancel={handleCancel}
+              onCancel={cancelEdit}
               onSave={handleSave}
               editInCardHeader={false}
               contactHeaderEnd={

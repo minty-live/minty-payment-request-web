@@ -2,6 +2,9 @@
 
 // COPY of minty-web/components/ui/ConfirmDialog.tsx (2026-10-01; there since 2026-10-05) - lifted into @minty/shared at Part 3 step 4;
 // change all three (minty-web, here, Flask's port: Minty static/js/minty_dialog.js + static/css/minty_dialog.css).
+// Local change (2026-11-17, owner: every question on minty-web's dialog): `role` and the described-by link,
+// so the payment-request confirms stay `alertdialog`s named and described by their own words; labels may be nodes;
+// `confirmHref` draws the confirm as a link where the way on is another page (the subscription notice).
 
 /**
  * The confirmation modal's shell (Figma 04-G, section 06 and 06·B): a small white card over the
@@ -49,9 +52,11 @@ export function ConfirmDialog({
   backLabel = "Go back",
   backTone = "grey",
   hideBack = false,
+  confirmHref,
   onConfirm,
   onBack,
   onDismiss,
+  role,
   children,
 }: {
   title: ReactNode;
@@ -61,25 +66,32 @@ export function ConfirmDialog({
   /** A line of its own in the company's slot (the card that declined). */
   lead?: ReactNode;
   busy: boolean;
-  confirmLabel: string;
+  confirmLabel: ReactNode;
   confirmTone?: ConfirmTone;
-  backLabel?: string;
+  backLabel?: ReactNode;
   backTone?: BackTone;
   /** One button only (a result to acknowledge): no secondary. */
   hideBack?: boolean;
+  /** The confirm is a link to another page (still drawn as the button). */
+  confirmHref?: string;
   onConfirm: () => void;
   onBack: () => void;
   /** Escape and the backdrop, when the secondary button is not the safe way out. */
   onDismiss?: () => void;
+  /** `alertdialog` for the payment-request confirms (2026-11-17); `dialog` otherwise. */
+  role?: "dialog" | "alertdialog";
   children: ReactNode;
 }) {
   const titleId = useId();
+  const bodyId = useId();
   const art = MODAL_IMAGE[image];
   const dismiss = onDismiss ?? onBack;
 
   return (
     <ModalFrame
       labelledBy={titleId}
+      describedBy={bodyId}
+      role={role}
       busy={busy}
       onDismiss={dismiss}
       className="max-w-[435px] rounded-[24px] border border-white/40 bg-white p-12 shadow-[0px_4px_8px_0px_rgba(15,23,42,0.08),0px_12px_32px_0px_rgba(0,0,0,0.1)]"
@@ -126,7 +138,10 @@ export function ConfirmDialog({
           className="-mr-3 -mt-2 w-auto shrink-0"
         />
       </div>
-      <div className="mt-6 flex flex-col gap-4 text-[15px] leading-snug text-[var(--ink-soft)]">
+      <div
+        id={bodyId}
+        className="mt-6 flex flex-col gap-4 text-[15px] leading-snug text-[var(--ink-soft)]"
+      >
         {children}
       </div>
       {/*
@@ -149,20 +164,33 @@ export function ConfirmDialog({
             {backLabel}
           </button>
         )}
-        <button
-          type="button"
-          onClick={onConfirm}
-          disabled={busy}
-          aria-busy={busy || undefined}
-          data-tone={confirmTone}
-          // the transparent border matters: with `flex-1` the bordered button beside it would
-          // otherwise end up 2px wider, both being basis-0 under border-box
-          className={`h-[66px] rounded-[14px] border border-transparent text-lg font-bold leading-tight text-white hover:opacity-90 disabled:cursor-wait disabled:opacity-60 ${
-            hideBack ? "w-[169px]" : "flex-1"
-          } ${CONFIRM_TONE[confirmTone]}`}
-        >
-          {confirmLabel}
-        </button>
+        {confirmHref ? (
+          <a
+            href={confirmHref}
+            onClick={onConfirm}
+            data-tone={confirmTone}
+            className={`flex items-center justify-center text-center h-[66px] rounded-[14px] border border-transparent text-lg font-bold leading-tight text-white hover:opacity-90 disabled:cursor-wait disabled:opacity-60 ${
+              hideBack ? "w-[169px]" : "flex-1"
+            } ${CONFIRM_TONE[confirmTone]}`}
+          >
+            {confirmLabel}
+          </a>
+        ) : (
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={busy}
+            aria-busy={busy || undefined}
+            data-tone={confirmTone}
+            // the transparent border matters: with `flex-1` the bordered button beside it would
+            // otherwise end up 2px wider, both being basis-0 under border-box
+            className={`h-[66px] rounded-[14px] border border-transparent text-lg font-bold leading-tight text-white hover:opacity-90 disabled:cursor-wait disabled:opacity-60 ${
+              hideBack ? "w-[169px]" : "flex-1"
+            } ${CONFIRM_TONE[confirmTone]}`}
+          >
+            {confirmLabel}
+          </button>
+        )}
       </div>
     </ModalFrame>
   );

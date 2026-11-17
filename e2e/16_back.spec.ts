@@ -44,6 +44,33 @@ test.beforeEach(async ({ page }) => {
 
 const back = (page: Page) => page.locator("header [data-back-link]");
 
+/** The text field (input or textarea) holding `value` - Playwright has no by-value query. */
+async function fieldHolding(page: Page, value: string) {
+  const fields = page.locator("textarea, input");
+  await expect
+    .poll(async () => {
+      for (let i = 0; i < (await fields.count()); i += 1)
+        if (
+          (await fields
+            .nth(i)
+            .inputValue()
+            .catch(() => "")) === value
+        )
+          return i;
+      return -1;
+    })
+    .toBeGreaterThan(-1);
+  for (let i = 0; i < (await fields.count()); i += 1)
+    if (
+      (await fields
+        .nth(i)
+        .inputValue()
+        .catch(() => "")) === value
+    )
+      return fields.nth(i);
+  throw new Error(`no field holds ${value}`);
+}
+
 test("from another request, Back returns to that request, not the list", async ({ page }) => {
   const first = pagesOf(creds()).request("b-1", "PR-0001");
   await handoff(page, creds(), first);
@@ -86,4 +113,27 @@ test("with nothing before it in this app, Back goes to the list", async ({ page 
   await back(page).click();
   await expect(page).toHaveURL((url) => url.pathname === pagesOf(creds()).list);
   await expect(page.getByRole("searchbox")).toBeVisible();
+});
+
+test("in edit mode, Back with a change asks first; Go Back stays, Discard changes leaves (2026-11-17)", async ({
+  page,
+}) => {
+  const list = pagesOf(creds()).list;
+  await handoff(page, creds(), list);
+  await expect(page.getByText("Young Bros Transport").first()).toBeVisible();
+  await page.getByText("Young Bros Transport").first().click();
+  await page.getByRole("button", { name: "Edit" }).click();
+  const description = await fieldHolding(page, "Corporate stationery and printer supplies");
+  await description.fill("Half-typed");
+
+  await back(page).click();
+  const leave = page.getByRole("dialog", { name: "Leave without saving?" });
+  await expect(leave).toBeVisible();
+  await leave.getByRole("button", { name: "Go Back" }).click();
+  await expect(leave).toHaveCount(0);
+  await expect(description).toHaveValue("Half-typed");
+
+  await back(page).click();
+  await leave.getByRole("button", { name: "Discard changes" }).click();
+  await expect(page).toHaveURL((url) => url.pathname === new URL(list, url).pathname);
 });

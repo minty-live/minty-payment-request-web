@@ -345,11 +345,72 @@ describe("editing it", () => {
     await userEvent.type(description, "Abandoned");
 
     await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    // a change is never thrown away silently (owner, 2026-11-17)
+    await userEvent.click(
+      within(screen.getByRole("dialog", { name: "Leave without saving?" })).getByRole("button", {
+        name: "Discard changes",
+      }),
+    );
 
     await waitFor(() =>
       expect(screen.getByText("Corporate stationery and printer supplies")).toBeInTheDocument(),
     );
     expect(screen.queryByDisplayValue("Abandoned")).not.toBeInTheDocument();
+  });
+
+  it("asks before Cancel throws a change away; Go Back keeps it (2026-11-17)", async () => {
+    serve();
+    show();
+    await loaded();
+    await userEvent.click(screen.getByRole("button", { name: "Edit" }));
+    const description = await screen.findByDisplayValue(
+      "Corporate stationery and printer supplies",
+    );
+    await userEvent.clear(description);
+    await userEvent.type(description, "Half-typed");
+
+    await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    const leave = screen.getByRole("dialog", { name: "Leave without saving?" });
+    expect(within(leave).getByText("You have unsaved changes.")).toBeInTheDocument();
+    await userEvent.click(within(leave).getByRole("button", { name: "Go Back" }));
+
+    expect(screen.queryByRole("dialog", { name: "Leave without saving?" })).not.toBeInTheDocument();
+    expect(screen.getByDisplayValue("Half-typed")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Cancel" })).toBeInTheDocument();
+  });
+
+  it("leaves edit mode without asking when nothing was changed", async () => {
+    serve();
+    show();
+    await loaded();
+    await userEvent.click(screen.getByRole("button", { name: "Edit" }));
+    await screen.findByDisplayValue("Corporate stationery and printer supplies");
+
+    await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
+
+    expect(screen.queryByRole("dialog", { name: "Leave without saving?" })).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole("button", { name: "Edit" })).toBeInTheDocument());
+  });
+
+  it("asks before a link takes the person away from a change", async () => {
+    serve();
+    show();
+    await loaded();
+    await userEvent.click(screen.getByRole("button", { name: "Edit" }));
+    const description = await screen.findByDisplayValue(
+      "Corporate stationery and printer supplies",
+    );
+    await userEvent.type(description, " more");
+    const away = document.createElement("a");
+    away.href = "/entity/360812e1/olive-and-vine/payment-request";
+    away.textContent = "Payment Requests";
+    document.body.appendChild(away);
+    try {
+      await userEvent.click(away);
+      expect(screen.getByRole("dialog", { name: "Leave without saving?" })).toBeInTheDocument();
+    } finally {
+      away.remove();
+    }
   });
 
   it("says a file that didn't upload needs adding again - not that the request didn't save", async () => {

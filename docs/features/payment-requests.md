@@ -54,6 +54,10 @@ this page is what the person sees and where each piece of the screen lives.
   **Retry** (`BankSlipLoadState.tsx`, re-reads the rows on screen) — never **Upload**, which
   could hide slips that already exist. Easy view shows nothing while loading, Retry on failure.
 
+## Question dialogs (owner, 2026-11-17)
+
+Every yes/no question - the four delete/void confirms (`AttachmentDeleteConfirmModal`, `BulkDeleteConfirmModal`, `PaymentDeleteConfirmModal`, `RowDeleteConfirmModal`, through `components/payment-request/ConfirmDialog.tsx`), `OverpaymentWarningModal` and `SubscriptionNoticeModal` - draws minty-web's `ConfirmDialog` (the copy at `features/subscription/components/`, with three local options: `role`, so they stay `alertdialog`s named by their title and described by their body; node labels; `confirmHref` for the notice's link). This replaces 2026-10-13's "Part 14 wins here" for questions (Figma comparison: Independent Minty, node 505:589). Titles, sentences and labels are unchanged; destructive confirms take minty-web's red tone, the rest teal; Escape and the blurred backdrop ("Go back") close. Forms and details (Add Payment, Record payment, Upload, Bank slip details) and the full-screen viewer keep their Part 14 frames for now.
+
 ## Add Payment (`components/PaymentRequestModal.tsx`)
 
 The dialog (`role="dialog"`, _Add Payment Request_): amount, description, the **supplier**
@@ -159,6 +163,8 @@ logged. The detail page's Save and a draft's Submit do the same: the save finish
 re-read, edit mode closes) and a warning names the files to add again.
 
 ## The detail page (`/entity/<shortid>/<name>/payment-request/<Payment No.>`)
+
+- **Unsaved changes in edit mode (owner, 2026-11-17):** while a field differs from where editing began, a file is staged, or one of the request's files was taken off, a link out (the sidebar, the list, "‹ Back"), the browser's Back and **Cancel** ask "Leave without saving?" in the page - minty-web's `LeaveDialog` (`features/subscription/components/InterruptedDialogs.tsx`, portalled above the sidebar drawer) over `@minty/shared/leaveGuard`. Go Back stays with the changes; Discard changes puts the saved request back (`handleCancel`) and goes on. Nothing changed: Cancel and every link leave at once. A reload or a closed tab leaves without asking (no native browser dialog). The other forms (Add Payment, Record payment, Upload) don't ask yet (owner chose the detail page only).
 
 Addressed by the Payment No. (the bill's `reference`) since 2026-10-05, the id when there is none
 (`lib/companyPages.ts` `pages.request(id, reference)`). `lib/useRequestId.ts` turns the address

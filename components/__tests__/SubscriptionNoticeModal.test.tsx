@@ -125,7 +125,7 @@ describe("the dialog", () => {
     await userEvent.keyboard("{Escape}");
     expect(onClose).toHaveBeenCalledTimes(2);
 
-    await userEvent.click(screen.getByRole("presentation"));
+    await userEvent.click(screen.getByRole("button", { name: "Go back" }));
     expect(onClose).toHaveBeenCalledTimes(3);
   });
 

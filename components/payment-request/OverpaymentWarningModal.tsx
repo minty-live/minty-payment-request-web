@@ -1,8 +1,9 @@
 "use client";
 
 import { createPortal } from "react-dom";
-import { useEffect, useId } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { ConfirmDialog } from "@/features/subscription/components/ConfirmDialog";
 import { pushAppScrollLock } from "@/lib/appScrollRoot";
 import type { PaymentItem } from "@/lib/api";
 import { formatDateInTimeZoneForDisplay, formatIsoDateForDisplay } from "@/lib/dateDisplayFormat";
@@ -18,19 +19,6 @@ export type OverpaymentWarningModalProps = {
   onCancel: () => void;
   onOpenPaymentHistory?: () => void;
 };
-
-const overlayClass =
-  "fixed inset-0 z-[440] flex items-center justify-center overflow-x-hidden overscroll-x-none bg-black/45 p-2 pt-[max(0.5rem,env(safe-area-inset-top))] pb-[max(0.5rem,env(safe-area-inset-bottom))] pl-[max(0.5rem,env(safe-area-inset-left))] pr-[max(0.5rem,env(safe-area-inset-right))] sm:p-4";
-
-const shellClass =
-  "relative z-[1] w-full min-w-0 max-w-[440px] rounded-xl bg-white p-5 shadow-xl ring-1 ring-black/5 sm:rounded-2xl sm:p-6";
-
-const focusRing =
-  "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary";
-
-const cancelClass = `box-border h-12 min-h-[48px] w-full cursor-pointer rounded-lg border-2 border-secondary bg-white px-4 text-sm font-semibold text-secondary transition-colors hover:bg-secondary/10 disabled:cursor-not-allowed disabled:opacity-60 ${focusRing} sm:h-11 sm:min-h-[44px] sm:w-auto`;
-
-const primaryClass = `box-border h-12 min-h-[48px] w-full cursor-pointer rounded-lg border border-transparent bg-secondary px-4 text-sm font-semibold text-white shadow-sm transition-opacity duration-200 ease-out hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:opacity-60 ${focusRing} sm:h-11 sm:min-h-[44px] sm:w-auto`;
 
 function formatPaymentDateTime(dateStr: string | null): string {
   if (!dateStr) return "—";
@@ -67,22 +55,11 @@ export function OverpaymentWarningModal({
 }: OverpaymentWarningModalProps) {
   const router = useRouter();
   const pages = useCompanyPages();
-  const titleId = useId();
-  const descId = useId();
 
   useEffect(() => {
     if (!open) return;
     return pushAppScrollLock();
   }, [open]);
-
-  useEffect(() => {
-    if (!open) return;
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onCancel();
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [open, onCancel]);
 
   if (!open || typeof document === "undefined") return null;
 
@@ -100,42 +77,32 @@ export function OverpaymentWarningModal({
   };
 
   return createPortal(
-    <div
-      className={overlayClass}
-      role="presentation"
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget) onCancel();
-      }}
-    >
-      <div
+    <div className="relative z-[440]">
+      <ConfirmDialog
         role="alertdialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        aria-describedby={descId}
-        className={shellClass}
-        onMouseDown={(e) => e.stopPropagation()}
+        title="Overpayment"
+        image="dont"
+        busy={false}
+        backLabel="Cancel"
+        confirmLabel="Payment history"
+        onBack={onCancel}
+        onConfirm={() => {
+          if (onOpenPaymentHistory) {
+            onCancel();
+            onOpenPaymentHistory();
+          } else {
+            goToPaymentHistory();
+          }
+        }}
       >
-        <div className="flex items-start gap-3">
-          <span
-            className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-secondary/15 text-secondary"
-            aria-hidden
-          >
-            <span className="material-symbols-outlined text-[20px] leading-none">info</span>
-          </span>
-          <h2 id={titleId} className="text-lg font-semibold text-primary sm:text-xl">
-            Overpayment
-          </h2>
-        </div>
-
-        <p id={descId} className="mt-3 text-sm leading-relaxed text-primary/80">
+        <p>
           The bill already has {payments.length === 1 ? "a payment" : "payments"} recorded totalling{" "}
           <span className="font-semibold text-primary">
             {formatMoney(totalPaid, currencyLabel)}
           </span>
           . Bill amount cannot be lower than recorded payments.
         </p>
-
-        <ul className="mt-4 flex max-h-60 flex-col gap-2 overflow-y-auto">
+        <ul className="flex max-h-60 flex-col gap-2 overflow-y-auto">
           {payments.map((p) => {
             const amt = parseFloat(p.amount || "0");
             const createdAtFormatted = formatCreatedAt(p.created_at);
@@ -170,32 +137,11 @@ export function OverpaymentWarningModal({
             );
           })}
         </ul>
-
-        <p className="mt-4 text-sm leading-relaxed text-primary/70">
+        <p>
           To edit this payment, you&apos;ll need to clear its payment history first. If it&apos;s
           been overpaid, your accountant can help sort it out.
         </p>
-
-        <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end sm:gap-3">
-          <button type="button" className={cancelClass} onClick={onCancel}>
-            Cancel
-          </button>
-          <button
-            type="button"
-            className={primaryClass}
-            onClick={() => {
-              if (onOpenPaymentHistory) {
-                onCancel();
-                onOpenPaymentHistory();
-              } else {
-                goToPaymentHistory();
-              }
-            }}
-          >
-            Payment history
-          </button>
-        </div>
-      </div>
+      </ConfirmDialog>
     </div>,
     document.body,
   );

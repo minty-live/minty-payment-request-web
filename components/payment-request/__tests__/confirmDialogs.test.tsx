@@ -1,5 +1,5 @@
 // The confirm dialogs (components/payment-request/ConfirmDialog.tsx and the five thin wrappers
-// over it).
+// over it), drawn on minty-web's ConfirmDialog since 2026-11-17 (its backdrop is a "Go back" button).
 //
 // The scaffold owns the portal, the backdrop, the scroll lock, Escape and the accessible
 // wrapper; each wrapper supplies only its own words. So the scaffold is tested once, and each
@@ -78,7 +78,7 @@ describe("the scaffold", () => {
     await userEvent.keyboard("{Escape}");
     expect(onClose).toHaveBeenCalledTimes(2);
 
-    await userEvent.click(screen.getByRole("presentation"));
+    await userEvent.click(screen.getByRole("button", { name: "Go back" }));
     expect(onClose).toHaveBeenCalledTimes(3);
   });
 
@@ -97,7 +97,7 @@ describe("the scaffold", () => {
     expect(screen.getByRole("button", { name: "Voiding…" })).toBeDisabled();
 
     await userEvent.keyboard("{Escape}");
-    await userEvent.click(screen.getByRole("presentation"));
+    await userEvent.click(screen.getByRole("button", { name: "Go back" }));
     expect(onClose).not.toHaveBeenCalled();
   });
 

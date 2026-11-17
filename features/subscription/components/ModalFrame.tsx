@@ -2,6 +2,8 @@
 
 // COPY of minty-web/components/ui/ModalFrame.tsx (2026-10-01; there since 2026-10-05) - lifted into @minty/shared at Part 3 step 4;
 // change all three (minty-web, here, Flask's port: Minty static/js/minty_dialog.js + static/css/minty_dialog.css).
+// Local change (2026-11-17, owner: every question on minty-web's dialog): `role` and the described-by link,
+// so the payment-request confirms stay `alertdialog`s named and described by their own words; labels may be nodes.
 
 /**
  * Every portal modal's frame: the page blurred behind a pale backdrop, and one card over it.
@@ -21,6 +23,8 @@ export function ModalFrame({
   busy,
   onDismiss,
   dismissLabel = "Go back",
+  role = "dialog",
+  describedBy,
   className,
   children,
 }: {
@@ -30,6 +34,10 @@ export function ModalFrame({
   onDismiss: () => void;
   /** What the backdrop button says to a screen reader. */
   dismissLabel?: string;
+  /** `alertdialog` for a question that must be answered (the payment-request confirms, 2026-11-17). */
+  role?: "dialog" | "alertdialog";
+  /** The id of what describes the dialog (its sentences). */
+  describedBy?: string;
   className: string;
   children: ReactNode;
 }) {
@@ -51,9 +59,10 @@ export function ModalFrame({
         className="absolute inset-0 cursor-default bg-white/60 backdrop-blur-[3px]"
       />
       <div
-        role="dialog"
+        role={role}
         aria-modal="true"
         aria-labelledby={labelledBy}
+        aria-describedby={describedBy}
         className={`relative w-full ${className}`}
       >
         {children}
