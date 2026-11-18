@@ -166,15 +166,15 @@ describe("the invoice reader", () => {
     expect(byId("pr-invoice-date").value).toBe("2026-10-20");
   });
 
-  it("an untouched default account is replaced, and Clear puts the default back", async () => {
+  it("the account starts empty (no default code), the invoice fills it, and Clear empties it", async () => {
     serve({
       accounts: [
-        { ...entityBillAccount({ code: "200", name: "Sales", active: true }, 0), is_default: true },
+        entityBillAccount({ code: "200", name: "Sales", active: true }, 0),
         entityBillAccount({ code: "429", name: "General Expenses", active: true }, 1),
       ],
     });
     show();
-    await waitFor(() => expect(byId("pr-account")).toHaveValue("200 - Sales"));
+    expect(byId("pr-account")).toHaveValue("");
 
     await attachAndRead(pdf());
 
@@ -185,7 +185,7 @@ describe("the invoice reader", () => {
         name: "Clear the suggested value for this field",
       }),
     );
-    expect(byId("pr-account")).toHaveValue("200 - Sales");
+    expect(byId("pr-account")).toHaveValue("");
   });
 
   it("Confirm sends what the form shows, the suggested supplier by its Xero id", async () => {

@@ -275,7 +275,6 @@ export function PaymentRequestModal({
   // The invoice reader (lib/invoiceReader.ts): its marks, notes and touched fields. The values stay
   // in their own states above; the reader's rules run on a snapshot of them.
   const [readerAux, setReaderAux] = useState<InvoiceState>(() => invoiceState());
-  const [defaultAccount, setDefaultAccount] = useState("");
   const [openedOn, setOpenedOn] = useState("");
   const [readFileId, setReadFileId] = useState<string | null>(null);
   // "Read the invoice" (owner, 2026-11-18): offered only when the API says the reader is on, and
@@ -312,13 +311,8 @@ export function PaymentRequestModal({
             value: `${a.account_code} - ${a.account_name}`,
             label: `${a.account_code} - ${a.account_name}`,
           }));
+        // No default account code (owner, 2026-11-18): the account starts empty.
         setAccountOptions(opts);
-        const defaultAcct = accounts.find((a) => a.is_default && a.is_active);
-        if (defaultAcct) {
-          const defaultVal = `${defaultAcct.account_code} - ${defaultAcct.account_name}`;
-          setDefaultAccount(defaultVal);
-          setAccountCode((prev) => prev || defaultVal);
-        }
       })
       .catch(() => {});
 
@@ -367,7 +361,7 @@ export function PaymentRequestModal({
     description,
     accountCode,
   };
-  const readerDefaults = { invoiceDate: openedOn, accountCode: defaultAccount };
+  const readerDefaults = { invoiceDate: openedOn, accountCode: "" };
 
   // The form's latest state, for the answer that arrives seconds after the read started.
   const latest = useRef({

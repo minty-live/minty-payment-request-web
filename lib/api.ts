@@ -548,7 +548,6 @@ export type EntityBillAccount = {
   account_code: string;
   account_name: string;
   account_type: string;
-  is_default: boolean;
   is_active: boolean;
   sort_order: number;
 };
@@ -886,7 +885,7 @@ export function fetchEntityBillAccounts(options?: {
 
 export function updateEntityBillAccount(
   accountId: string,
-  payload: Partial<Pick<EntityBillAccount, "is_active" | "is_default" | "sort_order">>,
+  payload: Partial<Pick<EntityBillAccount, "is_active" | "sort_order">>,
 ): Promise<EntityBillAccount> {
   return apiFetch(`/entity-bill-accounts/${accountId}`, {
     method: "PUT",

@@ -33,7 +33,6 @@ export function entityBillAccount(
     account_code: seed.code,
     account_name: seed.name,
     account_type: "EXPENSE",
-    is_default: false,
     is_active: seed.active,
     sort_order: index,
   };
