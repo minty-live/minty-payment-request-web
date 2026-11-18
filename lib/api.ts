@@ -722,6 +722,14 @@ export function extractInvoice(form: FormData, signal: AbortSignal): Promise<unk
   return apiFetch<unknown>("/bills/extract/", { method: "POST", body: form, signal });
 }
 
+/**
+ * Whether the invoice reader is switched on (`GET /bills/extract/status/`, `BILL_AI_ENABLED`): the
+ * form offers "Read the invoice" only then - an invoice is read only on that press (owner, 2026-11-18).
+ */
+export function fetchInvoiceReaderStatus(): Promise<{ enabled: boolean }> {
+  return apiFetch<{ enabled: boolean }>("/bills/extract/status/");
+}
+
 export function deleteBillAttachment(billId: string, attachmentId: string): Promise<void> {
   return apiFetch<void>(`/bills/${billId}/attachments/${attachmentId}`, {
     method: "DELETE",

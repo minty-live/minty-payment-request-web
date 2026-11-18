@@ -31,6 +31,7 @@ import {
   extractInvoice,
   fetchEntityBillAccounts,
   fetchEntityBillContacts,
+  fetchInvoiceReaderStatus,
   fetchSuggestedBillReference,
   isDuplicateBillReferenceError,
   saveBillDraft,
@@ -49,6 +50,7 @@ import { useAmountInput } from "@minty/shared/amountInput";
 import { ErrorSummary } from "@minty/shared/ui";
 import {
   cleared,
+  ReadButton,
   ReaderNote,
   ReadFailedLine,
   ReadingNotice,
@@ -65,6 +67,7 @@ import {
   invoiceSpec,
   invoiceState,
   READ_FAILED,
+  READ_LABEL,
   READING_DETAIL,
   READING_TITLE,
   showedAnything,
@@ -275,6 +278,10 @@ export function PaymentRequestModal({
   const [defaultAccount, setDefaultAccount] = useState("");
   const [openedOn, setOpenedOn] = useState("");
   const [readFileId, setReadFileId] = useState<string | null>(null);
+  // "Read the invoice" (owner, 2026-11-18): offered only when the API says the reader is on, and
+  // pressed for the current invoice - the button goes, and comes back after a failed read
+  const [readerEnabled, setReaderEnabled] = useState(false);
+  const [readAsked, setReadAsked] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<ValidatedField, string>>>({});
   /** Bumped on each refused Confirm, so the summary takes focus again (@minty/shared/ui ErrorSummary). */
   const [summaryAttempt, setSummaryAttempt] = useState(0);
@@ -327,6 +334,15 @@ export function PaymentRequestModal({
         setContactsList(deduped);
       })
       .catch(() => {});
+
+    fetchInvoiceReaderStatus()
+      .then((status) => {
+        if (!cancelled) setReaderEnabled(status.enabled === true);
+      })
+      // the status unknown: no button (the form works without the reader; the API logs its failure)
+      .catch(() => {
+        if (!cancelled) setReaderEnabled(false);
+      });
 
     return () => {
       cancelled = true;
@@ -410,6 +426,14 @@ export function PaymentRequestModal({
     },
   });
   const { cancel: cancelRead } = reader;
+  const fileToRead = uploadedFiles.find((x) => x.id === readFileId) ?? null;
+  // (and never once a `disabled` answer has switched the reader off for the session)
+  const offerRead =
+    readerEnabled &&
+    fileToRead !== null &&
+    !reader.reading &&
+    (!readAsked || reader.failed) &&
+    !INVOICE_LATCH.readerOff();
 
   /** The person changed a reader field: it is theirs now (the field's own setter still runs). */
   const readerEdit = (field: InvoiceField, patch: Partial<InvoiceValues>) => {
@@ -522,6 +546,7 @@ export function PaymentRequestModal({
     setDueDate("");
     setReaderAux(invoiceState());
     setReadFileId(null);
+    setReadAsked(false);
     setBillNo("");
     setDescription("");
     setUploadedFiles([]);
@@ -581,12 +606,14 @@ export function PaymentRequestModal({
     setPreviewFileId(added[added.length - 1]?.id ?? null);
     clearFieldError("attachments");
     e.target.value = "";
-    // The newest readable file is read; the previous one's suggestions go (what was typed stays).
+    // The newest readable file is the one "Read the invoice" reads - only on that press (owner,
+    // 2026-11-18); the previous one's suggestions go (what was typed stays).
     const toRead = [...added].reverse().find((x) => isReadable(x.file));
     if (toRead) {
+      cancelRead();
       dropSuggestions();
       setReadFileId(toRead.id);
-      void reader.read(toRead.file);
+      setReadAsked(false);
     }
   };
 
@@ -965,6 +992,15 @@ export function PaymentRequestModal({
               <ReadingNotice title={READING_TITLE} detail={READING_DETAIL} />
             ) : reader.failed ? (
               <ReadFailedLine text={READ_FAILED} />
+            ) : null}
+            {offerRead && fileToRead ? (
+              <ReadButton
+                label={READ_LABEL}
+                onClick={() => {
+                  setReadAsked(true);
+                  void reader.read(fileToRead.file);
+                }}
+              />
             ) : null}
             <div role="status" aria-live="polite" className="sr-only">
               {readerAux.announcement}

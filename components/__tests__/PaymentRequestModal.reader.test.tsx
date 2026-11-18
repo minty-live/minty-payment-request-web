@@ -1,7 +1,8 @@
 // The invoice reader in the Add Payment dialog (owner, 2026-11-04): an attached invoice is read
 // (`POST /bills/extract/`, lib/invoiceReader.ts) and the form's EMPTY fields are filled as
 // suggestions - or a field still at its untouched default (today's date, the default account).
-// What the person set is never overwritten; a failed read says so in one quiet line.
+// What the person set is never overwritten; a failed read says so in one quiet line. Since
+// 2026-11-18 (owner) the invoice is read only when the person presses "Read the invoice".
 
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -58,7 +59,13 @@ type Seen = { extracts: FormData[]; submits: unknown[] };
 function serve({
   extract = () => json(200, READ),
   accounts = entityBillAccounts(),
-}: { extract?: () => Response | Promise<Response>; accounts?: unknown[] } = {}): Seen {
+  enabled = true,
+}: {
+  extract?: () => Response | Promise<Response>;
+  accounts?: unknown[];
+  /** `GET /bills/extract/status/`: whether the reader is switched on (`BILL_AI_ENABLED`). */
+  enabled?: boolean;
+} = {}): Seen {
   const seen: Seen = { extracts: [], submits: [] };
   fetchMock.mockImplementation(async (input, init) => {
     const path = new URL(String(input)).pathname;
@@ -66,6 +73,7 @@ function serve({
     if (path.endsWith("/entity-bill-contacts/")) return json(200, SUPPLIERS);
     if (path.includes("/entity-bill-accounts/")) return json(200, accounts);
     if (path.endsWith("/bills/suggested-reference/")) return json(200, { reference: "MBIOVI-1" });
+    if (path.endsWith("/bills/extract/status/")) return json(200, { enabled });
     if (path.endsWith("/bills/extract/")) {
       seen.extracts.push(init?.body as FormData);
       return extract();
@@ -91,6 +99,12 @@ const byId = (id: string) => document.getElementById(id) as HTMLInputElement;
 const pdf = (name = "invoice.pdf") => new File(["%PDF-1.4"], name, { type: "application/pdf" });
 const attach = (f: File) =>
   userEvent.upload(within(dialog()).getByLabelText("Choose files to attach"), f);
+/** "Read the invoice": the only way an invoice is read (owner, 2026-11-18). */
+const readButton = () => within(dialog()).queryByRole("button", { name: "Read the invoice" });
+async function attachAndRead(f: File) {
+  await attach(f);
+  await userEvent.click(await within(dialog()).findByRole("button", { name: "Read the invoice" }));
+}
 const shown = (iso: string) => formatIsoDateAsDdMmmYyyy(iso);
 const FAILED = "I couldn't read this invoice. Enter the details yourself.";
 
@@ -110,7 +124,7 @@ describe("the invoice reader", () => {
     show();
     await waitFor(() => expect(byId("pr-invoice-date").value).toBe(todayLocalISODate()));
 
-    await attach(pdf());
+    await attachAndRead(pdf());
 
     await waitFor(() => expect(byId("pr-amount")).toHaveValue("1,200.50"));
     expect((seen.extracts[0].get("invoice") as File).name).toBe("invoice.pdf");
@@ -137,7 +151,7 @@ describe("the invoice reader", () => {
     fireEvent.change(byId("pr-invoice-date"), { target: { value: todayLocalISODate() } });
     await userEvent.type(byId("pr-amount"), "99");
 
-    await attach(pdf());
+    await attachAndRead(pdf());
 
     const note = await screen.findByText(
       `The invoice reads ${shown("2026-10-20")}, not ${shown(todayLocalISODate())}.`,
@@ -162,7 +176,7 @@ describe("the invoice reader", () => {
     show();
     await waitFor(() => expect(byId("pr-account")).toHaveValue("200 - Sales"));
 
-    await attach(pdf());
+    await attachAndRead(pdf());
 
     await waitFor(() => expect(byId("pr-account")).toHaveValue("429 - General Expenses"));
     const line = screen.getByText("Suggested from the invoice. Check it before you submit.");
@@ -177,7 +191,7 @@ describe("the invoice reader", () => {
   it("Confirm sends what the form shows, the suggested supplier by its Xero id", async () => {
     const seen = serve();
     show();
-    await attach(pdf());
+    await attachAndRead(pdf());
     await waitFor(() => expect(byId("pr-amount")).toHaveValue("1,200.50"));
 
     await userEvent.click(screen.getByRole("button", { name: /^Confirm/ }));
@@ -196,7 +210,7 @@ describe("the invoice reader", () => {
   it("a failed read says so in one quiet line; the form is untouched", async () => {
     serve({ extract: () => json(200, { suggestions: null, reason: "timeout" }) });
     show();
-    await attach(pdf());
+    await attachAndRead(pdf());
 
     expect(await screen.findByText(FAILED)).toHaveAttribute("role", "status");
     expect(byId("pr-amount")).toHaveValue("");
@@ -205,10 +219,12 @@ describe("the invoice reader", () => {
   it("switched off, it says nothing and is not asked again this session", async () => {
     const seen = serve({ extract: () => json(200, { suggestions: null, reason: "disabled" }) });
     show();
-    await attach(pdf("one.pdf"));
+    await attachAndRead(pdf("one.pdf"));
     await waitFor(() => expect(seen.extracts).toHaveLength(1));
     await attach(pdf("two.pdf"));
+    await screen.findByRole("button", { name: "Remove two.pdf" });
 
+    expect(readButton()).toBeNull();
     expect(seen.extracts).toHaveLength(1);
     expect(screen.queryByText(FAILED)).toBeNull();
     expect(screen.queryByText("Minty is reading the invoice details.")).toBeNull();
@@ -219,13 +235,62 @@ describe("the invoice reader", () => {
     show();
     await attach(new File(["<html>"], "invoice.html", { type: "text/html" }));
     await screen.findByRole("button", { name: "Remove invoice.html" });
+    expect(readButton()).toBeNull();
     expect(seen.extracts).toHaveLength(0);
+  });
+
+  it("attaching reads nothing; the button offers the read, and pressing it reads once", async () => {
+    const seen = serve();
+    show();
+    await attach(pdf());
+    const button = await within(dialog()).findByRole("button", { name: "Read the invoice" });
+    expect(button).toHaveAttribute("type", "button");
+    expect(seen.extracts).toHaveLength(0);
+    expect(byId("pr-amount")).toHaveValue("");
+
+    await userEvent.click(button);
+
+    await waitFor(() => expect(byId("pr-amount")).toHaveValue("1,200.50"));
+    expect(seen.extracts).toHaveLength(1);
+    expect(readButton()).toBeNull();
+  });
+
+  it("the reader switched off on the API offers no button", async () => {
+    const seen = serve({ enabled: false });
+    show();
+    await attach(pdf());
+    await screen.findByRole("button", { name: "Remove invoice.pdf" });
+    await waitFor(() =>
+      expect(fetchMock.mock.calls.some(([u]) => String(u).includes("/bills/extract/status/"))).toBe(
+        true,
+      ),
+    );
+    expect(readButton()).toBeNull();
+    expect(seen.extracts).toHaveLength(0);
+  });
+
+  it("a failed read brings the button back, and pressing it tries again", async () => {
+    let calls = 0;
+    const seen = serve({
+      extract: () =>
+        ++calls === 1 ? json(200, { suggestions: null, reason: "timeout" }) : json(200, READ),
+    });
+    show();
+    await attachAndRead(pdf());
+    expect(await screen.findByText(FAILED)).toBeInTheDocument();
+
+    await userEvent.click(
+      await within(dialog()).findByRole("button", { name: "Read the invoice" }),
+    );
+
+    await waitFor(() => expect(byId("pr-amount")).toHaveValue("1,200.50"));
+    expect(seen.extracts).toHaveLength(2);
   });
 
   it("removing the file that was read takes its suggestions with it", async () => {
     serve();
     show();
-    await attach(pdf());
+    await attachAndRead(pdf());
     await waitFor(() => expect(byId("pr-amount")).toHaveValue("1,200.50"));
 
     await userEvent.click(within(dialog()).getByRole("button", { name: /Remove invoice\.pdf/ }));

@@ -90,9 +90,13 @@ is never blocked.
 
 **The invoice reader** (owner, 2026-11-04; `lib/invoiceReader.ts` on `@minty/shared/reader`,
 the rules shared with Petty Cash's receipt reader; the API side is minty-payment-request-api's
-`docs/features/invoice-reader.md`). Staging a PDF, JPEG or PNG sends the newest one to
-`POST /bills/extract/` (an HTML file is not read). While it reads, "Minty is reading the invoice
-details." shows under the drop zone and the form stays usable.
+`docs/features/invoice-reader.md`). **Read only on a press** (owner, 2026-11-18): staging a
+PDF, JPEG or PNG reads nothing; the newest one is offered under the drop zone with **Read the
+invoice** (`ReadButton` from `@minty/shared/reader`), shown only when `GET /bills/extract/status/`
+(fetched as the dialog opens) says the reader is on. The press sends that file to
+`POST /bills/extract/` (an HTML file is never offered). The button goes after the press and comes
+back after a failed read; a new file offers it again. While it reads, "Minty is reading the
+invoice details." shows in its place and the form stays usable.
 
 - **Filling:** a suggestion fills the supplier (by its Xero id from the company's list), the
   invoice and due dates, the amount (in the company currency's places), the description and the
