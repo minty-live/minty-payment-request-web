@@ -111,17 +111,17 @@ function ToastCard({ item, onClose }: { item: ToastItem; onClose: () => void }) 
     <div
       role={item.type === "error" ? "alert" : "status"}
       data-toast-type={item.type}
-      className="pointer-events-auto flex items-start gap-3 rounded border border-[#e5e7eb] bg-white p-3 text-sm text-[#171717] shadow"
+      className="pointer-events-auto flex items-start gap-3 rounded border border-border-default bg-surface-card p-3 text-sm text-text-primary shadow"
     >
       <div className="min-w-0 flex-1">
         <p className="font-semibold">{LABEL[item.type] ?? LABEL.success}</p>
-        <p className="break-words text-[#6b7280]">{item.message}</p>
+        <p className="break-words text-text-muted">{item.message}</p>
       </div>
       <button
         type="button"
         onClick={onClose}
         aria-label="Dismiss"
-        className="cursor-pointer text-[#6b7280] hover:text-[#171717] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary"
+        className="cursor-pointer text-text-muted hover:text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus"
       >
         ×
       </button>

@@ -97,7 +97,7 @@ export function OverpaymentWarningModal({
       >
         <p>
           The bill already has {payments.length === 1 ? "a payment" : "payments"} recorded totalling{" "}
-          <span className="font-semibold text-primary">
+          <span className="font-semibold text-text-secondary">
             {formatMoney(totalPaid, currencyLabel)}
           </span>
           . Bill amount cannot be lower than recorded payments.
@@ -111,10 +111,10 @@ export function OverpaymentWarningModal({
             return (
               <li
                 key={p.id}
-                className="flex items-start gap-3 rounded-xl bg-secondary/8 px-3 py-3 ring-1 ring-secondary/20"
+                className="flex items-start gap-3 rounded-xl bg-state-selected px-3 py-3 ring-1 ring-border-selected/20"
               >
                 <span
-                  className="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-secondary/15 text-secondary"
+                  className="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-state-selected text-text-link"
                   aria-hidden
                 >
                   <span className="material-symbols-outlined text-[18px] leading-none">
@@ -122,15 +122,15 @@ export function OverpaymentWarningModal({
                   </span>
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-primary">{payerName}</p>
-                  <p className="mt-0.5 text-xs text-primary/70">
+                  <p className="text-sm font-semibold text-text-secondary">{payerName}</p>
+                  <p className="mt-0.5 text-xs text-text-secondary">
                     Payment date: {paymentDateFormatted}
                     {createdAtFormatted ? (
-                      <span className="ml-2 text-primary/50">· Recorded {createdAtFormatted}</span>
+                      <span className="ml-2 text-text-muted">· Recorded {createdAtFormatted}</span>
                     ) : null}
                   </p>
                 </div>
-                <span className="shrink-0 text-sm font-bold text-primary tabular-nums">
+                <span className="shrink-0 text-sm font-bold text-text-secondary tabular-nums">
                   ({formatMoney(amt, currencyLabel)})
                 </span>
               </li>

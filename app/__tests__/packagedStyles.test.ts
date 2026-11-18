@@ -65,6 +65,17 @@ describe("@minty/shared reaches the stylesheet", () => {
     expect(compiled).toMatch(/appearance:\s*none/);
   });
 
+  it("takes every colour from @minty/shared/colors.css, with no local alias left", () => {
+    // One palette for every Minty app (owner, 2026-11-18). The old `--primary` grey and
+    // `--secondary` brand teal would win invisibly over a role if they came back.
+    const source = readFileSync(CSS, "utf8");
+    expect(source).toContain('@import "@minty/shared/colors.css";');
+    expect(source).not.toMatch(/^\s*--(primary|secondary|teal-strong|accent|ink-soft):/m);
+    expect(source).not.toMatch(/^\s*--color-/m);
+    expect(compiled).toMatch(/--color-action-primary:\s*var\(--minty-main-action\)/);
+    expect(compiled).toMatch(/--minty-main-action:\s*#4fc7c7/);
+  });
+
   it("emits the packaged sidebar's own utilities", () => {
     // Declarations, not class selectors: no escaping to get wrong. Each arbitrary value appears in
     // the package's sidebar and nowhere in this app's own source, so if Tailwind stops scanning

@@ -91,7 +91,7 @@ describe("a toast", () => {
     const error = cards()[1].className;
 
     expect(error).toBe(success);
-    expect(success).toContain("bg-white");
+    expect(success).toContain("bg-surface-card");
   });
 });
 

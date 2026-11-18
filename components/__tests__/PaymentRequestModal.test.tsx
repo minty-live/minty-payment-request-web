@@ -614,13 +614,13 @@ describe("the attachments", () => {
   it("is not red until Confirm has been tried", async () => {
     show();
 
-    expect(dropZone()).toHaveClass("border-gray-300");
+    expect(dropZone()).toHaveClass("border-border-input");
     expect(filePicker()).not.toHaveAttribute("aria-invalid");
 
     await userEvent.click(confirm());
 
-    await waitFor(() => expect(dropZone()).toHaveClass("border-red-500"));
-    expect(dropZone()).not.toHaveClass("border-gray-300");
+    await waitFor(() => expect(dropZone()).toHaveClass("border-action-danger"));
+    expect(dropZone()).not.toHaveClass("border-border-input");
     expect(filePicker()).toHaveAttribute("aria-invalid", "true");
   });
 
@@ -640,11 +640,11 @@ describe("the attachments", () => {
   it("clears the red as soon as a file arrives", async () => {
     show();
     await userEvent.click(confirm());
-    await waitFor(() => expect(dropZone()).toHaveClass("border-red-500"));
+    await waitFor(() => expect(dropZone()).toHaveClass("border-action-danger"));
 
     await attach(file("receipt.png", "image/png"));
 
-    await waitFor(() => expect(dropZone()).toHaveClass("border-gray-300"));
+    await waitFor(() => expect(dropZone()).toHaveClass("border-border-input"));
     expect(filePicker()).not.toHaveAttribute("aria-invalid");
   });
 
@@ -749,7 +749,7 @@ describe("the error summary", () => {
       return found!;
     });
     expect(box).toHaveFocus();
-    expect(box).toHaveClass("bg-red-50");
+    expect(box).toHaveClass("bg-status-danger-bg");
     const links = within(box)
       .getAllByRole("link")
       .map((a) => a.textContent);

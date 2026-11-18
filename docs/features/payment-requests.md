@@ -54,6 +54,10 @@ this page is what the person sees and where each piece of the screen lives.
   **Retry** (`BankSlipLoadState.tsx`, re-reads the rows on screen) — never **Upload**, which
   could hide slips that already exist. Easy view shows nothing while loading, Retry on failure.
 
+## Colours (owner, 2026-11-18)
+
+Colours: @minty/shared colors.css roles only (owner 2026-11-18); one bill-status map in lib/billStatusDisplay.ts; no raw hex — **tests**/no_raw_colours.test.ts. Tones: Draft and Voided Neutral, Payment Requested Info, Paid Success, Partially Paid and Returned Warning, Payment failed and Upload failed Danger. Amounts are plain text, never coloured by status. Kept on purpose (allow-listed in the test): `app/landing` (its Minty Action hexes), ConfirmDialog's orange `#ea9713` (waits for the owner), the full-screen viewer's dark chrome (`bg-black/90` and white on it).
+
 ## Question dialogs (owner, 2026-11-17)
 
 Every yes/no question - the four delete/void confirms (`AttachmentDeleteConfirmModal`, `BulkDeleteConfirmModal`, `PaymentDeleteConfirmModal`, `RowDeleteConfirmModal`, through `components/payment-request/ConfirmDialog.tsx`), `OverpaymentWarningModal` and `SubscriptionNoticeModal` - draws minty-web's `ConfirmDialog` (the copy at `features/subscription/components/`, with three local options: `role`, so they stay `alertdialog`s named by their title and described by their body; node labels; `confirmHref` for the notice's link). This replaces 2026-10-13's "Part 14 wins here" for questions (Figma comparison: Independent Minty, node 505:589). Titles, sentences and labels are unchanged; destructive confirms take minty-web's red tone, the rest teal; Escape and the blurred backdrop ("Go back") close. Forms and details (Add Payment, Record payment, Upload, Bank slip details) and the full-screen viewer keep their Part 14 frames for now.
@@ -91,11 +95,17 @@ is never blocked.
 **The invoice reader** (owner, 2026-11-04; `lib/invoiceReader.ts` on `@minty/shared/reader`,
 the rules shared with Petty Cash's receipt reader; the API side is minty-payment-request-api's
 `docs/features/invoice-reader.md`). **Read only on a press** (owner, 2026-11-18): staging a
-PDF, JPEG or PNG reads nothing; the newest one is offered under the drop zone with **Read the
-invoice** (`ReadButton` from `@minty/shared/reader`), shown only when `GET /bills/extract/status/`
-(fetched as the dialog opens) says the reader is on. The press sends that file to
+PDF, JPEG or PNG reads nothing; **Read invoice** (`ReadButton` from `@minty/shared/reader`) shows
+under the drop zone only when `GET /bills/extract/status/` (fetched as the dialog opens) says the
+reader is on. **One file per read, the person's choice:** it reads the file selected in the list
+(the preview), else the newest readable one; with two or more readable files a line says which
+("Reads invoice.pdf. To read another file, select it above."). The press sends that file to
 `POST /bills/extract/` (an HTML file is never offered). The button goes after the press and comes
-back after a failed read; a new file offers it again. While it reads, "Minty is reading the
+back after a failed read or when another file is selected; a new file offers it again.
+**The company's AI allowance** (its grants, shared with Petty Cash): "80% of your AI allowance
+left" beside the button (its description; it stays after the read), updated from each read's
+answer (`onStatus`); used up, the button is disabled with the reason beside it, and
+`limit_reached` is not the failure line. A failed read uses none of it. While it reads, "Minty is reading the
 invoice details." shows in its place and the form stays usable.
 
 - **Filling:** a suggestion fills the supplier (by its Xero id from the company's list), the
@@ -110,7 +120,8 @@ invoice details." shows in its place and the form stays usable.
   offered. A supplier name that matches nobody goes into the supplier box as typed text, so the
   picker's "+ Add ... as a new supplier" offers it. The bill number is never read. A filled field
   is never left red. One polite live region says what was filled or offered.
-- **Cancelled by:** another readable file (its predecessor's suggestions go; typed values stay),
+- **Cancelled by:** another readable file added, or another file read (its predecessor's
+  suggestions go; typed values stay),
   removing the file that was read, closing or reopening the dialog, Save as Draft and Confirm.
 - **When it can't read:** one quiet line, "I couldn't read this invoice. Enter the details
   yourself." (`role="status"`). Switched off (`disabled`/`not_configured`) is silent and the

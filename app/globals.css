@@ -5,6 +5,11 @@
    minty-logo.svg the packaged SideMenu renders), so --font-brand falls through to Inter here.
    Adding a text lockup means adding the next/font call in app/layout.tsx too, not just a class. */
 @import "@minty/shared/theme.css";
+/* The colours, shared: @minty/shared/colors.css - the Part 13 roles ONLY (bg-action-primary,
+   text-text-secondary, bg-status-info-bg ...), one palette for every Minty app (owner, 2026-11-18).
+   Colours only, so this app's Tailwind rounded-* and text-* steps stay as they are. Screens use the
+   roles, never a hex or a palette class: __tests__/no_raw_colours.test.ts holds it. */
+@import "@minty/shared/colors.css";
 @import "material-symbols/outlined.css";
 @import "./styles/checkbox/checkbox-secondary-white-tick.css";
 /* Tailwind v4 NEVER scans node_modules, so without this every utility class inside a packaged
@@ -14,27 +19,8 @@
 @source "../node_modules/@minty/shared/src";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-  --primary: #656565;
-  --secondary: #54d3da;
-  /* The sidebar and My Profile copied from minty-web (components/ui/Sidebar.tsx, 2026-09-30):
-     minty-web's tokens, the same values - the avatar pair, SuperMinty's teal and the accent
-     the Subscriptions Overview draws "Trial ending" in. */
-  --avatar-bg: #ffe6b1;
-  --avatar-fg: #6b3a12;
-  --teal-strong: #18c4c7;
-  --accent: #f15a24;
-  /* The "Leave without saving?" dialog copied from minty-web (features/subscription/components/
-     ConfirmDialog.tsx, 2026-10-01): its sentences' grey, minty-web's value. */
-  --ink-soft: #757575;
-}
-
-@theme {
-  --color-primary: var(--primary);
-  --color-secondary: var(--secondary);
-  --color-teal-strong: var(--teal-strong);
-  --color-accent: var(--accent);
+  --background: var(--color-surface-page);
+  --foreground: var(--color-text-primary);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -126,21 +112,21 @@ input[type="date"].pr-date-input::-moz-calendar-picker-indicator {
 /* Scroll areas: make track + thumb visible (overlay scrollbars are often invisible until drag). */
 .visible-scrollbar {
   scrollbar-width: thin;
-  scrollbar-color: #c4c4c4 #f0f0f0;
+  scrollbar-color: var(--minty-neutral-300) var(--minty-neutral-50);
 }
 .visible-scrollbar::-webkit-scrollbar {
   width: 10px;
   height: 10px;
 }
 .visible-scrollbar::-webkit-scrollbar-track {
-  background: #f0f0f0;
+  background: var(--minty-neutral-50);
   border-radius: 9999px;
 }
 .visible-scrollbar::-webkit-scrollbar-thumb {
-  background: #c4c4c4;
+  background: var(--minty-neutral-300);
   border-radius: 9999px;
-  border: 2px solid #f0f0f0;
+  border: 2px solid var(--minty-neutral-50);
 }
 .visible-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #a3a3a3;
+  background: var(--minty-neutral-400);
 }

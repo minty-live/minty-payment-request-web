@@ -32,15 +32,15 @@ function LandingContent() {
 
   if (refused) {
     return (
-      <div className="flex min-h-dvh min-h-screen items-center justify-center bg-white px-4">
+      <div className="flex min-h-dvh min-h-screen items-center justify-center bg-surface-page px-4">
         <div className="flex w-full max-w-sm flex-col items-center gap-4 text-center">
-          <p role="alert" className="text-sm text-[#2B2B2B]">
+          <p role="alert" className="text-sm text-text-primary">
             {refused}
           </p>
           <button
             type="button"
             onClick={backIntoMinty}
-            className="inline-flex min-h-11 cursor-pointer items-center justify-center rounded-xl bg-[#3CBCC3] px-5 text-sm font-semibold text-white hover:bg-[#35B2B9] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2FA4AB] active:bg-[#2FA4AB]"
+            className="inline-flex min-h-11 cursor-pointer items-center justify-center rounded-xl bg-action-primary px-5 text-sm font-semibold text-action-on-primary hover:bg-action-primary-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus active:bg-action-primary-pressed"
           >
             Continue
           </button>
@@ -50,8 +50,8 @@ function LandingContent() {
   }
 
   return (
-    <div className="flex min-h-dvh min-h-screen items-center justify-center bg-white">
-      <span className="text-sm text-gray-400">Loading…</span>
+    <div className="flex min-h-dvh min-h-screen items-center justify-center bg-surface-page">
+      <span className="text-sm text-text-muted">Loading…</span>
     </div>
   );
 }

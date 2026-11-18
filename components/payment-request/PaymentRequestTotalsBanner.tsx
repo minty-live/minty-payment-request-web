@@ -85,33 +85,35 @@ export function PaymentRequestTotalsBanner({
 
   return (
     <div
-      className={`inline-flex max-w-full flex-col rounded-xl border-2 border-secondary bg-white px-4 py-2.5 ${className}`}
+      className={`inline-flex max-w-full flex-col rounded-xl border-2 border-border-selected bg-surface-card px-4 py-2.5 ${className}`}
       role="status"
       aria-live="polite"
     >
-      {subtitle ? <span className="text-[11px] text-gray-400 tabular-nums">{subtitle}</span> : null}
+      {subtitle ? (
+        <span className="text-[11px] text-text-disabled tabular-nums">{subtitle}</span>
+      ) : null}
       {groups.map((g) => (
         <div key={g.code} className="flex flex-col">
           {mixed ? (
-            <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+            <span className="text-[11px] font-semibold uppercase tracking-wide text-text-disabled">
               {currencyLabelForCode(g.code)}
             </span>
           ) : null}
           {/* Grid, not flex — keeps both figures right-aligned to the same edge. */}
           <div className="grid grid-cols-[auto_auto] items-baseline gap-x-6">
-            <span className="text-[15px] font-medium text-black">{unpaidLabel}</span>
-            <span className="whitespace-nowrap text-right text-2xl font-bold tabular-nums text-secondary">
+            <span className="text-[15px] font-medium text-text-primary">{unpaidLabel}</span>
+            <span className="whitespace-nowrap text-right text-2xl font-bold tabular-nums text-text-primary">
               {formatTotal(g.unpaid)}
             </span>
-            <span className="text-sm text-gray-400">{invoiceLabel}</span>
-            <span className="whitespace-nowrap text-right text-base tabular-nums text-gray-400">
+            <span className="text-sm text-text-disabled">{invoiceLabel}</span>
+            <span className="whitespace-nowrap text-right text-base tabular-nums text-text-disabled">
               {formatTotal(g.invoice)}
             </span>
           </div>
         </div>
       ))}
       {hiddenCount > 0 ? (
-        <span className="text-xs text-gray-400">
+        <span className="text-xs text-text-disabled">
           +{hiddenCount} more {hiddenCount === 1 ? "currency" : "currencies"}
         </span>
       ) : null}

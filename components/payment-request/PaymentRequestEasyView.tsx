@@ -18,7 +18,7 @@ import {
 import { type EasyViewDraftDetailActions } from "./EasyViewDraftDetailedInformation";
 import { EasyViewDraftDetailBody, EasyViewReadonlyBillDetailBody } from "./EasyViewDraftDetailBody";
 import { useEntityCurrency } from "@/lib/entityCurrency";
-import { statusDisplayBadgeClass } from "@/lib/billStatusDisplay";
+import { billStatusGradientFromClass, statusDisplayBadgeClass } from "@/lib/billStatusDisplay";
 import { type SortKey } from "@/lib/paymentRequestRowSort";
 import { HEADER_CHECKBOX_CLASS } from "./paymentRequestCheckboxClasses";
 import type { PaymentRequestRow } from "./PaymentRequestTable";
@@ -29,7 +29,7 @@ import { useCompanyPages } from "@/lib/useCompanyPages";
 const EASY_VIEW_STATUS_CELL =
   "box-border inline-flex w-full min-w-0 max-w-full items-center justify-center rounded-lg px-2.5 py-1 text-sm font-semibold sm:px-3 sm:py-0 lg:h-[42px] lg:min-h-[42px] lg:text-sm";
 
-const EASY_VIEW_TD_BASE = "px-4 py-3 text-sm text-primary sm:px-5 sm:py-3.5";
+const EASY_VIEW_TD_BASE = "px-4 py-3 text-sm text-text-secondary sm:px-5 sm:py-3.5";
 
 const easyViewContactTd = `${EASY_VIEW_TD_BASE} align-middle min-w-0`;
 const easyViewSubmittedTd = `${EASY_VIEW_TD_BASE} align-middle whitespace-nowrap tabular-nums text-center`;
@@ -66,13 +66,13 @@ const EASY_VIEW_ROW_GRID = `grid w-full min-w-0 grid-cols-1 gap-4 ${EASY_VIEW_GR
 const EASY_VIEW_HEADER_GRID = `mb-3 hidden min-w-0 md:grid ${EASY_VIEW_GRID_COLS} md:gap-x-3 md:items-end md:px-0`;
 
 const EASY_VIEW_HEADER_CELL =
-  "text-left text-xs font-medium text-[#656565] sm:text-sm pt-0 pb-0 translate-y-[15px]";
+  "text-left text-xs font-medium text-text-secondary sm:text-sm pt-0 pb-0 translate-y-[15px]";
 
 const EASY_VIEW_BANKSLIP_VOIDED_BTN =
-  "inline-flex cursor-pointer items-center gap-1.5 rounded-lg border-0 bg-transparent text-primary/40 transition-opacity hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary sm:gap-2";
+  "inline-flex cursor-pointer items-center gap-1.5 rounded-lg border-0 bg-transparent text-text-disabled transition-opacity hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus sm:gap-2";
 
 const EASY_VIEW_BANKSLIP_DEFAULT_BTN =
-  "inline-flex cursor-pointer items-center gap-1.5 rounded-lg border-0 bg-transparent text-primary transition-opacity hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary sm:gap-2";
+  "inline-flex cursor-pointer items-center gap-1.5 rounded-lg border-0 bg-transparent text-text-secondary transition-opacity hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus sm:gap-2";
 
 /** Fixed-width area so rows without files still reserve space; partial icon stays column-aligned with rows that have a slip. */
 const EASY_VIEW_BANKSLIP_SLOT =
@@ -133,36 +133,12 @@ function EasyViewBankSlipControl({
   );
 }
 
-function unpaidAmountClass(status: string): string {
-  if (status === "Paid") return "text-[#656565]";
-  if (status === "Payment Requested") return "text-secondary";
-  if (status === "Partially Paid") return "text-[#70ebba]";
-  if (status === "Voided") return "text-[#FF6B6B]";
-  if (status === "Draft") return "text-[#656565]";
-  if (status === "Returned") return "text-[#EA9713]";
-  return "text-[#C0C0C0]";
-}
+/** Amounts are plain text, never coloured by their status (Part 13). */
+const unpaidAmountClass = "text-text-primary";
 
-/** Main easy-view shell: short status tint at top (stops ~15%), then white (toolbar filter or row status labels). */
+/** Main easy-view shell: short status tint at top (stops ~15%), then the card surface (toolbar filter or row status labels); the tint is the status's tone (lib/billStatusDisplay.ts). */
 function easyViewMainBackgroundClass(status: string): string {
-  switch (status) {
-    case "Payment Requested":
-      return "bg-gradient-to-b from-secondary/10 from-[0%] to-white to-[15%]";
-    case "Partially Paid":
-      return "bg-gradient-to-b from-[#70ebba]/10 from-[0%] to-white to-[15%]";
-    case "Returned":
-      return "bg-gradient-to-b from-[#EA9713]/10 from-[0%] to-white to-[15%]";
-    case "Paid":
-      return "bg-gradient-to-b from-gray-300/10 from-[0%] to-white to-[15%]";
-    case "Voided":
-      return "bg-gradient-to-b from-[#FF6B6B]/10 from-[0%] to-white to-[15%]";
-    case "Draft":
-      return "bg-gradient-to-b from-[#656565]/10 from-[0%] to-white to-[15%]";
-    case "All":
-      return "bg-gradient-to-b from-gray-200/10 from-[0%] to-white to-[15%]";
-    default:
-      return "bg-gradient-to-b from-gray-200/10 from-[0%] to-white to-[15%]";
-  }
+  return `bg-gradient-to-b ${billStatusGradientFromClass(status)} from-[0%] to-surface-card to-[15%]`;
 }
 
 export type PaymentRequestEasyViewProps = {
@@ -237,7 +213,7 @@ function EasyViewStatusCell({
     return (
       <button
         type="button"
-        className={`${statusDisplayBadgeClass("Voided")} ${statusHoverClass} box-border w-full min-w-0 max-w-full shrink-0 cursor-pointer whitespace-nowrap border-0 text-center focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary`}
+        className={`${statusDisplayBadgeClass("Voided")} ${statusHoverClass} box-border w-full min-w-0 max-w-full shrink-0 cursor-pointer whitespace-nowrap border-0 text-center focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus`}
         onClick={(e) => {
           stop(e);
           onDraftBillOpen(row.id);
@@ -252,7 +228,7 @@ function EasyViewStatusCell({
     return (
       <button
         type="button"
-        className={`${statusDisplayBadgeClass("Returned")} ${statusHoverClass} box-border w-full min-w-0 max-w-full shrink-0 cursor-pointer whitespace-nowrap border-0 text-center focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary`}
+        className={`${statusDisplayBadgeClass("Returned")} ${statusHoverClass} box-border w-full min-w-0 max-w-full shrink-0 cursor-pointer whitespace-nowrap border-0 text-center focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus`}
         onClick={(e) => {
           stop(e);
           onDraftBillOpen(row.id);
@@ -267,7 +243,7 @@ function EasyViewStatusCell({
     return (
       <button
         type="button"
-        className={`${statusDisplayBadgeClass("Draft")} ${statusHoverClass} box-border w-full min-w-0 max-w-full shrink-0 cursor-pointer whitespace-nowrap border-0 text-center focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary`}
+        className={`${statusDisplayBadgeClass("Draft")} ${statusHoverClass} box-border w-full min-w-0 max-w-full shrink-0 cursor-pointer whitespace-nowrap border-0 text-center focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus`}
         onClick={(e) => {
           stop(e);
           onDraftBillOpen(row.id);
@@ -282,7 +258,7 @@ function EasyViewStatusCell({
     return (
       <button
         type="button"
-        className={`${statusDisplayBadgeClass("Paid")} ${statusHoverClass} box-border w-full min-w-0 max-w-full shrink-0 cursor-pointer whitespace-nowrap text-center focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary`}
+        className={`${statusDisplayBadgeClass("Paid")} ${statusHoverClass} box-border w-full min-w-0 max-w-full shrink-0 cursor-pointer whitespace-nowrap text-center focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus`}
         onClick={(e) => {
           stop(e);
           onPaidStatusOpen(row.id);
@@ -297,7 +273,7 @@ function EasyViewStatusCell({
     return (
       <button
         type="button"
-        className={`${statusDisplayBadgeClass("Partially Paid")} ${statusHoverClass} box-border w-full min-w-0 max-w-full shrink-0 cursor-pointer whitespace-nowrap border-0 text-center focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary disabled:cursor-not-allowed disabled:hover:brightness-100 disabled:hover:shadow-none`}
+        className={`${statusDisplayBadgeClass("Partially Paid")} ${statusHoverClass} box-border w-full min-w-0 max-w-full shrink-0 cursor-pointer whitespace-nowrap border-0 text-center focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus disabled:cursor-not-allowed disabled:hover:brightness-100 disabled:hover:shadow-none`}
         onClick={(e) => {
           stop(e);
           if (!isElevated) return;
@@ -313,7 +289,7 @@ function EasyViewStatusCell({
     return (
       <button
         type="button"
-        className={`${EASY_VIEW_STATUS_CELL} ${statusHoverClass} cursor-pointer border border-transparent bg-secondary text-white disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:brightness-100 disabled:hover:shadow-none`}
+        className={`${EASY_VIEW_STATUS_CELL} ${statusHoverClass} cursor-pointer border border-transparent bg-action-primary text-action-on-primary disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:brightness-100 disabled:hover:shadow-none`}
         onClick={(e) => {
           stop(e);
           if (!isElevated) return;
@@ -327,7 +303,7 @@ function EasyViewStatusCell({
   }
   return (
     <span
-      className={`${EASY_VIEW_STATUS_CELL} truncate font-medium text-primary/80`}
+      className={`${EASY_VIEW_STATUS_CELL} truncate font-medium text-text-secondary`}
       title={row.status}
       onClick={stop}
     >
@@ -352,7 +328,7 @@ function EasyViewSortChevronButton({
   return (
     <button
       type="button"
-      className={`inline-flex size-7 shrink-0 cursor-pointer items-center justify-center rounded outline-none hover:bg-primary/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary ${active ? "" : "opacity-60"}`}
+      className={`inline-flex size-7 shrink-0 cursor-pointer items-center justify-center rounded outline-none hover:bg-state-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus ${active ? "" : "opacity-60"}`}
       aria-label={ariaLabel}
       title={title}
       aria-pressed={active}
@@ -362,7 +338,7 @@ function EasyViewSortChevronButton({
       }}
     >
       <span className="inline-flex size-5 items-center justify-center" aria-hidden>
-        <span className="material-symbols-outlined block text-[18px] leading-none text-primary">
+        <span className="material-symbols-outlined block text-[18px] leading-none text-text-secondary">
           {!active ? "expand_more" : sortDir === "asc" ? "expand_less" : "expand_more"}
         </span>
       </span>
@@ -582,7 +558,7 @@ export function PaymentRequestEasyView({
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <div className="flex w-full min-w-0 flex-wrap items-center justify-between gap-2">
           <span
-            className="min-w-0 truncate text-[18px] font-semibold text-black"
+            className="min-w-0 truncate text-[18px] font-semibold text-text-primary"
             title={headerStatusLabel}
           >
             {headerStatusLabel}
@@ -593,7 +569,7 @@ export function PaymentRequestEasyView({
         <div ref={listScrollRef} className="min-h-0 flex-1 overflow-auto">
           <div className="mb-2 flex flex-col gap-2 md:hidden">
             <div className="flex items-center gap-1">
-              <span className="text-sm font-medium text-primary">Supplier</span>
+              <span className="text-sm font-medium text-text-secondary">Supplier</span>
               <EasyViewSortChevronButton
                 sortDir={sort.dir}
                 active={sort.key === "contact"}
@@ -603,7 +579,7 @@ export function PaymentRequestEasyView({
               />
             </div>
             <div className="flex items-center gap-1">
-              <span className="text-sm font-medium text-primary">Submitted date</span>
+              <span className="text-sm font-medium text-text-secondary">Submitted date</span>
               <EasyViewSortChevronButton
                 sortDir={sort.dir}
                 active={sort.key === "submittedDate"}
@@ -613,7 +589,7 @@ export function PaymentRequestEasyView({
               />
             </div>
             <div className="flex items-center gap-1">
-              <span className="text-sm font-medium text-primary">Status</span>
+              <span className="text-sm font-medium text-text-secondary">Status</span>
               <EasyViewSortChevronButton
                 sortDir={sort.dir}
                 active={sort.key === "status"}
@@ -623,7 +599,7 @@ export function PaymentRequestEasyView({
               />
             </div>
             <div className="flex items-center gap-1">
-              <span className="text-sm font-medium text-primary">Unpaid amount</span>
+              <span className="text-sm font-medium text-text-secondary">Unpaid amount</span>
               <EasyViewSortChevronButton
                 sortDir={sort.dir}
                 active={sort.key === "unpaidAmount"}
@@ -636,37 +612,37 @@ export function PaymentRequestEasyView({
           {loading ? (
             <div className={EASY_VIEW_HEADER_GRID} aria-hidden>
               <div className={easyViewHeaderCheckboxTd}>
-                <div className="h-4 w-4 shrink-0 rounded bg-gray-200/90 animate-pulse" />
+                <div className="h-4 w-4 shrink-0 rounded bg-border-default/90 animate-pulse" />
               </div>
               <div
                 className={`${EASY_VIEW_HEADER_CELL} ${EASY_VIEW_TD_BASE} flex items-end justify-start gap-1 pb-1`}
               >
-                <div className="h-3.5 w-[min(100%,11rem)] rounded-md bg-gray-200/90 animate-pulse" />
-                <div className="size-7 shrink-0 rounded bg-gray-200/90 animate-pulse" />
+                <div className="h-3.5 w-[min(100%,11rem)] rounded-md bg-border-default/90 animate-pulse" />
+                <div className="size-7 shrink-0 rounded bg-border-default/90 animate-pulse" />
               </div>
               <div
                 className={`${EASY_VIEW_HEADER_CELL} ${EASY_VIEW_TD_BASE} flex items-end justify-start gap-1 pb-1`}
               >
-                <div className="h-3.5 w-[min(100%,9.5rem)] rounded-md bg-gray-200/90 animate-pulse" />
-                <div className="size-7 shrink-0 rounded bg-gray-200/90 animate-pulse" />
+                <div className="h-3.5 w-[min(100%,9.5rem)] rounded-md bg-border-default/90 animate-pulse" />
+                <div className="size-7 shrink-0 rounded bg-border-default/90 animate-pulse" />
               </div>
               <div
                 className={`${EASY_VIEW_HEADER_CELL} ${EASY_VIEW_TD_BASE} flex items-end justify-start gap-1 pb-1`}
               >
-                <div className="h-3.5 w-[min(100%,6rem)] rounded-md bg-gray-200/90 animate-pulse" />
+                <div className="h-3.5 w-[min(100%,6rem)] rounded-md bg-border-default/90 animate-pulse" />
                 <span className="size-7 shrink-0" aria-hidden />
               </div>
               <div
                 className={`${EASY_VIEW_HEADER_CELL} ${EASY_VIEW_TD_BASE} flex items-end justify-start gap-1 pb-1`}
               >
-                <div className="h-3.5 w-[min(100%,7.5rem)] rounded-md bg-gray-200/90 animate-pulse" />
-                <div className="size-7 shrink-0 rounded bg-gray-200/90 animate-pulse" />
+                <div className="h-3.5 w-[min(100%,7.5rem)] rounded-md bg-border-default/90 animate-pulse" />
+                <div className="size-7 shrink-0 rounded bg-border-default/90 animate-pulse" />
               </div>
               <div
                 className={`${EASY_VIEW_HEADER_CELL} ${EASY_VIEW_TD_BASE} flex items-end justify-start gap-1 pb-1`}
               >
-                <div className="h-3.5 w-[min(100%,5rem)] rounded-md bg-gray-200/90 animate-pulse" />
-                <div className="size-7 shrink-0 rounded bg-gray-200/90 animate-pulse" />
+                <div className="h-3.5 w-[min(100%,5rem)] rounded-md bg-border-default/90 animate-pulse" />
+                <div className="size-7 shrink-0 rounded bg-border-default/90 animate-pulse" />
               </div>
             </div>
           ) : (
@@ -757,17 +733,17 @@ export function PaymentRequestEasyView({
               {Array.from({ length: 6 }, (_, i) => (
                 <li
                   key={`sk-${i}`}
-                  className={`${EASY_VIEW_ROW_GRID} rounded-lg border border-gray-200 bg-white`}
+                  className={`${EASY_VIEW_ROW_GRID} rounded-lg border border-border-default bg-surface-card`}
                 >
                   <div className={easyViewCheckboxTd}>
-                    <div className="h-4 w-4 shrink-0 animate-pulse rounded bg-gray-200" />
+                    <div className="h-4 w-4 shrink-0 animate-pulse rounded bg-border-default" />
                   </div>
                   <div className={`${easyViewContactTd} space-y-2 py-0.5`}>
-                    <div className="h-4 max-w-[14rem] animate-pulse rounded bg-gray-200" />
-                    <div className="h-3 max-w-[min(100%,20rem)] animate-pulse rounded bg-gray-100" />
+                    <div className="h-4 max-w-[14rem] animate-pulse rounded bg-border-default" />
+                    <div className="h-3 max-w-[min(100%,20rem)] animate-pulse rounded bg-surface-sunk" />
                   </div>
                   <div className={easyViewSubmittedTd}>
-                    <div className="h-4 w-[9.5rem] max-w-full shrink-0 animate-pulse rounded-md bg-gray-200 tabular-nums" />
+                    <div className="h-4 w-[9.5rem] max-w-full shrink-0 animate-pulse rounded-md bg-border-default tabular-nums" />
                   </div>
                   <div className={easyViewAttachmentTd}>
                     <div
@@ -775,25 +751,25 @@ export function PaymentRequestEasyView({
                       aria-hidden
                     >
                       <div className={EASY_VIEW_BANKSLIP_SLOT}>
-                        <div className="h-9 w-14 max-w-full animate-pulse rounded-lg bg-gray-200" />
+                        <div className="h-9 w-14 max-w-full animate-pulse rounded-lg bg-border-default" />
                       </div>
-                      <div className="h-[18px] w-[18px] shrink-0 animate-pulse rounded bg-gray-200" />
+                      <div className="h-[18px] w-[18px] shrink-0 animate-pulse rounded bg-border-default" />
                     </div>
                   </div>
                   <div className={easyViewUnpaidTd}>
                     <div className="flex min-w-0 flex-col gap-1.5 tabular-nums">
-                      <div className="h-4 w-28 animate-pulse rounded bg-gray-200 sm:h-5" />
-                      <div className="h-3 w-36 max-w-full animate-pulse rounded bg-gray-100" />
+                      <div className="h-4 w-28 animate-pulse rounded bg-border-default sm:h-5" />
+                      <div className="h-3 w-36 max-w-full animate-pulse rounded bg-surface-sunk" />
                     </div>
                   </div>
                   <div className={easyViewStatusTd}>
-                    <div className="h-7 w-full min-h-[42px] max-w-full animate-pulse rounded-lg bg-gray-200 sm:h-[42px]" />
+                    <div className="h-7 w-full min-h-[42px] max-w-full animate-pulse rounded-lg bg-border-default sm:h-[42px]" />
                   </div>
                 </li>
               ))}
             </ul>
           ) : rows.length === 0 ? (
-            <div className="rounded-lg border border-dashed border-gray-200 bg-gray-50/50 px-4 py-12 text-center text-sm text-primary/60">
+            <div className="rounded-lg border border-dashed border-border-default bg-surface-sunk px-4 py-12 text-center text-sm text-text-muted">
               Hmm, nothing here with this status just yet.
             </div>
           ) : (
@@ -808,15 +784,15 @@ export function PaymentRequestEasyView({
                   <li
                     key={row.id}
                     data-easy-view-row={row.id}
-                    className={`flex flex-col overflow-visible rounded-lg border bg-white transition-[opacity,colors] duration-200 ${
-                      isRowSelected ? "border-secondary/50" : "border-gray-200"
+                    className={`flex flex-col overflow-visible rounded-lg border bg-surface-card transition-[opacity,colors] duration-200 ${
+                      isRowSelected ? "border-border-selected" : "border-border-default"
                     } ${dimRow ? "opacity-20" : "opacity-100"}`}
                   >
                     {/* The grid lives on this wrapper, not the anchor, so the checkbox can sit
                         outside the link: stopPropagation would not cancel the navigation and
                         preventDefault would cancel the checkbox's own toggle. */}
                     <div
-                      className={`${EASY_VIEW_ROW_GRID} cursor-pointer transition-colors hover:border-primary/20 hover:bg-gray-50/80`}
+                      className={`${EASY_VIEW_ROW_GRID} cursor-pointer transition-colors hover:border-border-default hover:bg-state-hover`}
                     >
                       <div className={easyViewCheckboxTd}>
                         <input
@@ -845,7 +821,7 @@ export function PaymentRequestEasyView({
                       >
                         <div className={easyViewContactTd}>
                           <div className="flex min-w-0 flex-col gap-0.5">
-                            <span className="text-sm font-semibold text-primary sm:text-base">
+                            <span className="text-sm font-semibold text-text-secondary sm:text-base">
                               {row.contactTitle}
                             </span>
                           </div>
@@ -863,14 +839,14 @@ export function PaymentRequestEasyView({
                               />
                             </div>
                             <div className="relative group inline-block transform translate-y-[2px]">
-                              <span className="material-symbols-outlined text-[16px] cursor-pointer text-black hover:text-stone-800 block">
+                              <span className="material-symbols-outlined text-[16px] cursor-pointer text-text-primary hover:text-text-primary block">
                                 info
                               </span>
-                              <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 hidden group-hover:block bg-gray-950 text-white text-xs rounded-md py-2 px-3 whitespace-nowrap shadow-lg z-10 pointer-events-none">
+                              <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 hidden group-hover:block bg-text-primary text-text-inverse text-xs rounded-md py-2 px-3 whitespace-nowrap shadow-lg z-10 pointer-events-none">
                                 {row.contactCaption?.trim()
                                   ? row.contactCaption
                                   : "No description added"}
-                                <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-950"></div>
+                                <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-null"></div>
                               </div>
                             </div>
                           </div>
@@ -880,13 +856,13 @@ export function PaymentRequestEasyView({
                             <div className="flex min-w-0 flex-col gap-0.5">
                               {row.unpaidAmount ? (
                                 <span
-                                  className={`whitespace-nowrap text-sm font-semibold sm:text-base ${unpaidAmountClass(row.status)}`}
+                                  className={`whitespace-nowrap text-sm font-semibold sm:text-base ${unpaidAmountClass}`}
                                 >
                                   {row.unpaidAmount}
                                 </span>
                               ) : null}
                               {row.invoiceTotal ? (
-                                <span className="whitespace-nowrap text-xs text-primary/65 tabular-nums sm:text-sm">
+                                <span className="whitespace-nowrap text-xs text-text-secondary tabular-nums sm:text-sm">
                                   (Inv total {entityCurrency} {row.invoiceTotal})
                                 </span>
                               ) : null}
@@ -906,7 +882,7 @@ export function PaymentRequestEasyView({
                     </div>
                     {isPayPanelOpen ? (
                       <div
-                        className="border-t border-gray-200 bg-gray-50/50 p-4 sm:p-5"
+                        className="border-t border-border-default bg-surface-sunk p-4 sm:p-5"
                         onClick={(e) => e.stopPropagation()}
                       >
                         <div className="flex w-full min-w-0 flex-col gap-4 sm:flex-row sm:items-start sm:gap-6 sm:justify-between">
@@ -929,7 +905,7 @@ export function PaymentRequestEasyView({
                       </div>
                     ) : isDraftDetailOpen ? (
                       <div
-                        className="border-t border-gray-200 bg-gray-50/50 p-4 sm:p-5"
+                        className="border-t border-border-default bg-surface-sunk p-4 sm:p-5"
                         onClick={(e) => e.stopPropagation()}
                       >
                         <div className="w-full min-w-0 max-w-full">
@@ -963,12 +939,12 @@ export function PaymentRequestEasyView({
         </div>
         {/* Sibling of the scroll container, so the pager stays pinned below the list. */}
         {pagination ? (
-          <div className="shrink-0 border-t border-gray-100 pb-3 pt-2">{pagination}</div>
+          <div className="shrink-0 border-t border-border-subtle pb-3 pt-2">{pagination}</div>
         ) : null}
       </div>
 
       <div
-        className="hidden min-h-0 w-px shrink-0 self-stretch bg-gray-200 min-[1650px]:block"
+        className="hidden min-h-0 w-px shrink-0 self-stretch bg-border-default min-[1650px]:block"
         aria-hidden
       />
 
@@ -983,7 +959,7 @@ export function PaymentRequestEasyView({
           >
             <div className="mb-3 flex w-full min-w-0 shrink-0">
               <span
-                className="min-w-0 truncate text-[18px] font-semibold text-black"
+                className="min-w-0 truncate text-[18px] font-semibold text-text-primary"
                 title="Invoice"
               >
                 Invoice

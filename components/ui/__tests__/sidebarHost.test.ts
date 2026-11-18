@@ -116,11 +116,11 @@ describe("links", () => {
 // Takes the path since 2026-10-12, instead of reading window.location itself: the packaged
 // sidebar feeds it from this app's router (sidebarHost.usePathname), so it is a pure function.
 describe("currentOf", () => {
-  it("is null on every page: no menu item is this app's own since Settings moved (2026-11-10)", () => {
+  it("marks Bills current on the bills pages (owner, 2026-11-18), and nothing elsewhere", () => {
+    expect(currentOf("/entity/360812e1/olive-and-vine/payment-request")).toBe("bills");
+    expect(currentOf("/entity/360812e1/olive-and-vine/payment-request/PR-0001")).toBe("bills");
     for (const path of [
       "/entity/360812e1/olive-and-vine/settings/payment-request",
-      "/entity/360812e1/olive-and-vine/payment-request",
-      "/entity/360812e1/olive-and-vine/payment-request/PR-0001",
       "/landing",
       "/",
       "",

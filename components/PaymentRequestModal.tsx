@@ -114,7 +114,7 @@ const isReadable = (file: File) =>
 function getUploadedFileIconInfo(filename: string): { icon: string; iconClass: string } {
   const ext = filename.trim().split(".").pop()?.toLowerCase() ?? "";
   if (ext === "pdf") {
-    return { icon: "picture_as_pdf", iconClass: "text-red-600" };
+    return { icon: "picture_as_pdf", iconClass: "text-status-danger-ink" };
   }
   if (
     ext === "jpg" ||
@@ -125,12 +125,12 @@ function getUploadedFileIconInfo(filename: string): { icon: string; iconClass: s
     ext === "webp" ||
     ext === "gif"
   ) {
-    return { icon: "image", iconClass: "text-sky-600" };
+    return { icon: "image", iconClass: "text-status-info-ink" };
   }
   if (ext === "html" || ext === "htm") {
-    return { icon: "html", iconClass: "text-orange-600" };
+    return { icon: "html", iconClass: "text-status-warning-ink" };
   }
-  return { icon: "draft", iconClass: "text-primary" };
+  return { icon: "draft", iconClass: "text-text-secondary" };
 }
 
 type ValidatedField =
@@ -228,7 +228,7 @@ function FieldLabel({
   return (
     <label
       htmlFor={htmlFor}
-      className="mb-1.5 block text-[11px] font-semibold tracking-wide text-gray-700 sm:text-xs"
+      className="mb-1.5 block text-[11px] font-semibold tracking-wide text-text-secondary sm:text-xs"
     >
       {children}
       {required ? <RequiredMark /> : null}
@@ -827,7 +827,7 @@ export function PaymentRequestModal({
       <button
         type="button"
         aria-label="Close dialog"
-        className="absolute inset-0 bg-black/35 backdrop-blur-[1px]"
+        className="absolute inset-0 bg-overlay-scrim backdrop-blur-[1px]"
         onClick={onClose}
       />
       <div
@@ -835,20 +835,20 @@ export function PaymentRequestModal({
         aria-modal="true"
         aria-labelledby={titleId}
         aria-describedby={previewFile ? previewSubtitleId : undefined}
-        className="relative z-[1] flex max-h-[min(100dvh-1rem,880px)] w-full min-w-0 max-w-[520px] flex-col rounded-xl bg-white shadow-xl ring-1 ring-black/5 sm:max-h-[min(92dvh,880px)] sm:rounded-2xl"
+        className="relative z-[1] flex max-h-[min(100dvh-1rem,880px)] w-full min-w-0 max-w-[520px] flex-col rounded-xl bg-surface-card shadow-xl ring-1 ring-border-subtle sm:max-h-[min(92dvh,880px)] sm:rounded-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-gray-100 px-4 pb-3 pt-4 sm:gap-4 sm:px-6 sm:pb-4 sm:pt-6">
+        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-border-subtle px-4 pb-3 pt-4 sm:gap-4 sm:px-6 sm:pb-4 sm:pt-6">
           <h2
             id={titleId}
-            className="min-w-0 pr-2 text-lg font-bold leading-snug text-black sm:text-xl md:text-2xl"
+            className="min-w-0 pr-2 text-lg font-bold leading-snug text-text-primary sm:text-xl md:text-2xl"
           >
             Add Payment Request
           </h2>
           <button
             type="button"
             onClick={onClose}
-            className="-mr-1 -mt-1 flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-lg text-primary transition-colors hover:bg-gray-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary"
+            className="-mr-1 -mt-1 flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-lg text-text-secondary transition-colors hover:bg-state-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus"
             aria-label="Close"
           >
             <span className="material-symbols-outlined text-[22px] leading-none" aria-hidden>
@@ -870,23 +870,23 @@ export function PaymentRequestModal({
                   onViewFull={() => setViewerOpen(true)}
                 />
               ) : previewFile && !previewObjectUrl ? (
-                <div className="flex min-h-[156px] items-center justify-center rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 px-4 text-center text-sm text-primary/60 sm:min-h-[176px]">
+                <div className="flex min-h-[156px] items-center justify-center rounded-lg border-2 border-dashed border-border-input bg-surface-sunk px-4 text-center text-sm text-text-muted sm:min-h-[176px]">
                   Loading preview…
                 </div>
               ) : (
-                <div className="flex min-h-[156px] items-center justify-center rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 px-4 text-center text-sm text-primary/60 sm:min-h-[176px]">
+                <div className="flex min-h-[156px] items-center justify-center rounded-lg border-2 border-dashed border-border-input bg-surface-sunk px-4 text-center text-sm text-text-muted sm:min-h-[176px]">
                   Pick a file and I&apos;ll show it here.
                 </div>
               )}
             </div>
 
             <div className="mb-2 flex items-baseline justify-between gap-3">
-              <p className="min-w-0 text-[11px] font-semibold uppercase tracking-wide text-primary/80">
+              <p className="min-w-0 text-[11px] font-semibold uppercase tracking-wide text-text-secondary">
                 Uploaded files ({uploadedFiles.length})
                 <RequiredMark />
               </p>
               {uploadedFiles.length > 0 ? (
-                <span className="shrink-0 text-[10px] font-medium text-primary/55 sm:text-[11px]">
+                <span className="shrink-0 text-[10px] font-medium text-text-muted sm:text-[11px]">
                   Click the file to preview
                 </span>
               ) : null}
@@ -899,10 +899,10 @@ export function PaymentRequestModal({
                   <li
                     key={id}
                     className={
-                      "relative flex items-center justify-start rounded-lg border bg-white px-3 py-2.5 pr-11 sm:gap-2 sm:pr-3 " +
+                      "relative flex items-center justify-start rounded-lg border bg-surface-card px-3 py-2.5 pr-11 sm:gap-2 sm:pr-3 " +
                       (selected
-                        ? "border-secondary/50 ring-2 ring-secondary/20"
-                        : "border-gray-300")
+                        ? "border-border-selected ring-2 ring-border-selected/20"
+                        : "border-border-input")
                     }
                   >
                     <button
@@ -918,14 +918,14 @@ export function PaymentRequestModal({
                       >
                         {icon}
                       </span>
-                      <span className="min-w-0 break-words text-left text-sm leading-snug text-black sm:flex-1 sm:truncate sm:leading-normal">
+                      <span className="min-w-0 break-words text-left text-sm leading-snug text-text-primary sm:flex-1 sm:truncate sm:leading-normal">
                         {file.name}
                       </span>
                     </button>
                     <button
                       type="button"
                       onClick={() => removeFile(id)}
-                      className="absolute right-2 top-1/2 flex h-8 w-8 shrink-0 -translate-y-1/2 items-center justify-center rounded-md text-primary/60 transition-colors hover:bg-gray-100 hover:text-primary sm:static sm:translate-y-0"
+                      className="absolute right-2 top-1/2 flex h-8 w-8 shrink-0 -translate-y-1/2 items-center justify-center rounded-md text-text-muted transition-colors hover:bg-state-hover hover:text-text-secondary sm:static sm:translate-y-0"
                       aria-label={`Remove ${file.name}`}
                     >
                       <span
@@ -956,19 +956,19 @@ export function PaymentRequestModal({
               />
               <div className="pointer-events-none">
                 <div
-                  className={`flex min-h-[156px] flex-col items-center justify-center gap-3 overflow-visible rounded-lg border-2 border-dashed px-4 py-5 sm:min-h-[176px] sm:gap-4 sm:py-6 ${fieldErrors.attachments ? "border-red-500 bg-red-50/40" : "border-gray-300 bg-gray-50"}`}
+                  className={`flex min-h-[156px] flex-col items-center justify-center gap-3 overflow-visible rounded-lg border-2 border-dashed px-4 py-5 sm:min-h-[176px] sm:gap-4 sm:py-6 ${fieldErrors.attachments ? "border-action-danger bg-status-danger-bg" : "border-border-input bg-surface-sunk"}`}
                 >
                   <span
-                    className="material-symbols-outlined inline-block origin-center text-[48px] leading-none text-gray-400 [font-variation-settings:'FILL'_0,'wght'_400,'GRAD'_0,'opsz'_48] scale-[1.78] sm:text-[48px] sm:scale-[2.02]"
+                    className="material-symbols-outlined inline-block origin-center text-[48px] leading-none text-text-disabled [font-variation-settings:'FILL'_0,'wght'_400,'GRAD'_0,'opsz'_48] scale-[1.78] sm:text-[48px] sm:scale-[2.02]"
                     aria-hidden
                   >
                     cloud_upload
                   </span>
                   <div className="flex flex-col items-center">
-                    <p className="px-2 text-center text-[14px] font-medium leading-tight text-gray-700">
+                    <p className="px-2 text-center text-[14px] font-medium leading-tight text-text-secondary">
                       Click or drag files here to upload
                     </p>
-                    <p className="mt-1 px-2 text-center text-[12px] leading-tight text-gray-400">
+                    <p className="mt-1 px-2 text-center text-[12px] leading-tight text-text-disabled">
                       PDF, JPEG, PNG, HTML (Max 10MB)
                     </p>
                   </div>
@@ -977,7 +977,11 @@ export function PaymentRequestModal({
             </div>
 
             {fieldErrors.attachments ? (
-              <p id={attachmentsErrorId} className="mt-2 text-xs text-red-600" role="alert">
+              <p
+                id={attachmentsErrorId}
+                className="mt-2 text-xs text-status-danger-ink"
+                role="alert"
+              >
                 {fieldErrors.attachments}
               </p>
             ) : null}
@@ -1002,7 +1006,7 @@ export function PaymentRequestModal({
 
             {formError ? (
               <div
-                className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950"
+                className="mt-4 rounded-lg border border-status-warning-bg bg-status-warning-bg px-3 py-2 text-sm text-status-warning-ink"
                 role="alert"
               >
                 {formError}
@@ -1032,15 +1036,19 @@ export function PaymentRequestModal({
                   aria-invalid={!!fieldErrors.billNo}
                   aria-describedby={fieldErrors.billNo ? "pr-bill-no-error" : undefined}
                   className={
-                    "box-border h-11 min-h-[44px] w-full rounded-2xl border bg-white px-3 text-base text-black placeholder:text-gray-700 focus:outline-none focus:ring-2 sm:min-h-11 sm:text-sm " +
+                    "box-border h-11 min-h-[44px] w-full rounded-2xl border bg-surface-card px-3 text-base text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 sm:min-h-11 sm:text-sm " +
                     (fieldErrors.billNo
-                      ? "border-red-500 focus:border-red-500 focus:ring-red-200/50"
-                      : "border-gray-300 focus:border-secondary focus:ring-secondary/25")
+                      ? "border-action-danger focus:border-action-danger focus:ring-action-danger/20"
+                      : "border-border-input focus:border-border-focus focus:ring-border-focus/25")
                   }
                   placeholder="MBIOVI-115803031626"
                 />
                 {fieldErrors.billNo ? (
-                  <p id="pr-bill-no-error" className="mt-1 text-xs text-red-600" role="alert">
+                  <p
+                    id="pr-bill-no-error"
+                    className="mt-1 text-xs text-status-danger-ink"
+                    role="alert"
+                  >
                     {fieldErrors.billNo}
                   </p>
                 ) : null}
@@ -1063,16 +1071,16 @@ export function PaymentRequestModal({
                     invalid={!!fieldErrors.invoiceDate}
                     calendarAriaLabel="Open calendar for invoice date"
                     textInputClassName={
-                      "relative z-[1] box-border h-11 min-h-[44px] w-full rounded-2xl border bg-white py-0 pl-3 pr-3 text-base text-black placeholder:text-gray-700 focus:outline-none focus:ring-2 [color-scheme:light] sm:min-h-11 sm:text-sm " +
+                      "relative z-[1] box-border h-11 min-h-[44px] w-full rounded-2xl border bg-surface-card py-0 pl-3 pr-3 text-base text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 [color-scheme:light] sm:min-h-11 sm:text-sm " +
                       (fieldErrors.invoiceDate
-                        ? "border-red-500 focus:border-red-500 focus:ring-red-200/50"
-                        : "border-gray-300 focus:border-secondary focus:ring-secondary/25") +
+                        ? "border-action-danger focus:border-action-danger focus:ring-action-danger/20"
+                        : "border-border-input focus:border-border-focus focus:ring-border-focus/25") +
                       ring("invoiceDate")
                     }
                     calendarButtonClassName="hidden"
                   />
                   {fieldErrors.invoiceDate ? (
-                    <p className="mt-1 text-xs text-red-600" role="alert">
+                    <p className="mt-1 text-xs text-status-danger-ink" role="alert">
                       {fieldErrors.invoiceDate}
                     </p>
                   ) : null}
@@ -1094,16 +1102,16 @@ export function PaymentRequestModal({
                     invalid={!!fieldErrors.dueDate}
                     calendarAriaLabel="Open calendar for due date"
                     textInputClassName={
-                      "relative z-[1] box-border h-11 min-h-[44px] w-full rounded-2xl border bg-white py-0 pl-3 pr-3 text-base text-black placeholder:text-gray-700 focus:outline-none focus:ring-2 [color-scheme:light] sm:min-h-11 sm:text-sm " +
+                      "relative z-[1] box-border h-11 min-h-[44px] w-full rounded-2xl border bg-surface-card py-0 pl-3 pr-3 text-base text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 [color-scheme:light] sm:min-h-11 sm:text-sm " +
                       (fieldErrors.dueDate
-                        ? "border-red-500 focus:border-red-500 focus:ring-red-200/50"
-                        : "border-gray-300 focus:border-secondary focus:ring-secondary/25") +
+                        ? "border-action-danger focus:border-action-danger focus:ring-action-danger/20"
+                        : "border-border-input focus:border-border-focus focus:ring-border-focus/25") +
                       ring("dueDate")
                     }
                     calendarButtonClassName="hidden"
                   />
                   {fieldErrors.dueDate ? (
-                    <p className="mt-1 text-xs text-red-600" role="alert">
+                    <p className="mt-1 text-xs text-status-danger-ink" role="alert">
                       {fieldErrors.dueDate}
                     </p>
                   ) : null}
@@ -1119,12 +1127,12 @@ export function PaymentRequestModal({
                   <div
                     aria-label="Currency"
                     className={
-                      "box-border flex h-11 min-h-[44px] w-24 shrink-0 items-center justify-center rounded-l-2xl rounded-r-none border border-r-0 bg-white px-2 text-base text-black sm:min-h-11 sm:px-3 sm:text-sm " +
+                      "box-border flex h-11 min-h-[44px] w-24 shrink-0 items-center justify-center rounded-l-2xl rounded-r-none border border-r-0 bg-surface-card px-2 text-base text-text-primary sm:min-h-11 sm:px-3 sm:text-sm " +
                       (fieldErrors.amount ||
                       currency.status === "unset" ||
                       currency.status === "error"
-                        ? "border-red-500"
-                        : "border-gray-300")
+                        ? "border-action-danger"
+                        : "border-border-input")
                     }
                   >
                     {currency.status === "ready"
@@ -1141,38 +1149,38 @@ export function PaymentRequestModal({
                     aria-invalid={!!fieldErrors.amount}
                     aria-describedby={describedBy("amount")}
                     className={
-                      "box-border h-11 min-h-[44px] min-w-0 flex-1 rounded-l-none rounded-r-2xl border border-l-0 bg-white px-3 text-base text-black placeholder:text-gray-700 focus:outline-none focus:ring-2 sm:min-h-11 sm:text-sm " +
+                      "box-border h-11 min-h-[44px] min-w-0 flex-1 rounded-l-none rounded-r-2xl border border-l-0 bg-surface-card px-3 text-base text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 sm:min-h-11 sm:text-sm " +
                       (fieldErrors.amount
-                        ? "border-red-500 focus:border-red-500 focus:ring-red-200/50"
-                        : "border-gray-300 focus:border-secondary focus:ring-secondary/25") +
+                        ? "border-action-danger focus:border-action-danger focus:ring-action-danger/20"
+                        : "border-border-input focus:border-border-focus focus:ring-border-focus/25") +
                       ring("amount")
                     }
                   />
                 </div>
                 {readerExtras("amount")}
                 {fieldErrors.amount ? (
-                  <p className="mt-1 text-xs text-red-600" role="alert">
+                  <p className="mt-1 text-xs text-status-danger-ink" role="alert">
                     {fieldErrors.amount}
                   </p>
                 ) : null}
                 {currency.status === "unset" ? (
-                  <p className="mt-1 text-xs text-red-600" role="alert">
+                  <p className="mt-1 text-xs text-status-danger-ink" role="alert">
                     Your company has no currency set. Choose one in{" "}
                     <a
                       href={hubSettingsUrl(entityId, "general")}
-                      className="font-medium underline underline-offset-2 hover:opacity-80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary"
+                      className="font-medium underline underline-offset-2 hover:opacity-80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus"
                     >
                       Settings, under General
                     </a>
                     .
                   </p>
                 ) : currency.status === "error" ? (
-                  <p className="mt-1 text-xs text-red-600" role="alert">
+                  <p className="mt-1 text-xs text-status-danger-ink" role="alert">
                     We couldn&apos;t load your company&apos;s currency.{" "}
                     <button
                       type="button"
                       onClick={currency.retry}
-                      className="inline-flex min-h-[44px] cursor-pointer items-center font-medium underline underline-offset-2 hover:opacity-80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary"
+                      className="inline-flex min-h-[44px] cursor-pointer items-center font-medium underline underline-offset-2 hover:opacity-80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus"
                     >
                       Try again
                     </button>
@@ -1193,7 +1201,7 @@ export function PaymentRequestModal({
                   placeholder="Description (optional)"
                   aria-describedby={describedBy("description")}
                   className={
-                    "box-border h-11 min-h-[44px] w-full rounded-2xl border border-gray-300 bg-white px-3 text-base text-black placeholder:text-gray-700 focus:border-secondary focus:outline-none focus:ring-2 focus:ring-secondary/25 sm:min-h-11 sm:text-sm" +
+                    "box-border h-11 min-h-[44px] w-full rounded-2xl border border-border-input bg-surface-card px-3 text-base text-text-primary placeholder:text-text-secondary focus:border-border-focus focus:outline-none focus:ring-2 focus:ring-border-focus/25 sm:min-h-11 sm:text-sm" +
                     ring("description")
                   }
                 />
@@ -1220,7 +1228,7 @@ export function PaymentRequestModal({
                   error={!!fieldErrors.contact}
                 />
                 {fieldErrors.contact ? (
-                  <p className="mt-1 text-xs text-red-600" role="alert">
+                  <p className="mt-1 text-xs text-status-danger-ink" role="alert">
                     {fieldErrors.contact}
                   </p>
                 ) : null}
@@ -1248,7 +1256,7 @@ export function PaymentRequestModal({
                   searchable
                 />
                 {fieldErrors.accountCode ? (
-                  <p className="mt-1 text-xs text-red-600" role="alert">
+                  <p className="mt-1 text-xs text-status-danger-ink" role="alert">
                     {fieldErrors.accountCode}
                   </p>
                 ) : null}
@@ -1258,12 +1266,12 @@ export function PaymentRequestModal({
           </div>
         </div>
 
-        <div className="flex shrink-0 flex-col gap-2 border-t border-gray-100 px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:px-6 sm:py-5 sm:pb-5">
+        <div className="flex shrink-0 flex-col gap-2 border-t border-border-subtle px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:px-6 sm:py-5 sm:pb-5">
           <div className="order-1 flex w-full min-w-0 gap-2">
             <button
               type="button"
               onClick={handleCancel}
-              className="box-border h-12 min-h-[48px] min-w-0 flex-1 cursor-pointer rounded-lg border-2 border-secondary bg-white px-3 text-sm font-semibold text-secondary transition-colors hover:bg-secondary/10"
+              className="box-border h-12 min-h-[48px] min-w-0 flex-1 cursor-pointer rounded-lg border-2 border-action-secondary-border bg-surface-card px-3 text-sm font-semibold text-action-secondary-text transition-colors hover:bg-state-selected"
             >
               Cancel
             </button>
@@ -1271,7 +1279,7 @@ export function PaymentRequestModal({
               type="button"
               onClick={() => void handleConfirm()}
               disabled={confirmSubmitting || currencyBlocked}
-              className="box-border h-12 min-h-[48px] min-w-0 flex-1 rounded-lg border border-transparent bg-secondary px-4 text-sm font-bold text-white shadow-sm transition-opacity hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary enabled:cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
+              className="box-border h-12 min-h-[48px] min-w-0 flex-1 rounded-lg border border-transparent bg-action-primary px-4 text-sm font-bold text-action-on-primary shadow-sm transition-colors hover:bg-action-primary-hover active:bg-action-primary-pressed focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus enabled:cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
             >
               {confirmSubmitting ? "Confirming…" : "Confirm"}
             </button>
@@ -1280,7 +1288,7 @@ export function PaymentRequestModal({
             type="button"
             onClick={() => void handleSaveDraft()}
             disabled={draftSubmitting || currencyBlocked}
-            className="order-2 box-border h-12 min-h-[48px] w-full rounded-lg border border-gray-200 bg-white px-4 text-sm font-semibold text-primary transition-colors hover:bg-gray-50 enabled:cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
+            className="order-2 box-border h-12 min-h-[48px] w-full rounded-lg border border-border-default bg-surface-card px-4 text-sm font-semibold text-text-secondary transition-colors hover:bg-state-hover enabled:cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
           >
             {draftSubmitting ? "Saving…" : "Save as Draft"}
           </button>
@@ -1323,17 +1331,17 @@ function PaymentRequestInlinePreview({
           {icon}
         </span>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-medium text-black sm:text-base">{file.name}</p>
+          <p className="truncate text-sm font-medium text-text-primary sm:text-base">{file.name}</p>
           <p
             id={previewSubtitleId}
-            className="mt-1 text-[11px] font-medium tracking-wide text-primary/55 sm:text-xs"
+            className="mt-1 text-[11px] font-medium tracking-wide text-text-muted sm:text-xs"
           >
-            Document preview<span className="text-primary/35"> • </span>
+            Document preview<span className="text-text-disabled"> • </span>
             {formatFileSize(file.size)}
           </p>
         </div>
       </div>
-      <div className="relative mt-3 min-h-[min(60dvh,420px)] overflow-auto rounded-lg bg-black/5 p-2 sm:p-3">
+      <div className="relative mt-3 min-h-[min(60dvh,420px)] overflow-auto rounded-lg bg-state-hover p-2 sm:p-3">
         <ViewFullButton name={file.name} onClick={onViewFull} />
         <PreviewBlock {...fileToPreviewItem(file, objectUrl)} />
       </div>

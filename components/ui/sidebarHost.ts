@@ -18,7 +18,12 @@
 
 import { usePathname } from "next/navigation";
 
-import { setSidebarHost, type SidebarHost, type Viewer } from "@minty/shared/sidebar";
+import {
+  setSidebarHost,
+  type SideMenuCurrent,
+  type SidebarHost,
+  type Viewer,
+} from "@minty/shared/sidebar";
 import { guardLeave } from "@minty/shared/leaveGuard";
 
 import { ApiError, logoutSession } from "@/lib/api";
@@ -101,10 +106,9 @@ export const links = {
  * Takes the path rather than reading `window.location` itself, so it is a pure function the
  * packaged sidebar can feed from the app's router.
  */
-export function currentOf(
-  _pathname: string,
-): "profile" | "entities" | "subscriptions" | "settings" | null {
-  return null;
+/** The menu's Bills row highlights on the bills pages (owner, 2026-11-18). */
+export function currentOf(pathname: string): SideMenuCurrent {
+  return /^\/entity\/[^/]+\/[^/]+\/payment-request(\/|$)/.test(pathname) ? "bills" : null;
 }
 
 /** Hold the page still while the sidebar is open; the returned function lets it go. */

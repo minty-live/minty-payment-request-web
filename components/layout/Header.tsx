@@ -55,7 +55,7 @@ export function Header({
           className="h-9 w-9 shrink-0 object-contain sm:h-10 sm:w-10"
         />
       ) : null}
-      <span className="min-w-0 cursor-default truncate text-base font-semibold text-black sm:text-lg">
+      <span className="min-w-0 cursor-default truncate text-base font-semibold text-text-primary sm:text-lg">
         {title}
       </span>
     </>
@@ -66,7 +66,7 @@ export function Header({
       <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-2 sm:gap-3">
         <BackLink
           href={backHref}
-          className="inline-flex shrink-0 items-center gap-0.5 text-sm font-medium text-primary transition-colors hover:text-secondary sm:text-base"
+          className="inline-flex shrink-0 items-center gap-0.5 text-sm font-medium text-text-secondary transition-colors hover:text-text-link sm:text-base"
         >
           <span
             className="material-symbols-outlined text-[22px] leading-none sm:text-[24px]"
@@ -87,7 +87,7 @@ export function Header({
               className="h-9 w-9 shrink-0 object-contain sm:h-10 sm:w-10"
             />
           ) : null}
-          <span className="min-w-0 cursor-default truncate text-base font-semibold text-black sm:text-lg">
+          <span className="min-w-0 cursor-default truncate text-base font-semibold text-text-primary sm:text-lg">
             {title}
           </span>
           {titleActions ? <div className="flex shrink-0 items-center">{titleActions}</div> : null}
@@ -107,7 +107,7 @@ export function Header({
             />
           </Link>
         ) : null}
-        <span className="min-w-0 cursor-default truncate text-base font-semibold text-black sm:text-lg">
+        <span className="min-w-0 cursor-default truncate text-base font-semibold text-text-primary sm:text-lg">
           {title}
         </span>
         {titleActions ? <div className="flex shrink-0 items-center">{titleActions}</div> : null}
@@ -118,7 +118,7 @@ export function Header({
 
   return (
     <header
-      className={`bg-white ${noBorder ? "" : "border-b border-gray-200"} ${suppressTopSafeArea ? "" : "pt-[env(safe-area-inset-top,0px)]"}`}
+      className={`bg-surface-card ${noBorder ? "" : "border-b border-border-default"} ${suppressTopSafeArea ? "" : "pt-[env(safe-area-inset-top,0px)]"}`}
     >
       <div className="mx-auto flex w-full max-w-[1920px] flex-row flex-wrap items-center justify-between gap-2 px-4 py-3 sm:flex-nowrap sm:gap-3 sm:px-6 sm:py-4">
         <div
@@ -138,7 +138,7 @@ export function Header({
         >
           <span className="relative inline-flex shrink-0">
             <span
-              className="material-symbols-outlined text-[22px] leading-none text-primary sm:text-[26px]"
+              className="material-symbols-outlined text-[22px] leading-none text-text-secondary sm:text-[26px]"
               aria-hidden
             >
               corporate_fare
@@ -147,7 +147,7 @@ export function Header({
           {/* A plain 6.5rem, not min(100%,6.5rem): a percentage cap counts as no cap while the
               shrink-0 block around it is sized, so on a phone a long name made it cover the way
               back (fixed in minty-web's AppHeader and Flask's port too). */}
-          <span className="min-w-0 max-w-[6.5rem] truncate text-sm font-medium text-primary sm:max-w-[9rem] sm:text-base md:max-w-[14rem] lg:max-w-md">
+          <span className="min-w-0 max-w-[6.5rem] truncate text-sm font-medium text-text-secondary sm:max-w-[9rem] sm:text-base md:max-w-[14rem] lg:max-w-md">
             {companyName}
           </span>
           {/* The sidebar's two doors (components/ui/Sidebar.tsx, copied from minty-web): the

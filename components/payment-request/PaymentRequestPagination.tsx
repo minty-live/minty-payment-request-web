@@ -11,9 +11,9 @@ const MAX_INLINE_PAGES = 7;
 const ELLIPSIS = "…";
 
 const pageButtonBase =
-  "box-border inline-flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-lg text-sm font-medium tabular-nums transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary";
+  "box-border inline-flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-lg text-sm font-medium tabular-nums transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus";
 
-const chevronButtonClass = `${pageButtonBase} border border-gray-300 text-primary hover:bg-gray-50 disabled:cursor-not-allowed disabled:text-primary/30 disabled:hover:bg-transparent`;
+const chevronButtonClass = `${pageButtonBase} border border-border-input text-text-secondary hover:bg-state-hover disabled:cursor-not-allowed disabled:text-text-disabled disabled:hover:bg-transparent`;
 
 export type PaymentRequestPaginationProps = {
   /** 1-based. */
@@ -62,12 +62,12 @@ export function PaymentRequestPagination({
     <div
       className={`flex w-full min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between ${className}`}
     >
-      <p className="text-sm text-gray-500 tabular-nums">
+      <p className="text-sm text-text-muted tabular-nums">
         Showing {from}–{to} of {totalItems}
         {truncated ? "+" : ""} items
       </p>
       <div className="flex min-w-0 flex-wrap items-center gap-2 sm:gap-3">
-        <label htmlFor={selectId} className="shrink-0 text-sm text-gray-500">
+        <label htmlFor={selectId} className="shrink-0 text-sm text-text-muted">
           Items per page
         </label>
         <ThemedSelect
@@ -97,7 +97,7 @@ export function PaymentRequestPagination({
               item === ELLIPSIS ? (
                 <span
                   key={`gap-${i}`}
-                  className="inline-flex size-9 items-center justify-center text-sm text-gray-400"
+                  className="inline-flex size-9 items-center justify-center text-sm text-text-disabled"
                   aria-hidden
                 >
                   {ELLIPSIS}
@@ -108,8 +108,8 @@ export function PaymentRequestPagination({
                   type="button"
                   className={`${pageButtonBase} ${
                     item === page
-                      ? "bg-secondary text-white"
-                      : "border border-gray-300 text-primary hover:bg-gray-50"
+                      ? "bg-action-primary text-action-on-primary"
+                      : "border border-border-input text-text-secondary hover:bg-state-hover"
                   }`}
                   aria-current={item === page ? "page" : undefined}
                   aria-label={`Page ${item}`}

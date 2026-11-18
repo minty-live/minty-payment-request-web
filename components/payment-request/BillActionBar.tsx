@@ -9,7 +9,7 @@ import { useMintyOnly } from "@/lib/useMintyOnly";
 const ROW_MENU_MIN_WIDTH_PX = 160;
 
 const rowMenuButtonClass =
-  "box-border inline-flex h-9 min-h-9 w-9 min-w-9 cursor-pointer items-center justify-center rounded-lg text-primary transition-colors hover:bg-gray-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary disabled:cursor-not-allowed disabled:text-primary/35 disabled:hover:bg-transparent sm:h-10 sm:min-h-10 sm:w-10 sm:min-w-10";
+  "box-border inline-flex h-9 min-h-9 w-9 min-w-9 cursor-pointer items-center justify-center rounded-lg text-text-secondary transition-colors hover:bg-state-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus disabled:cursor-not-allowed disabled:text-text-disabled disabled:hover:bg-transparent sm:h-10 sm:min-h-10 sm:w-10 sm:min-w-10";
 
 type BillActionBarProps = {
   onDeleteBill?: () => void;
@@ -106,7 +106,7 @@ export function BillActionBar({
             id={menuId}
             role="menu"
             aria-label="Payment actions"
-            className="fixed z-[400] rounded-lg border border-gray-200 bg-white py-1 shadow-lg"
+            className="fixed z-[400] rounded-lg border border-border-default bg-surface-card py-1 shadow-lg"
             style={{ top: pos.top, left: pos.left, minWidth: ROW_MENU_MIN_WIDTH_PX }}
           >
             {(overflowShowPublish || overflowShowRepublish) && !mintyOnly ? (
@@ -114,7 +114,7 @@ export function BillActionBar({
                 type="button"
                 role="menuitem"
                 disabled={publishItemDisabled}
-                className="block w-full cursor-pointer px-3 py-2 text-left text-sm font-medium text-primary transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
+                className="block w-full cursor-pointer px-3 py-2 text-left text-sm font-medium text-text-secondary transition-colors hover:bg-state-hover disabled:cursor-not-allowed disabled:opacity-50"
                 onClick={() => {
                   if (publishItemDisabled) return;
                   setMenuOpen(false);
@@ -134,7 +134,7 @@ export function BillActionBar({
               type="button"
               role="menuitem"
               disabled={overflowVoidDisabled}
-              className="block w-full cursor-pointer px-3 py-2 text-left text-sm font-medium text-red-600 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+              className="block w-full cursor-pointer px-3 py-2 text-left text-sm font-medium text-status-danger-ink transition-colors hover:bg-status-danger-bg disabled:cursor-not-allowed disabled:opacity-50"
               onClick={() => {
                 if (overflowVoidDisabled) return;
                 setMenuOpen(false);
@@ -154,7 +154,7 @@ export function BillActionBar({
         type="button"
         onClick={onDeleteBill}
         disabled={deleteDisabled}
-        className="inline-flex h-10 min-h-[44px] w-auto shrink-0 cursor-pointer items-center justify-center gap-2 rounded-md bg-rose-50 px-3 text-sm font-medium text-rose-600 transition-colors hover:bg-rose-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-400 disabled:cursor-not-allowed disabled:opacity-50 sm:px-4"
+        className="inline-flex h-10 min-h-[44px] w-auto shrink-0 cursor-pointer items-center justify-center gap-2 rounded-md bg-status-danger-bg px-3 text-sm font-medium text-status-danger-ink transition-colors hover:brightness-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-action-danger disabled:cursor-not-allowed disabled:opacity-50 sm:px-4"
       >
         {removePrimaryLabel}
         <span className="material-symbols-outlined text-[20px] leading-none" aria-hidden>
@@ -182,10 +182,10 @@ export function BillActionBar({
             <span
               role="status"
               aria-live="polite"
-              className="inline-flex items-center gap-1.5 whitespace-nowrap text-sm font-medium text-primary/60"
+              className="inline-flex items-center gap-1.5 whitespace-nowrap text-sm font-medium text-text-muted"
             >
               <span
-                className="material-symbols-outlined animate-spin text-secondary text-[20px] leading-none"
+                className="material-symbols-outlined animate-spin text-text-link text-[20px] leading-none"
                 aria-hidden
               >
                 progress_activity
@@ -228,18 +228,18 @@ export function BillActionBar({
           className={
             "inline-flex h-10 min-h-[44px] w-auto max-w-full shrink-0 items-center justify-center gap-1.5 rounded-full px-2.5 text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 sm:gap-2 sm:px-4 " +
             (isPublished
-              ? "border-2 border-emerald-500 bg-emerald-50 text-emerald-700 cursor-default"
+              ? "border-2 border-status-success-ink bg-status-success-bg text-status-success-ink cursor-default"
               : publishDisabled
-                ? "border border-primary/20 bg-[#F5F5F5] text-primary/40 cursor-not-allowed"
+                ? "border border-border-default bg-surface-sunk text-text-disabled cursor-not-allowed"
                 : publishPending
-                  ? "border border-primary/25 bg-white text-primary/50 cursor-wait"
-                  : "border border-primary/25 bg-white text-primary cursor-pointer hover:bg-primary/5 focus-visible:outline-secondary")
+                  ? "border border-border-default bg-surface-card text-text-muted cursor-wait"
+                  : "border border-border-default bg-surface-card text-text-secondary cursor-pointer hover:bg-state-hover focus-visible:outline-border-focus")
           }
         >
           {isPublished ? (
             <>
               <span
-                className="material-symbols-outlined text-[20px] leading-none text-emerald-500"
+                className="material-symbols-outlined text-[20px] leading-none text-status-success-ink"
                 aria-hidden
               >
                 check_circle

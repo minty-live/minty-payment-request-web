@@ -199,7 +199,7 @@ test.describe("the sidebar", () => {
       pagesOf(creds).list,
     );
     const select = await nav
-      .getByRole("link", { name: "Select Entity", exact: true })
+      .getByRole("link", { name: "Select Company", exact: true })
       .getAttribute("href");
     expect(select === `${enter}${encodeURIComponent("/entity")}`).toBe(true);
     const reports = await nav

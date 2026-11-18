@@ -12,6 +12,7 @@ import { recordPaymentButtonClass } from "./paymentRequestButtonClasses";
 import { HEADER_CHECKBOX_CLASS } from "./paymentRequestCheckboxClasses";
 import { type SortKey } from "@/lib/paymentRequestRowSort";
 import { useCompanyPages } from "@/lib/useCompanyPages";
+import { billStatusToneClass } from "@/lib/billStatusDisplay";
 
 const COLUMN_TITLES = [
   "Supplier / Description",
@@ -239,7 +240,8 @@ const DEMO_ROWS: PaymentRequestRow[] = [
   },
 ];
 
-const dataCellBase = "border-b border-gray-100 px-4 py-3 text-sm text-primary sm:px-5 sm:py-3.5";
+const dataCellBase =
+  "border-b border-border-subtle px-4 py-3 text-sm text-text-secondary sm:px-5 sm:py-3.5";
 const contactCellClass = `${dataCellBase} align-middle`;
 const invoiceDateCellClass = `${dataCellBase} align-middle`;
 const singleLineDateCellClass = `${dataCellBase} align-middle whitespace-nowrap tabular-nums min-w-[9rem]`;
@@ -250,45 +252,30 @@ const STATUS_TAG_UNIFORM =
 const singleLineStatusCellClass = `${dataCellBase} align-middle whitespace-nowrap min-w-0 sm:min-w-[11rem]`;
 const unpaidAmountCellClass = `${dataCellBase} align-middle tabular-nums min-w-[13rem]`;
 
-const actionBodyCellBg = "bg-secondary/8";
+const actionBodyCellBg = "bg-state-selected";
 
 const TABLE_SKELETON_ROW_COUNT = 6;
 const MOBILE_SKELETON_CARD_COUNT = 6;
 
-const statusTagClass = `inline-flex rounded-lg bg-[#EDEDED] text-xs font-medium text-[#C0C0C0] sm:text-sm ${STATUS_TAG_UNIFORM}`;
-
-/** Paid: #656565 text, border-primary/25. Payment Requested: secondary text + tinted fill, no border. */
-const statusTagPaidClass = `inline-flex rounded-lg border border-primary/25 bg-transparent text-xs font-semibold text-[#656565] sm:text-sm ${STATUS_TAG_UNIFORM}`;
-
-const statusTagPartiallyPaidClass = `inline-flex rounded-lg bg-[#70ebba]/10 text-xs font-semibold text-[#70ebba] sm:text-sm ${STATUS_TAG_UNIFORM}`;
-
-const statusTagPaymentRequestedClass = `inline-flex rounded-lg bg-secondary/10 text-xs font-semibold text-secondary sm:text-sm ${STATUS_TAG_UNIFORM}`;
-
-const statusTagReturnedClass = `inline-flex rounded-lg bg-[#EA9713]/10 text-xs font-semibold text-[#EA9713] sm:text-sm ${STATUS_TAG_UNIFORM}`;
-
-const statusTagVoidedClass = `inline-flex rounded-lg text-xs font-semibold text-[#FF6B6B] sm:text-sm ${STATUS_TAG_UNIFORM}`;
+/** A status's tag: one geometry, the colours from the one bill-status map (lib/billStatusDisplay.ts). */
+function statusTagClass(status: string): string {
+  return `inline-flex rounded-lg text-xs font-semibold sm:text-sm ${STATUS_TAG_UNIFORM} ${billStatusToneClass(status)}`;
+}
 
 const viewPaymentsButtonClass =
-  "box-border inline-flex h-10 min-h-10 w-max max-w-full cursor-pointer items-center justify-center gap-2 rounded-lg border-0 bg-secondary/15 px-3 text-xs font-medium text-secondary transition-colors hover:bg-secondary/25 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary disabled:cursor-not-allowed disabled:bg-[#F5F5F5] disabled:text-primary/40 disabled:hover:bg-[#F5F5F5] sm:h-[42px] sm:min-h-[42px] sm:px-4 sm:text-sm";
+  "box-border inline-flex h-10 min-h-10 w-max max-w-full cursor-pointer items-center justify-center gap-2 rounded-lg border-0 bg-state-selected px-3 text-xs font-medium text-text-link transition-colors hover:brightness-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus disabled:cursor-not-allowed disabled:bg-action-disabled disabled:text-text-disabled disabled:hover:bg-action-disabled sm:h-[42px] sm:min-h-[42px] sm:px-4 sm:text-sm";
 
 const uploadBankslipButtonClass =
-  "box-border inline-flex h-10 min-h-10 w-max max-w-full cursor-pointer items-center justify-center gap-2 rounded-lg border-2 border-secondary bg-white px-3 text-xs font-semibold text-secondary transition-colors hover:bg-secondary/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary sm:h-[42px] sm:min-h-[42px] sm:px-4 sm:text-sm";
+  "box-border inline-flex h-10 min-h-10 w-max max-w-full cursor-pointer items-center justify-center gap-2 rounded-lg border-2 border-action-secondary-border bg-surface-card px-3 text-xs font-semibold text-action-secondary-text transition-colors hover:bg-state-selected focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus sm:h-[42px] sm:min-h-[42px] sm:px-4 sm:text-sm";
 
 const uploadBankslipReadOnlyClass =
-  "box-border inline-flex h-10 min-h-10 w-max max-w-full cursor-default items-center justify-center gap-2 rounded-lg border-2 border-primary/15 bg-[#F5F5F5] px-3 text-xs font-semibold text-primary/40 sm:h-[42px] sm:min-h-[42px] sm:px-4 sm:text-sm";
+  "box-border inline-flex h-10 min-h-10 w-max max-w-full cursor-default items-center justify-center gap-2 rounded-lg border-2 border-border-default bg-surface-sunk px-3 text-xs font-semibold text-text-disabled sm:h-[42px] sm:min-h-[42px] sm:px-4 sm:text-sm";
 
 const rowMenuButtonClass =
-  "box-border inline-flex h-9 min-h-9 w-9 min-w-9 cursor-pointer items-center justify-center rounded-lg text-primary transition-colors hover:bg-gray-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary disabled:cursor-not-allowed disabled:text-primary/35 disabled:hover:bg-transparent sm:h-10 sm:min-h-10 sm:w-10 sm:min-w-10";
+  "box-border inline-flex h-9 min-h-9 w-9 min-w-9 cursor-pointer items-center justify-center rounded-lg text-text-secondary transition-colors hover:bg-state-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus disabled:cursor-not-allowed disabled:text-text-disabled disabled:hover:bg-transparent sm:h-10 sm:min-h-10 sm:w-10 sm:min-w-10";
 
-function unpaidAmountTextClass(status: string): string {
-  if (status === "Paid") return "text-[#656565]";
-  if (status === "Payment Requested") return "text-secondary";
-  if (status === "Partially Paid") return "text-[#70ebba]";
-  if (status === "Voided") return "text-[#FF6B6B]";
-  if (status === "Draft") return "text-[#656565]";
-  if (status === "Returned") return "text-[#EA9713]";
-  return "text-[#C0C0C0]";
-}
+/** Amounts are plain text, never coloured by their status (Part 13). */
+const unpaidAmountTextClass = "text-text-primary";
 
 type PaymentRequestTableProps = {
   /** The current page slice — already filtered and sorted by `PaymentRequestView`. */
@@ -414,29 +401,31 @@ function skeletonDesktopCellInner(title: PaymentRequestColumnTitle) {
     case "Supplier / Description":
       return (
         <div className="space-y-2 py-0.5">
-          <div className="h-4 max-w-[14rem] animate-pulse rounded bg-gray-200" />
-          <div className="h-3 max-w-md animate-pulse rounded bg-gray-100" />
+          <div className="h-4 max-w-[14rem] animate-pulse rounded bg-border-default" />
+          <div className="h-3 max-w-md animate-pulse rounded bg-surface-sunk" />
         </div>
       );
     case "Invoice Date":
     case "Submitted Date":
-      return <div className="h-4 w-[5.75rem] animate-pulse rounded bg-gray-200" />;
+      return <div className="h-4 w-[5.75rem] animate-pulse rounded bg-border-default" />;
     case "Status":
       return (
-        <div className="h-7 w-[7rem] animate-pulse rounded-lg bg-gray-200 sm:h-[42px] sm:min-w-[11rem] sm:w-[11rem]" />
+        <div className="h-7 w-[7rem] animate-pulse rounded-lg bg-border-default sm:h-[42px] sm:min-w-[11rem] sm:w-[11rem]" />
       );
     case "Unpaid Amount":
       return (
         <div className="space-y-1.5">
-          <div className="h-4 w-28 animate-pulse rounded bg-gray-200" />
-          <div className="h-3 w-36 animate-pulse rounded bg-gray-100" />
+          <div className="h-4 w-28 animate-pulse rounded bg-border-default" />
+          <div className="h-3 w-36 animate-pulse rounded bg-surface-sunk" />
         </div>
       );
     case "Payment":
     case "Bankslip":
-      return <div className="h-10 w-[7.5rem] max-w-full animate-pulse rounded-lg bg-gray-200" />;
+      return (
+        <div className="h-10 w-[7.5rem] max-w-full animate-pulse rounded-lg bg-border-default" />
+      );
     case "Paid Date":
-      return <div className="h-4 w-[5.75rem] animate-pulse rounded bg-gray-200" />;
+      return <div className="h-4 w-[5.75rem] animate-pulse rounded bg-border-default" />;
     default:
       return null;
   }
@@ -745,32 +734,32 @@ export function PaymentRequestTable({
             {Array.from({ length: MOBILE_SKELETON_CARD_COUNT }, (_, i) => (
               <div
                 key={`sk-card-${i}`}
-                className="rounded-xl border border-gray-200 bg-[#F5F5F5] p-4 shadow-sm"
+                className="rounded-xl border border-border-default bg-surface-sunk p-4 shadow-sm"
                 aria-hidden
               >
                 <div className="flex gap-3">
-                  <div className="mt-0.5 h-4 w-4 shrink-0 animate-pulse rounded bg-gray-300" />
+                  <div className="mt-0.5 h-4 w-4 shrink-0 animate-pulse rounded bg-border-default" />
                   <div className="min-w-0 flex-1 space-y-3">
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1 space-y-2">
-                        <div className="h-4 w-[min(100%,12rem)] animate-pulse rounded bg-gray-300" />
-                        <div className="h-3 w-full max-w-[18rem] animate-pulse rounded bg-gray-200" />
+                        <div className="h-4 w-[min(100%,12rem)] animate-pulse rounded bg-border-default" />
+                        <div className="h-3 w-full max-w-[18rem] animate-pulse rounded bg-border-default" />
                       </div>
-                      <div className="h-7 w-20 shrink-0 animate-pulse rounded-lg bg-gray-200" />
+                      <div className="h-7 w-20 shrink-0 animate-pulse rounded-lg bg-border-default" />
                     </div>
                     <div className="flex items-start justify-between gap-3 pt-1">
                       <div className="space-y-1.5">
-                        <div className="h-2.5 w-16 animate-pulse rounded bg-gray-200" />
-                        <div className="h-4 w-24 animate-pulse rounded bg-gray-300" />
+                        <div className="h-2.5 w-16 animate-pulse rounded bg-border-default" />
+                        <div className="h-4 w-24 animate-pulse rounded bg-border-default" />
                       </div>
                       <div className="space-y-1 text-right">
-                        <div className="ml-auto h-5 w-28 animate-pulse rounded bg-gray-300" />
-                        <div className="ml-auto h-3 w-32 animate-pulse rounded bg-gray-200" />
+                        <div className="ml-auto h-5 w-28 animate-pulse rounded bg-border-default" />
+                        <div className="ml-auto h-3 w-32 animate-pulse rounded bg-border-default" />
                       </div>
                     </div>
                     <div className="flex min-h-10 items-center gap-2 pt-1">
-                      <div className="h-7 w-20 max-w-[50%] animate-pulse rounded-lg bg-gray-200 sm:h-[42px] sm:min-w-[11rem] sm:w-[min(100%,11rem)] sm:max-w-none" />
-                      <div className="ml-auto h-10 w-24 animate-pulse rounded-lg bg-gray-200" />
+                      <div className="h-7 w-20 max-w-[50%] animate-pulse rounded-lg bg-border-default sm:h-[42px] sm:min-w-[11rem] sm:w-[min(100%,11rem)] sm:max-w-none" />
+                      <div className="ml-auto h-10 w-24 animate-pulse rounded-lg bg-border-default" />
                     </div>
                   </div>
                 </div>
@@ -778,30 +767,18 @@ export function PaymentRequestTable({
             ))}
           </div>
         ) : rows.length === 0 ? (
-          <div className="rounded-xl border border-gray-200 bg-[#F5F5F5] px-4 py-8 text-center text-sm text-primary/70">
+          <div className="rounded-xl border border-border-default bg-surface-sunk px-4 py-8 text-center text-sm text-text-secondary">
             No payment requests match this status.
           </div>
         ) : (
           rows.map((row) => {
             const isPaid = row.status === "Paid";
-            const isPartiallyPaid = row.status === "Partially Paid";
             const isVoided = row.status === "Voided";
-            const isPaymentRequested = row.status === "Payment Requested";
             const isDraft = row.status === "Draft";
             const isReturned = row.status === "Returned";
             const bankslipReadOnly = isVoided || isDraft;
-            const statusBadgeClass = isPaid
-              ? statusTagPaidClass
-              : isPartiallyPaid
-                ? statusTagPartiallyPaidClass
-                : isVoided
-                  ? statusTagVoidedClass
-                  : isPaymentRequested
-                    ? statusTagPaymentRequestedClass
-                    : isReturned
-                      ? statusTagReturnedClass
-                      : statusTagClass;
-            const articleClassName = `rounded-xl border border-gray-200 p-4 shadow-sm transition-colors ${isVoided ? "bg-[#F5F5F5]" : isPaid ? "bg-[#F5F5F5]" : isPaymentRequested ? "bg-secondary/10" : isPartiallyPaid ? "bg-[#70ebba]/10" : isReturned ? "bg-[#EA9713]/10" : "bg-[#F5F5F5]"} ${isVoided ? "cursor-pointer active:bg-gray-200/60" : isPaid ? "cursor-pointer active:bg-gray-200/60" : isPaymentRequested ? "cursor-pointer active:bg-secondary/20" : isPartiallyPaid ? "cursor-pointer active:bg-[#70ebba]/20" : isReturned ? "cursor-pointer active:bg-[#EA9713]/20" : "cursor-pointer active:bg-gray-200/60"}`;
+            const statusBadgeClass = statusTagClass(row.status);
+            const articleClassName = `rounded-xl border border-border-default p-4 shadow-sm transition-colors cursor-pointer bg-surface-card hover:bg-state-hover`;
             return (
               <article
                 key={row.id}
@@ -839,12 +816,12 @@ export function PaymentRequestTable({
                   <div className="min-w-0 flex-1">
                     <div className="flex items-start gap-2">
                       <div className="min-w-0 flex-1">
-                        <h3 className="text-sm font-semibold leading-snug text-primary">
+                        <h3 className="text-sm font-semibold leading-snug text-text-secondary">
                           {row.contactTitle}
                         </h3>
                         {row.contactCaption ? (
                           <p
-                            className="mt-0.5 min-w-0 max-w-full text-xs leading-snug text-primary/60"
+                            className="mt-0.5 min-w-0 max-w-full text-xs leading-snug text-text-muted"
                             title={row.contactCaption}
                           >
                             {truncateMobileBillDescription(row.contactCaption)}
@@ -862,10 +839,10 @@ export function PaymentRequestTable({
                     </div>
                     <div className="mt-4 flex min-w-0 items-start justify-between gap-3">
                       <div className="flex min-w-0 flex-col gap-0.5">
-                        <span className="text-[10px] font-medium uppercase tracking-wide text-primary/45">
+                        <span className="text-[10px] font-medium uppercase tracking-wide text-text-muted">
                           Invoice date
                         </span>
-                        <span className="text-sm font-semibold tabular-nums text-primary">
+                        <span className="text-sm font-semibold tabular-nums text-text-secondary">
                           {row.invoiceDate}
                         </span>
                       </div>
@@ -874,15 +851,14 @@ export function PaymentRequestTable({
                           {row.unpaidAmount ? (
                             <p
                               className={
-                                "text-base font-semibold tabular-nums " +
-                                unpaidAmountTextClass(row.status)
+                                "text-base font-semibold tabular-nums " + unpaidAmountTextClass
                               }
                             >
                               {row.unpaidAmount}
                             </p>
                           ) : null}
                           {row.invoiceTotal ? (
-                            <p className="text-[11px] tabular-nums text-primary/55">
+                            <p className="text-[11px] tabular-nums text-text-muted">
                               (Inv total {entityCurrency} {row.invoiceTotal})
                             </p>
                           ) : null}
@@ -962,7 +938,7 @@ export function PaymentRequestTable({
                         ) : row.bankslipFileCount != null && row.bankslipFileCount > 0 ? (
                           <button
                             type="button"
-                            className={`inline-flex h-10 min-h-10 cursor-pointer items-center gap-1.5 rounded-lg border-0 bg-transparent transition-opacity hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary ${bankslipReadOnly ? "text-primary/40" : "text-secondary"}`}
+                            className={`inline-flex h-10 min-h-10 cursor-pointer items-center gap-1.5 rounded-lg border-0 bg-transparent transition-opacity hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus ${bankslipReadOnly ? "text-text-disabled" : "text-text-link"}`}
                             onClick={(e) => {
                               e.stopPropagation();
                               setBankSlipDetailsRowId(row.id);
@@ -1031,7 +1007,7 @@ export function PaymentRequestTable({
           })
         )}
       </div>
-      <div className="hidden rounded-lg border border-gray-200 lg:block">
+      <div className="hidden rounded-lg border border-border-default lg:block">
         {/* `relative`: an absolute child with no positioned cell (a header's sr-only label) is
             clipped here too, instead of widening the page (9px at 1280). */}
         <div className="relative overflow-x-auto touch-auto [-webkit-overflow-scrolling:touch]">
@@ -1040,7 +1016,7 @@ export function PaymentRequestTable({
               <tr>
                 <th
                   scope="col"
-                  className="w-12 min-w-[2.75rem] border-b border-gray-200 bg-[#9CA3AF] px-2 py-3 text-center sm:px-3 sm:py-3.5"
+                  className="w-12 min-w-[2.75rem] border-b border-border-default bg-surface-sunk px-2 py-3 text-center sm:px-3 sm:py-3.5"
                 >
                   <input
                     ref={headerCheckboxRef}
@@ -1058,11 +1034,11 @@ export function PaymentRequestTable({
                   if (selectorKey && !columnVisibility[selectorKey]) return null;
                   const sortKeyForCol = SORTABLE_TITLE[title];
                   const sortActive = sortKeyForCol != null && sort.key === sortKeyForCol;
-                  const thBase = `border-b border-gray-200 px-4 py-3 text-left text-xs sm:px-5 sm:py-3.5 sm:text-sm ${isActionColumnTitle(title) ? "bg-secondary text-white" : "bg-[#9CA3AF] text-white"} ${title === "Supplier / Description" ? "min-w-[14rem]" : title === "Payment" || title === "Bankslip" ? "min-w-[11rem] whitespace-nowrap" : title === "Invoice Date" || title === "Paid Date" ? "min-w-[9rem] whitespace-nowrap" : title === "Status" ? "min-w-0 whitespace-nowrap sm:min-w-[11rem]" : title === "Unpaid Amount" ? "min-w-[13rem] whitespace-nowrap" : "min-w-[7rem] whitespace-nowrap"}`;
+                  const thBase = `border-b border-border-default px-4 py-3 text-left text-xs sm:px-5 sm:py-3.5 sm:text-sm ${isActionColumnTitle(title) ? "bg-action-primary text-action-on-primary" : "bg-surface-sunk text-text-secondary"} ${title === "Supplier / Description" ? "min-w-[14rem]" : title === "Payment" || title === "Bankslip" ? "min-w-[11rem] whitespace-nowrap" : title === "Invoice Date" || title === "Paid Date" ? "min-w-[9rem] whitespace-nowrap" : title === "Status" ? "min-w-0 whitespace-nowrap sm:min-w-[11rem]" : title === "Unpaid Amount" ? "min-w-[13rem] whitespace-nowrap" : "min-w-[7rem] whitespace-nowrap"}`;
                   const hoverSort =
                     title === "Paid Date"
-                      ? "hover:bg-white/15 focus-visible:outline-white/60"
-                      : "hover:bg-black/10 focus-visible:outline-white/60";
+                      ? "hover:bg-action-on-primary/15 focus-visible:outline-action-on-primary"
+                      : "hover:bg-surface-document focus-visible:outline-border-focus";
                   return (
                     <th
                       key={title}
@@ -1115,12 +1091,12 @@ export function PaymentRequestTable({
                   scope="col"
                   colSpan={actionColCount}
                   aria-label="Actions"
-                  className="border-b border-gray-200 bg-secondary px-2 py-2 text-right text-white sm:px-3 sm:py-2.5"
+                  className="border-b border-border-default bg-action-primary px-2 py-2 text-right text-action-on-primary sm:px-3 sm:py-2.5"
                 >
                   <button
                     type="button"
                     data-columns-menu-trigger
-                    className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-lg border border-white/40 bg-white/15 px-3 text-sm font-medium text-white transition-colors hover:bg-white/25 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                    className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-lg border border-action-on-primary/40 bg-action-on-primary/15 px-3 text-sm font-medium text-action-on-primary transition-colors hover:bg-action-on-primary/25 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-action-on-primary"
                     aria-label="Columns"
                     aria-expanded={columnsMenu ? "true" : "false"}
                     aria-haspopup="dialog"
@@ -1140,12 +1116,12 @@ export function PaymentRequestTable({
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white" aria-busy={loading}>
+            <tbody className="bg-surface-card" aria-busy={loading}>
               {loading ? (
                 Array.from({ length: TABLE_SKELETON_ROW_COUNT }, (_, rowIdx) => (
                   <tr key={`sk-row-${rowIdx}`} className="pointer-events-none" aria-hidden>
-                    <td className="border-b border-gray-100 px-2 py-3 text-center align-middle sm:px-3">
-                      <div className="mx-auto h-4 w-4 animate-pulse rounded bg-gray-200" />
+                    <td className="border-b border-border-subtle px-2 py-3 text-center align-middle sm:px-3">
+                      <div className="mx-auto h-4 w-4 animate-pulse rounded bg-border-default" />
                     </td>
                     {orderedTableTitles.map((title) => {
                       const selectorKey = TITLE_SELECTOR_KEY[title];
@@ -1159,14 +1135,14 @@ export function PaymentRequestTable({
                       );
                     })}
                     <td
-                      className={`border-b border-gray-100 px-2 py-3 text-center align-middle sm:px-3 ${actionBodyCellBg}`}
+                      className={`border-b border-border-subtle px-2 py-3 text-center align-middle sm:px-3 ${actionBodyCellBg}`}
                     >
-                      <div className="mx-auto h-10 w-10 animate-pulse rounded-md bg-gray-200" />
+                      <div className="mx-auto h-10 w-10 animate-pulse rounded-md bg-border-default" />
                     </td>
                     <td
-                      className={`border-b border-gray-100 px-2 py-3 text-center align-middle sm:px-3 ${actionBodyCellBg}`}
+                      className={`border-b border-border-subtle px-2 py-3 text-center align-middle sm:px-3 ${actionBodyCellBg}`}
                     >
-                      <div className="mx-auto h-9 w-9 animate-pulse rounded-full bg-gray-200" />
+                      <div className="mx-auto h-9 w-9 animate-pulse rounded-full bg-border-default" />
                     </td>
                   </tr>
                 ))
@@ -1174,7 +1150,7 @@ export function PaymentRequestTable({
                 <tr>
                   <td
                     colSpan={tableColCount}
-                    className="border-b border-gray-100 px-4 py-8 text-center text-sm text-primary/70 sm:px-5"
+                    className="border-b border-border-subtle px-4 py-8 text-center text-sm text-text-secondary sm:px-5"
                   >
                     No payment requests match this status.
                   </td>
@@ -1183,9 +1159,7 @@ export function PaymentRequestTable({
               {!loading &&
                 rows.map((row) => {
                   const isPaid = row.status === "Paid";
-                  const isPartiallyPaid = row.status === "Partially Paid";
                   const isVoided = row.status === "Voided";
-                  const isPaymentRequested = row.status === "Payment Requested";
                   const isDraft = row.status === "Draft";
                   const isReturned = row.status === "Returned";
                   const bankslipReadOnly = isVoided || isDraft;
@@ -1194,12 +1168,12 @@ export function PaymentRequestTable({
                   return (
                     <tr
                       key={row.id}
-                      className={`transition-colors duration-150 ease-out cursor-pointer hover:bg-gray-50`}
+                      className={`transition-colors duration-150 ease-out cursor-pointer hover:bg-state-hover`}
                       onClick={() => {
                         onRowClick?.(row.id, row.reference, row.status);
                       }}
                     >
-                      <td className="border-b border-gray-100 px-2 py-3 text-center align-middle sm:px-3">
+                      <td className="border-b border-border-subtle px-2 py-3 text-center align-middle sm:px-3">
                         <input
                           type="checkbox"
                           checked={selectedIds.has(row.id)}
@@ -1229,11 +1203,11 @@ export function PaymentRequestTable({
                                   label={`Open ${row.contactTitle}`}
                                 />
                                 <div className="flex min-w-0 flex-col gap-0.5">
-                                  <span className="text-sm font-semibold text-primary sm:text-base">
+                                  <span className="text-sm font-semibold text-text-secondary sm:text-base">
                                     {row.contactTitle}
                                   </span>
                                   {row.contactCaption ? (
-                                    <span className="text-xs text-primary/65 sm:text-sm">
+                                    <span className="text-xs text-text-secondary sm:text-sm">
                                       {row.contactCaption}
                                     </span>
                                   ) : null}
@@ -1262,23 +1236,7 @@ export function PaymentRequestTable({
                                   label={`Open ${row.contactTitle}`}
                                 />
                                 {row.status ? (
-                                  <span
-                                    className={
-                                      isPaid
-                                        ? statusTagPaidClass
-                                        : isPartiallyPaid
-                                          ? statusTagPartiallyPaidClass
-                                          : isVoided
-                                            ? statusTagVoidedClass
-                                            : isPaymentRequested
-                                              ? statusTagPaymentRequestedClass
-                                              : isReturned
-                                                ? statusTagReturnedClass
-                                                : statusTagClass
-                                    }
-                                  >
-                                    {row.status}
-                                  </span>
+                                  <span className={statusTagClass(row.status)}>{row.status}</span>
                                 ) : null}
                               </td>
                             );
@@ -1309,14 +1267,14 @@ export function PaymentRequestTable({
                                       <span
                                         className={
                                           "whitespace-nowrap text-sm font-semibold sm:text-base " +
-                                          unpaidAmountTextClass(row.status)
+                                          unpaidAmountTextClass
                                         }
                                       >
                                         {row.unpaidAmount}
                                       </span>
                                     ) : null}
                                     {row.invoiceTotal ? (
-                                      <span className="whitespace-nowrap text-xs text-primary/65 tabular-nums sm:text-sm">
+                                      <span className="whitespace-nowrap text-xs text-text-secondary tabular-nums sm:text-sm">
                                         (Inv total {entityCurrency} {row.invoiceTotal})
                                       </span>
                                     ) : null}
@@ -1407,7 +1365,7 @@ export function PaymentRequestTable({
                                   row.paidDate
                                 ) : (
                                   <span
-                                    className="text-primary/40 tabular-nums"
+                                    className="text-text-disabled tabular-nums"
                                     aria-label="No paid date"
                                   >
                                     -
@@ -1439,7 +1397,7 @@ export function PaymentRequestTable({
                                       row.bankslipFileCount > 0 ? (
                                       <button
                                         type="button"
-                                        className={`inline-flex cursor-pointer items-center gap-1.5 rounded-lg border-0 bg-transparent transition-opacity hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary sm:gap-2 ${bankslipReadOnly ? "text-primary/40" : "text-secondary"}`}
+                                        className={`inline-flex cursor-pointer items-center gap-1.5 rounded-lg border-0 bg-transparent transition-opacity hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus sm:gap-2 ${bankslipReadOnly ? "text-text-disabled" : "text-text-link"}`}
                                         onClick={(e) => {
                                           e.stopPropagation();
                                           setBankSlipDetailsRowId(row.id);
@@ -1501,14 +1459,14 @@ export function PaymentRequestTable({
                                     )}
                                   </div>
                                   <div className="relative group inline-block">
-                                    <span className="material-symbols-outlined text-[16px] cursor-pointer text-black hover:text-stone-800 block">
+                                    <span className="material-symbols-outlined text-[16px] cursor-pointer text-text-primary hover:text-text-primary block">
                                       info
                                     </span>
-                                    <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 hidden group-hover:block bg-gray-950 text-white text-xs rounded-md py-2 px-3 whitespace-nowrap shadow-lg z-20 pointer-events-none">
+                                    <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 hidden group-hover:block bg-text-primary text-text-inverse text-xs rounded-md py-2 px-3 whitespace-nowrap shadow-lg z-20 pointer-events-none">
                                       {row.contactCaption?.trim()
                                         ? row.contactCaption
                                         : "No description added"}
-                                      <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-950"></div>
+                                      <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-null"></div>
                                     </div>
                                   </div>
                                 </div>
@@ -1520,7 +1478,7 @@ export function PaymentRequestTable({
                       })}
                       {mintyOnly ? null : (
                         <td
-                          className={`border-b border-gray-100 px-2 py-3 text-center align-middle sm:px-3 ${actionBodyCellBg} relative`}
+                          className={`border-b border-border-subtle px-2 py-3 text-center align-middle sm:px-3 ${actionBodyCellBg} relative`}
                         >
                           <RowLinkOverlay
                             rowId={row.id}
@@ -1539,7 +1497,7 @@ export function PaymentRequestTable({
                         </td>
                       )}
                       <td
-                        className={`border-b border-gray-100 px-2 py-3 text-center align-middle sm:px-3 ${actionBodyCellBg}`}
+                        className={`border-b border-border-subtle px-2 py-3 text-center align-middle sm:px-3 ${actionBodyCellBg}`}
                       >
                         <button
                           type="button"
@@ -1563,7 +1521,7 @@ export function PaymentRequestTable({
                           }}
                         >
                           <span
-                            className={`material-symbols-outlined text-[22px] leading-none${isRowPublishing ? " animate-spin text-secondary" : ""}`}
+                            className={`material-symbols-outlined text-[22px] leading-none${isRowPublishing ? " animate-spin text-text-link" : ""}`}
                             aria-hidden
                           >
                             {isRowPublishing ? "progress_activity" : "more_vert"}
@@ -1598,14 +1556,14 @@ export function PaymentRequestTable({
               data-row-menu-panel
               role="menu"
               aria-label="Row actions"
-              className="fixed z-[400] rounded-lg border border-gray-200 bg-white py-1 shadow-lg"
+              className="fixed z-[400] rounded-lg border border-border-default bg-surface-card py-1 shadow-lg"
               style={{ top: rowMenu.top, left: rowMenu.left, minWidth: ROW_MENU_MIN_WIDTH_PX }}
             >
               {showRowMenuPublish ? (
                 <button
                   type="button"
                   role="menuitem"
-                  className="block w-full cursor-pointer px-3 py-2 text-left text-sm font-medium text-primary transition-colors hover:bg-gray-100"
+                  className="block w-full cursor-pointer px-3 py-2 text-left text-sm font-medium text-text-secondary transition-colors hover:bg-state-hover"
                   onClick={() => {
                     const id = rowMenu.rowId;
                     setRowMenu(null);
@@ -1619,7 +1577,7 @@ export function PaymentRequestTable({
                 <button
                   type="button"
                   role="menuitem"
-                  className="block w-full cursor-pointer px-3 py-2 text-left text-sm font-medium text-primary transition-colors hover:bg-gray-100"
+                  className="block w-full cursor-pointer px-3 py-2 text-left text-sm font-medium text-text-secondary transition-colors hover:bg-state-hover"
                   onClick={() => {
                     const id = rowMenu.rowId;
                     setRowMenu(null);
@@ -1633,7 +1591,7 @@ export function PaymentRequestTable({
                 type="button"
                 role="menuitem"
                 disabled={isRowMenuDeleteDisabled}
-                className="block w-full cursor-pointer px-3 py-2 text-left text-sm font-medium text-red-600 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                className="block w-full cursor-pointer px-3 py-2 text-left text-sm font-medium text-status-danger-ink transition-colors hover:bg-status-danger-bg disabled:cursor-not-allowed disabled:opacity-50"
                 onClick={() => {
                   if (isRowMenuDeleteDisabled) return;
                   const id = rowMenu.rowId;
@@ -1653,19 +1611,19 @@ export function PaymentRequestTable({
               data-columns-menu-panel
               role="dialog"
               aria-label="Columns selector"
-              className="fixed z-[400] w-[min(18rem,calc(100vw-1rem))] overflow-hidden rounded-lg border border-gray-200 bg-white shadow-lg"
+              className="fixed z-[400] w-[min(18rem,calc(100vw-1rem))] overflow-hidden rounded-lg border border-border-default bg-surface-card shadow-lg"
               style={{ top: columnsMenu.top, left: columnsMenu.left }}
             >
-              <div className="border-b border-gray-200 px-3 py-2">
-                <h3 className="text-sm font-semibold text-primary">Columns</h3>
-                <p className="mt-1 text-xs leading-snug text-primary/65">
+              <div className="border-b border-border-default px-3 py-2">
+                <h3 className="text-sm font-semibold text-text-secondary">Columns</h3>
+                <p className="mt-1 text-xs leading-snug text-text-secondary">
                   Select columns to show in the table.
                 </p>
               </div>
               <ul className="max-h-[min(22rem,55dvh)] overflow-y-auto overscroll-contain py-1">
                 {COLUMN_SELECTOR_ITEMS.map((item) => (
                   <li key={item.key}>
-                    <label className="flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-sm font-medium text-primary transition-colors hover:bg-gray-100">
+                    <label className="flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-sm font-medium text-text-secondary transition-colors hover:bg-state-hover">
                       <span className="min-w-0 flex-1 truncate">{item.label}</span>
                       <input
                         type="checkbox"
@@ -1684,17 +1642,17 @@ export function PaymentRequestTable({
                   </li>
                 ))}
               </ul>
-              <div className="flex items-center gap-2 border-t border-gray-200 px-3 py-2">
+              <div className="flex items-center gap-2 border-t border-border-default px-3 py-2">
                 <button
                   type="button"
-                  className="inline-flex h-9 min-h-[44px] w-full min-w-0 flex-1 items-center justify-center rounded-lg border-2 border-secondary bg-white px-4 text-sm font-semibold text-secondary transition-colors hover:bg-secondary/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary sm:min-h-9"
+                  className="inline-flex h-9 min-h-[44px] w-full min-w-0 flex-1 items-center justify-center rounded-lg border-2 border-action-secondary-border bg-surface-card px-4 text-sm font-semibold text-action-secondary-text transition-colors hover:bg-state-selected focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus sm:min-h-9"
                   onClick={() => setColumnVisibilityDraft({ ...DEFAULT_COLUMN_VISIBILITY })}
                 >
                   Reset
                 </button>
                 <button
                   type="button"
-                  className="inline-flex h-9 min-h-[44px] w-full min-w-0 flex-1 items-center justify-center rounded-lg bg-secondary px-4 text-sm font-semibold text-white shadow-sm transition-opacity hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary sm:min-h-9"
+                  className="inline-flex h-9 min-h-[44px] w-full min-w-0 flex-1 items-center justify-center rounded-lg bg-action-primary px-4 text-sm font-semibold text-action-on-primary shadow-sm transition-colors hover:bg-action-primary-hover active:bg-action-primary-pressed focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus sm:min-h-9"
                   onClick={() => {
                     const next = { ...columnVisibilityDraft };
                     setColumnVisibility(next);

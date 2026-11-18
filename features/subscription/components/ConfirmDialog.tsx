@@ -28,17 +28,19 @@ export const MODAL_IMAGE: Record<ModalImage, { src: string; width: number; heigh
   dont: { src: "/portal/minty-dont.png", width: 100, height: 130 },
 };
 
+// Colours: @minty/shared colors.css roles (owner, 2026-11-18). The orange is kept as it was until
+// the owner picks its role.
 const CONFIRM_TONE: Record<ConfirmTone, string> = {
-  teal: "bg-[#4fc7c7]",
-  orange: "bg-[#ea9713]",
-  red: "bg-[#dc5a5a]",
+  teal: "bg-action-primary text-action-on-primary hover:bg-action-primary-hover active:bg-action-primary-pressed",
+  orange: "bg-status-warning-ink text-action-on-primary hover:opacity-90",
+  red: "bg-action-danger text-action-on-danger hover:bg-action-danger-hover",
 };
 
 export type BackTone = "grey" | "teal";
 
 const BACK_TONE: Record<BackTone, string> = {
-  grey: "border-[#737a87]/30 font-bold text-black hover:bg-gray-50",
-  teal: "border-[#18c4c7] text-[#4fc7c7] hover:bg-[#f5ffff]",
+  grey: "border-border-input font-bold text-text-primary hover:bg-state-hover",
+  teal: "border-action-secondary-border text-action-secondary-text hover:bg-state-selected",
 };
 
 export function ConfirmDialog({
@@ -94,7 +96,7 @@ export function ConfirmDialog({
       role={role}
       busy={busy}
       onDismiss={dismiss}
-      className="max-w-[435px] rounded-[24px] border border-white/40 bg-white p-12 shadow-[0px_4px_8px_0px_rgba(15,23,42,0.08),0px_12px_32px_0px_rgba(0,0,0,0.1)]"
+      className="max-w-[435px] rounded-[24px] border border-border-subtle bg-surface-card p-12 shadow-[0px_4px_8px_0px_rgba(15,23,42,0.08),0px_12px_32px_0px_rgba(0,0,0,0.1)]"
     >
       {/*
           The company sits in the TITLE's column, tight under the last line of it and no wider
@@ -106,7 +108,7 @@ export function ConfirmDialog({
         */}
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
-          <h2 id={titleId} className="text-[26px] font-bold leading-tight text-black">
+          <h2 id={titleId} className="text-[26px] font-bold leading-tight text-text-primary">
             {title}
           </h2>
           {/*
@@ -117,13 +119,13 @@ export function ConfirmDialog({
           {lead !== undefined ? (
             <div className="mt-4 text-[15px] leading-snug break-words">{lead}</div>
           ) : entityName ? (
-            <p className="mt-4 text-[15px] leading-snug break-words text-[#737a87]">
+            <p className="mt-4 text-[15px] leading-snug break-words text-text-muted">
               Entity
               <br />
               {/* The COMPANY is coloured, the label above it is not: "Entity" is furniture,
                     the name is the thing the modal is about. (It was one grey for a while -
                     that reading of the design's single text node is superseded.) */}
-              <span className="text-[#18c4c7]">{entityName}</span>
+              <span className="text-text-link">{entityName}</span>
             </p>
           ) : null}
         </div>
@@ -140,7 +142,7 @@ export function ConfirmDialog({
       </div>
       <div
         id={bodyId}
-        className="mt-6 flex flex-col gap-4 text-[15px] leading-snug text-[var(--ink-soft)]"
+        className="mt-6 flex flex-col gap-4 text-[15px] leading-snug text-text-secondary"
       >
         {children}
       </div>
@@ -159,7 +161,7 @@ export function ConfirmDialog({
             onClick={onBack}
             disabled={busy}
             data-tone={backTone}
-            className={`h-[66px] flex-1 rounded-[14px] border bg-white text-lg leading-tight disabled:opacity-60 ${BACK_TONE[backTone]}`}
+            className={`h-[66px] flex-1 rounded-[14px] border bg-surface-card text-lg leading-tight disabled:opacity-60 ${BACK_TONE[backTone]}`}
           >
             {backLabel}
           </button>
@@ -169,7 +171,7 @@ export function ConfirmDialog({
             href={confirmHref}
             onClick={onConfirm}
             data-tone={confirmTone}
-            className={`flex items-center justify-center text-center h-[66px] rounded-[14px] border border-transparent text-lg font-bold leading-tight text-white hover:opacity-90 disabled:cursor-wait disabled:opacity-60 ${
+            className={`flex items-center justify-center text-center h-[66px] rounded-[14px] border border-transparent text-lg font-bold leading-tight disabled:cursor-wait disabled:opacity-60 ${
               hideBack ? "w-[169px]" : "flex-1"
             } ${CONFIRM_TONE[confirmTone]}`}
           >
@@ -184,7 +186,7 @@ export function ConfirmDialog({
             data-tone={confirmTone}
             // the transparent border matters: with `flex-1` the bordered button beside it would
             // otherwise end up 2px wider, both being basis-0 under border-box
-            className={`h-[66px] rounded-[14px] border border-transparent text-lg font-bold leading-tight text-white hover:opacity-90 disabled:cursor-wait disabled:opacity-60 ${
+            className={`h-[66px] rounded-[14px] border border-transparent text-lg font-bold leading-tight disabled:cursor-wait disabled:opacity-60 ${
               hideBack ? "w-[169px]" : "flex-1"
             } ${CONFIRM_TONE[confirmTone]}`}
           >

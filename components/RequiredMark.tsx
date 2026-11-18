@@ -13,7 +13,7 @@ export function RequiredMark() {
   // 2026-11-04) - the control's own `aria-required` stays too.
   return (
     <>
-      <span className="text-red-500" aria-hidden>
+      <span className="text-status-danger-ink" aria-hidden>
         {" *"}
       </span>
       <span className="sr-only"> (required)</span>

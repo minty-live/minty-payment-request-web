@@ -87,7 +87,7 @@ export function DateTextField({
         aria-hidden
         className={
           "pointer-events-none absolute left-3 z-[1] select-none text-base sm:text-sm " +
-          (display ? "text-black" : "text-gray-700")
+          (display ? "text-text-primary" : "text-text-secondary")
         }
       >
         {display || DATE_TEXT_PLACEHOLDER}

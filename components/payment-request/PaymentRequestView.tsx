@@ -899,10 +899,10 @@ export function PaymentRequestView({ easyView }: PaymentRequestViewProps) {
         <div
           role="status"
           aria-live="polite"
-          className="mx-auto flex w-full max-w-[1920px] items-center gap-2 bg-amber-50 px-4 py-2.5 text-sm text-amber-800 sm:px-6"
+          className="mx-auto flex w-full max-w-[1920px] items-center gap-2 bg-status-warning-bg px-4 py-2.5 text-sm text-status-warning-ink sm:px-6"
         >
           <span
-            className="material-symbols-outlined shrink-0 text-[18px] leading-none text-amber-600"
+            className="material-symbols-outlined shrink-0 text-[18px] leading-none text-status-warning-ink"
             aria-hidden
           >
             visibility
@@ -916,11 +916,11 @@ export function PaymentRequestView({ easyView }: PaymentRequestViewProps) {
       >
         {loadError ? (
           <div className="px-4 py-8 text-center sm:px-6">
-            <p className="text-sm text-red-600">{loadError}</p>
+            <p className="text-sm text-status-danger-ink">{loadError}</p>
             <button
               type="button"
               onClick={loadBills}
-              className="mt-2 text-sm font-medium text-secondary hover:underline"
+              className="mt-2 text-sm font-medium text-text-link hover:underline"
             >
               Retry
             </button>

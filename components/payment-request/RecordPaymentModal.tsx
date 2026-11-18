@@ -440,7 +440,7 @@ export function RecordPaymentModal({
   const slipsReadyNote =
     slipsForNextPayment.length > 0 ? (
       <div
-        className="flex min-w-0 flex-wrap items-center justify-between gap-2 rounded-lg border border-gray-100 bg-gray-50 px-3 py-2 text-sm text-primary"
+        className="flex min-w-0 flex-wrap items-center justify-between gap-2 rounded-lg border border-border-subtle bg-surface-sunk px-3 py-2 text-sm text-text-secondary"
         role="status"
       >
         <span className="min-w-0 break-words">
@@ -450,7 +450,7 @@ export function RecordPaymentModal({
         <button
           type="button"
           onClick={() => setSlipsForNextPayment([])}
-          className="min-h-[44px] cursor-pointer rounded-lg px-3 text-sm font-semibold text-secondary hover:bg-secondary/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-secondary sm:min-h-[36px]"
+          className="min-h-[44px] cursor-pointer rounded-lg px-3 text-sm font-semibold text-text-link hover:bg-state-selected focus-visible:outline focus-visible:outline-2 focus-visible:outline-border-focus sm:min-h-[36px]"
         >
           Remove
         </button>
@@ -511,20 +511,20 @@ export function RecordPaymentModal({
   const isEasyInline = presentation === "easyInline";
 
   const paymentDateTextClass =
-    "relative z-[1] box-border h-11 min-h-[44px] w-full rounded-2xl border border-gray-300 bg-white py-0 pl-3 pr-11 text-base text-black placeholder:text-gray-700 focus:border-secondary focus:outline-none focus:ring-2 focus:ring-secondary/25 [color-scheme:light] sm:min-h-11 sm:text-sm";
+    "relative z-[1] box-border h-11 min-h-[44px] w-full rounded-2xl border border-border-input bg-surface-card py-0 pl-3 pr-11 text-base text-text-primary placeholder:text-text-secondary focus:border-border-focus focus:outline-none focus:ring-2 focus:ring-border-focus/25 [color-scheme:light] sm:min-h-11 sm:text-sm";
   /** Light grey fill, full `border-gray-300`, primary icon — shared by modal, inline, and easy-inline. */
   const paymentDateCalendarBtnClass =
-    "absolute right-0 top-0 z-[3] box-border flex h-11 min-h-[44px] w-11 min-w-[44px] cursor-pointer items-center justify-center rounded-r-2xl border border-gray-300 bg-gray-100 text-primary transition-colors hover:bg-gray-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary sm:min-h-11";
+    "absolute right-0 top-0 z-[3] box-border flex h-11 min-h-[44px] w-11 min-w-[44px] cursor-pointer items-center justify-center rounded-r-2xl border border-border-input bg-surface-sunk text-text-secondary transition-colors hover:bg-border-default focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus sm:min-h-11";
 
   const addPaymentButtonClass =
-    "inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-[#00C896]/10 px-4 py-2.5 text-sm font-semibold text-[#00C896] transition-colors hover:bg-[#00C896]/15 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#00C896] disabled:cursor-not-allowed disabled:opacity-50";
+    "inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-status-success-bg px-4 py-2.5 text-sm font-semibold text-status-success-ink transition-colors hover:brightness-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-status-success-ink disabled:cursor-not-allowed disabled:opacity-50";
 
   const dialogShellClassName =
     presentation === "modal"
-      ? "relative z-[1] flex max-h-[min(100dvh-1rem,880px)] w-full min-w-0 max-w-[480px] flex-col rounded-2xl bg-white shadow-xl ring-1 ring-black/5 sm:max-h-[min(92dvh,880px)] sm:rounded-2xl"
+      ? "relative z-[1] flex max-h-[min(100dvh-1rem,880px)] w-full min-w-0 max-w-[480px] flex-col rounded-2xl bg-surface-card shadow-xl ring-1 ring-border-subtle sm:max-h-[min(92dvh,880px)] sm:rounded-2xl"
       : presentation === "easyInline"
-        ? "relative flex max-h-[min(72vh,880px)] w-full min-w-0 max-w-[min(100%,720px)] flex-col overflow-hidden rounded-lg border border-secondary/50 bg-white sm:max-h-[min(80vh,880px)]"
-        : "relative flex max-h-[min(72vh,880px)] w-full min-w-0 max-w-[480px] flex-col rounded-2xl bg-white shadow-lg ring-1 ring-secondary/25 sm:max-h-[min(80vh,880px)]";
+        ? "relative flex max-h-[min(72vh,880px)] w-full min-w-0 max-w-[min(100%,720px)] flex-col overflow-hidden rounded-lg border border-border-selected bg-surface-card sm:max-h-[min(80vh,880px)]"
+        : "relative flex max-h-[min(72vh,880px)] w-full min-w-0 max-w-[480px] flex-col rounded-2xl bg-surface-card shadow-lg ring-1 ring-border-selected/25 sm:max-h-[min(80vh,880px)]";
 
   const bankSlipOpenLabel =
     bankSlipFileCount > 0
@@ -552,14 +552,14 @@ export function RecordPaymentModal({
               <div className="flex items-start justify-between gap-3">
                 <h2
                   id={titleId}
-                  className="text-sm font-semibold uppercase tracking-[0.12em] text-secondary sm:text-base"
+                  className="text-sm font-semibold uppercase tracking-[0.12em] text-text-link sm:text-base"
                 >
                   {effectiveReadOnly ? "View payments" : "Payment history"}
                 </h2>
                 <button
                   type="button"
                   onClick={onClose}
-                  className="-mr-1 -mt-1 flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-lg text-primary transition-colors hover:bg-gray-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary"
+                  className="-mr-1 -mt-1 flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-lg text-text-secondary transition-colors hover:bg-state-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus"
                   aria-label="Close"
                 >
                   <span className="material-symbols-outlined text-[22px] leading-none" aria-hidden>
@@ -568,7 +568,7 @@ export function RecordPaymentModal({
                 </button>
               </div>
             </div>
-            <div className="mt-3 w-full border-b border-dotted border-gray-300" aria-hidden />
+            <div className="mt-3 w-full border-b border-dotted border-border-input" aria-hidden />
           </>
         )}
       </div>
@@ -583,19 +583,19 @@ export function RecordPaymentModal({
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1">
-              <p className="text-sm font-medium text-primary">INVOICE AMOUNT</p>
+              <p className="text-sm font-medium text-text-secondary">INVOICE AMOUNT</p>
               <div className="relative group inline-block">
-                <span className="material-symbols-outlined text-[16px] cursor-pointer text-black hover:text-stone-800 block">
+                <span className="material-symbols-outlined text-[16px] cursor-pointer text-text-primary hover:text-text-primary block">
                   info
                 </span>
-                <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 hidden group-hover:block bg-gray-950 text-white text-xs rounded-md py-1 px-3 whitespace-nowrap shadow-lg z-20 pointer-events-none">
+                <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 hidden group-hover:block bg-text-primary text-text-inverse text-xs rounded-md py-1 px-3 whitespace-nowrap shadow-lg z-20 pointer-events-none">
                   {description?.trim() ? description : "No description added"}
-                  <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-950"></div>
+                  <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-null"></div>
                 </div>
               </div>
             </div>
             <p
-              className={`mt-1 font-bold text-primary ${isEasyInline ? "text-lg sm:text-xl" : "text-xl sm:text-2xl"}`}
+              className={`mt-1 font-bold text-text-secondary ${isEasyInline ? "text-lg sm:text-xl" : "text-xl sm:text-2xl"}`}
             >
               {formatMoney(invoiceAmount, currencyLabel, decimals)}
             </p>
@@ -603,18 +603,18 @@ export function RecordPaymentModal({
           <button
             type="button"
             onClick={() => setBankSlipPreviewOpen(true)}
-            className="relative flex h-11 min-h-[44px] shrink-0 cursor-pointer items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-gray-200 bg-white px-3 text-sm text-primary/55 transition-colors hover:border-secondary/35 hover:bg-gray-50/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary sm:min-h-11"
+            className="relative flex h-11 min-h-[44px] shrink-0 cursor-pointer items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-border-default bg-surface-card px-3 text-sm text-text-muted transition-colors hover:border-border-selected hover:bg-state-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus sm:min-h-11"
             aria-label={bankSlipOpenLabel}
           >
             <span className="whitespace-nowrap">Upload Bank Slip</span>
             <span
-              className="material-symbols-outlined shrink-0 text-[22px] text-gray-400"
+              className="material-symbols-outlined shrink-0 text-[22px] text-text-disabled"
               aria-hidden
             >
               upload_file
             </span>
             {slipBadgeCount > 0 ? (
-              <span className="absolute -right-1 -top-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-secondary px-1 text-[10px] font-bold leading-none text-white">
+              <span className="absolute -right-1 -top-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-action-primary px-1 text-[10px] font-bold leading-none text-action-on-primary">
                 {slipBadgeCount > 99 ? "99+" : slipBadgeCount}
               </span>
             ) : null}
@@ -640,10 +640,10 @@ export function RecordPaymentModal({
               }}
               className={`flex-1 rounded-lg px-4 py-2.5 text-sm font-semibold transition-colors sm:py-2 ${
                 fullPayLocked
-                  ? "cursor-not-allowed border-2 border-gray-200 bg-gray-100 text-primary/45"
+                  ? "cursor-not-allowed border-2 border-border-default bg-surface-sunk text-text-muted"
                   : payMode === "full"
-                    ? "cursor-pointer bg-secondary text-white shadow-sm"
-                    : "cursor-pointer border-2 border-secondary/40 bg-white text-secondary hover:bg-secondary/5"
+                    ? "cursor-pointer bg-action-primary text-action-on-primary shadow-sm"
+                    : "cursor-pointer border-2 border-border-selected bg-surface-card text-text-link hover:bg-state-selected"
               }`}
               aria-disabled={fullPayLocked}
             >
@@ -656,7 +656,7 @@ export function RecordPaymentModal({
                 setPayMode("partial");
                 setDraftAmount("");
               }}
-              className={`flex-1 cursor-pointer rounded-lg px-4 py-2.5 text-sm font-semibold transition-colors sm:py-2 ${payMode === "partial" ? "bg-secondary text-white shadow-sm" : "border-2 border-secondary/40 bg-white text-secondary hover:bg-secondary/5"}`}
+              className={`flex-1 cursor-pointer rounded-lg px-4 py-2.5 text-sm font-semibold transition-colors sm:py-2 ${payMode === "partial" ? "bg-action-primary text-action-on-primary shadow-sm" : "border-2 border-border-selected bg-surface-card text-text-link hover:bg-state-selected"}`}
             >
               Partial Pay
             </button>
@@ -666,11 +666,11 @@ export function RecordPaymentModal({
         <div
           className={`relative flex items-center gap-3 ${effectiveReadOnly ? "mt-2" : isEasyInline ? "my-5" : "my-6"}`}
         >
-          <div className="h-px flex-1 bg-gray-200" aria-hidden />
-          <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wider text-primary/50">
+          <div className="h-px flex-1 bg-border-default" aria-hidden />
+          <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wider text-text-muted">
             {isEasyInline ? "LESS : PAYMENTS" : "Less : payments"}
           </span>
-          <div className="h-px flex-1 bg-gray-200" aria-hidden />
+          <div className="h-px flex-1 bg-border-default" aria-hidden />
         </div>
 
         {showPaymentHistoryPlaceholder ? (
@@ -683,26 +683,26 @@ export function RecordPaymentModal({
             {Array.from({ length: 1 }, (_, i) => (
               <li
                 key={`pay-sk-${i}`}
-                className="flex items-center gap-2 rounded-xl bg-gray-50 px-3 py-3 sm:gap-3 sm:px-4"
+                className="flex items-center gap-2 rounded-xl bg-surface-sunk px-3 py-3 sm:gap-3 sm:px-4"
                 aria-hidden
               >
                 <span
-                  className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-secondary/15"
+                  className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-state-selected"
                   aria-hidden
                 >
-                  <span className="block h-[20px] w-[20px] animate-pulse rounded-sm bg-secondary/25" />
+                  <span className="block h-[20px] w-[20px] animate-pulse rounded-sm bg-state-selected" />
                 </span>
                 <div className="min-w-0 flex-1">
-                  <div className="h-4 max-w-[min(100%,18rem)] animate-pulse rounded-sm bg-gray-200" />
+                  <div className="h-4 max-w-[min(100%,18rem)] animate-pulse rounded-sm bg-border-default" />
                 </div>
                 <span
-                  className="inline-block h-5 w-[7.25rem] shrink-0 animate-pulse rounded-sm bg-gray-200 tabular-nums"
+                  className="inline-block h-5 w-[7.25rem] shrink-0 animate-pulse rounded-sm bg-border-default tabular-nums"
                   aria-hidden
                 />
                 {!effectiveReadOnly || canDeletePayments ? (
                   <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md">
                     <span
-                      className="block h-[22px] w-[22px] animate-pulse rounded bg-gray-200"
+                      className="block h-[22px] w-[22px] animate-pulse rounded bg-border-default"
                       aria-hidden
                     />
                   </span>
@@ -711,7 +711,7 @@ export function RecordPaymentModal({
             ))}
           </ul>
         ) : paymentsForHistoryList.length === 0 ? (
-          <p className="py-4 text-center text-sm text-primary/50">No payments recorded yet.</p>
+          <p className="py-4 text-center text-sm text-text-muted">No payments recorded yet.</p>
         ) : (
           <ul className="flex flex-col gap-2.5">
             {paymentsForHistoryList.map((p) => {
@@ -722,10 +722,10 @@ export function RecordPaymentModal({
               return (
                 <li
                   key={p.id}
-                  className="flex items-center gap-2 rounded-xl bg-gray-50 px-3 py-3 sm:gap-3 sm:px-4"
+                  className="flex items-center gap-2 rounded-xl bg-surface-sunk px-3 py-3 sm:gap-3 sm:px-4"
                 >
                   <span
-                    className={`inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${isPending ? "bg-amber-100 text-amber-600" : "bg-secondary/15 text-secondary"}`}
+                    className={`inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${isPending ? "bg-status-warning-bg text-status-warning-ink" : "bg-state-selected text-text-link"}`}
                     aria-hidden
                   >
                     <span className="material-symbols-outlined text-[20px]">
@@ -733,7 +733,7 @@ export function RecordPaymentModal({
                     </span>
                   </span>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-primary">
+                    <p className="truncate text-sm font-medium text-text-secondary">
                       {effectiveReadOnly
                         ? dateLabel
                         : isPending
@@ -743,10 +743,10 @@ export function RecordPaymentModal({
                             : `Paid on ${dateLabel}`}
                     </p>
                     {isPending && !effectiveReadOnly ? (
-                      <p className="text-[11px] text-amber-600">Pending</p>
+                      <p className="text-[11px] text-status-warning-ink">Pending</p>
                     ) : null}
                   </div>
-                  <span className="shrink-0 text-sm font-bold text-primary tabular-nums">
+                  <span className="shrink-0 text-sm font-bold text-text-secondary tabular-nums">
                     ({formatMoney(amt, currencyLabel, decimals)})
                   </span>
                   {!effectiveReadOnly || canDeletePayments ? (
@@ -757,7 +757,7 @@ export function RecordPaymentModal({
                         setPaymentPendingDelete(p);
                       }}
                       disabled={!canDeletePayments || deletingId === p.id}
-                      className={`inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${canDeletePayments ? "cursor-pointer text-rose-500 hover:bg-rose-100 hover:text-rose-600" : "cursor-not-allowed text-gray-400"}`}
+                      className={`inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${canDeletePayments ? "cursor-pointer text-status-danger-ink hover:bg-status-danger-bg hover:text-status-danger-ink" : "cursor-not-allowed text-text-disabled"}`}
                       aria-label={
                         canDeletePayments
                           ? "Remove this payment"
@@ -804,15 +804,15 @@ export function RecordPaymentModal({
                   <div
                     className={
                       payMode === "full"
-                        ? "flex min-w-0 overflow-hidden rounded-2xl border border-gray-200 bg-gray-100 shadow-[inset_0_1px_3px_rgba(0,0,0,0.06)] focus-within:border-gray-300 focus-within:ring-1 focus-within:ring-gray-300/50"
-                        : "flex min-w-0 overflow-hidden rounded-2xl border border-gray-300 bg-white focus-within:border-secondary focus-within:ring-2 focus-within:ring-secondary/25"
+                        ? "flex min-w-0 overflow-hidden rounded-2xl border border-border-default bg-surface-sunk shadow-[inset_0_1px_3px_rgba(0,0,0,0.06)] focus-within:border-border-input focus-within:ring-1 focus-within:ring-border-default/50"
+                        : "flex min-w-0 overflow-hidden rounded-2xl border border-border-input bg-surface-card focus-within:border-border-focus focus-within:ring-2 focus-within:ring-border-focus/25"
                     }
                   >
                     <span
                       className={
                         payMode === "full"
-                          ? "flex shrink-0 items-center border-r border-gray-200 bg-gray-200/70 px-3 text-sm font-medium text-gray-600"
-                          : "flex shrink-0 items-center border-r border-gray-300 bg-gray-100 px-3 text-sm font-medium text-primary"
+                          ? "flex shrink-0 items-center border-r border-border-default bg-border-default/70 px-3 text-sm font-medium text-text-secondary"
+                          : "flex shrink-0 items-center border-r border-border-input bg-surface-sunk px-3 text-sm font-medium text-text-secondary"
                       }
                     >
                       {currencyLabel}
@@ -822,14 +822,14 @@ export function RecordPaymentModal({
                       placeholder="0.00"
                       {...amountInput}
                       readOnly={payMode === "full"}
-                      className="box-border min-h-[44px] min-w-0 flex-1 border-0 bg-transparent px-3 py-2 text-base text-black placeholder:text-gray-700 read-only:cursor-default read-only:text-gray-700 read-only:placeholder:text-gray-500 focus:outline-none focus:ring-0 sm:min-h-11 sm:text-sm"
+                      className="box-border min-h-[44px] min-w-0 flex-1 border-0 bg-transparent px-3 py-2 text-base text-text-primary placeholder:text-text-secondary read-only:cursor-default read-only:text-text-secondary read-only:placeholder:text-text-muted focus:outline-none focus:ring-0 sm:min-h-11 sm:text-sm"
                     />
                   </div>
                 </div>
               </div>
 
               {formError ? (
-                <p className="mt-2 text-sm text-red-600" role="alert">
+                <p className="mt-2 text-sm text-status-danger-ink" role="alert">
                   {formError}
                 </p>
               ) : null}
@@ -859,13 +859,13 @@ export function RecordPaymentModal({
                     placeholder="0.00"
                     {...amountInput}
                     readOnly={payMode === "full"}
-                    className="box-border h-11 min-h-[44px] w-full rounded-2xl border border-gray-300 bg-white px-3 text-base text-black placeholder:text-gray-700 focus:border-secondary focus:outline-none focus:ring-2 focus:ring-secondary/25 sm:min-h-11 sm:text-sm read-only:cursor-default read-only:border-gray-200 read-only:bg-gray-100 read-only:text-gray-700 read-only:shadow-[inset_0_1px_3px_rgba(0,0,0,0.06)] read-only:placeholder:text-gray-500 read-only:focus:border-gray-300 read-only:focus:ring-1 read-only:focus:ring-gray-300/50"
+                    className="box-border h-11 min-h-[44px] w-full rounded-2xl border border-border-input bg-surface-card px-3 text-base text-text-primary placeholder:text-text-secondary focus:border-border-focus focus:outline-none focus:ring-2 focus:ring-border-focus/25 sm:min-h-11 sm:text-sm read-only:cursor-default read-only:border-border-default read-only:bg-surface-sunk read-only:text-text-secondary read-only:shadow-[inset_0_1px_3px_rgba(0,0,0,0.06)] read-only:placeholder:text-text-muted read-only:focus:border-border-input read-only:focus:ring-1 read-only:focus:ring-border-default/50"
                   />
                 </div>
               </div>
 
               {formError ? (
-                <p className="mt-2 text-sm text-red-600" role="alert">
+                <p className="mt-2 text-sm text-status-danger-ink" role="alert">
                   {formError}
                 </p>
               ) : null}
@@ -891,7 +891,7 @@ export function RecordPaymentModal({
       </div>
 
       {!effectiveReadOnly ? (
-        <div className="shrink-0 border-t border-gray-200 px-4 py-4 sm:px-6 sm:py-5">
+        <div className="shrink-0 border-t border-border-default px-4 py-4 sm:px-6 sm:py-5">
           <div className="flex flex-col gap-4">
             {isEasyInline ? (
               <>
@@ -903,21 +903,21 @@ export function RecordPaymentModal({
                     showPaymentHistoryPlaceholder ? "Loading amount to be paid" : undefined
                   }
                 >
-                  <span className="text-sm font-medium text-primary/75">Amount to be Paid</span>
+                  <span className="text-sm font-medium text-text-secondary">Amount to be Paid</span>
                   {showPaymentHistoryPlaceholder ? (
                     <span
-                      className="inline-block h-7 w-[min(100%,9.5rem)] max-w-full animate-pulse rounded-md bg-gray-200 tabular-nums"
+                      className="inline-block h-7 w-[min(100%,9.5rem)] max-w-full animate-pulse rounded-md bg-border-default tabular-nums"
                       aria-hidden
                     />
                   ) : (
-                    <span className="text-xl font-bold text-secondary sm:text-2xl">
+                    <span className="text-xl font-bold text-text-primary sm:text-2xl">
                       {formatMoney(remaining, currencyLabel, decimals)}
                     </span>
                   )}
                 </div>
                 {bankSlipRequiredForPending ? (
                   <p
-                    className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900"
+                    className="rounded-lg border border-status-warning-bg bg-status-warning-bg px-3 py-2 text-sm text-status-warning-ink"
                     role="status"
                   >
                     I need at least one bank slip to finalise pending payments - draft bills
@@ -926,14 +926,14 @@ export function RecordPaymentModal({
                 ) : null}
                 {finalizingPending ? (
                   <div
-                    className="space-y-2 rounded-lg border border-gray-100 bg-gray-50 px-3 py-3"
+                    className="space-y-2 rounded-lg border border-border-subtle bg-surface-sunk px-3 py-3"
                     role="status"
                     aria-live="polite"
                   >
                     <span className="sr-only">Updating payments…</span>
-                    <div className="h-3 w-40 animate-pulse rounded bg-gray-200" aria-hidden />
+                    <div className="h-3 w-40 animate-pulse rounded bg-border-default" aria-hidden />
                     <div
-                      className="h-3 w-full max-w-[16rem] animate-pulse rounded bg-gray-100"
+                      className="h-3 w-full max-w-[16rem] animate-pulse rounded bg-surface-sunk"
                       aria-hidden
                     />
                   </div>
@@ -966,21 +966,21 @@ export function RecordPaymentModal({
                     showPaymentHistoryPlaceholder ? "Loading amount to be paid" : undefined
                   }
                 >
-                  <span className="text-sm font-medium text-primary">Amount to be Paid</span>
+                  <span className="text-sm font-medium text-text-secondary">Amount to be Paid</span>
                   {showPaymentHistoryPlaceholder ? (
                     <span
-                      className="inline-block h-6 w-[min(100%,9.5rem)] max-w-full animate-pulse rounded-md bg-gray-200 tabular-nums sm:h-7 sm:w-[10.5rem]"
+                      className="inline-block h-6 w-[min(100%,9.5rem)] max-w-full animate-pulse rounded-md bg-border-default tabular-nums sm:h-7 sm:w-[10.5rem]"
                       aria-hidden
                     />
                   ) : (
-                    <span className="text-2xl font-bold text-secondary sm:text-3xl">
+                    <span className="text-2xl font-bold text-text-primary sm:text-3xl">
                       {formatMoney(remaining, currencyLabel, decimals)}
                     </span>
                   )}
                 </div>
                 {bankSlipRequiredForPending ? (
                   <p
-                    className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900"
+                    className="rounded-lg border border-status-warning-bg bg-status-warning-bg px-3 py-2 text-sm text-status-warning-ink"
                     role="status"
                   >
                     I need at least one bank slip to finalise pending payments - draft bills
@@ -989,14 +989,14 @@ export function RecordPaymentModal({
                 ) : null}
                 {finalizingPending ? (
                   <div
-                    className="space-y-2 rounded-lg border border-gray-100 bg-gray-50 px-3 py-3"
+                    className="space-y-2 rounded-lg border border-border-subtle bg-surface-sunk px-3 py-3"
                     role="status"
                     aria-live="polite"
                   >
                     <span className="sr-only">Updating payments…</span>
-                    <div className="h-3 w-40 animate-pulse rounded bg-gray-200" aria-hidden />
+                    <div className="h-3 w-40 animate-pulse rounded bg-border-default" aria-hidden />
                     <div
-                      className="h-3 w-full max-w-[16rem] animate-pulse rounded bg-gray-100"
+                      className="h-3 w-full max-w-[16rem] animate-pulse rounded bg-surface-sunk"
                       aria-hidden
                     />
                   </div>
@@ -1020,7 +1020,7 @@ export function RecordPaymentModal({
               <button
                 type="button"
                 aria-label="Close dialog"
-                className="absolute inset-0 cursor-pointer bg-black/35 backdrop-blur-[1px]"
+                className="absolute inset-0 cursor-pointer bg-overlay-scrim backdrop-blur-[1px]"
                 onClick={onClose}
               />
               {paymentDialog}

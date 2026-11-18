@@ -268,7 +268,7 @@ export function EasyViewDraftDetailBody({
   }
   if (loadErr) {
     return (
-      <div className="text-sm text-red-600" role="alert">
+      <div className="text-sm text-status-danger-ink" role="alert">
         {loadErr}
       </div>
     );
@@ -437,7 +437,7 @@ export function EasyViewReadonlyBillDetailBody({
   }
   if (loadErr) {
     return (
-      <div className="text-sm text-red-600" role="alert">
+      <div className="text-sm text-status-danger-ink" role="alert">
         {loadErr}
       </div>
     );

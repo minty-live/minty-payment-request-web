@@ -13,7 +13,7 @@ const NAME_TOO_LONG = "Keep the supplier's name to 100 characters or fewer.";
 const TYPE_TO_ADD = "Type a supplier name to add a new supplier";
 
 const inputClassBase =
-  "box-border h-11 min-h-[44px] w-full border bg-white px-3 text-base text-black placeholder:text-gray-700 focus:outline-none focus:ring-2 sm:min-h-11 sm:text-sm ";
+  "box-border h-11 min-h-[44px] w-full border bg-surface-card px-3 text-base text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 sm:min-h-11 sm:text-sm ";
 
 export type BillContactPickerProps = {
   id: string;
@@ -144,8 +144,8 @@ export function BillContactPicker({
 
   const invalid = error || createError !== null || nameTooLong;
   const borderTone = invalid
-    ? "border-red-500 focus:border-red-500 focus:ring-red-200/50 "
-    : "border-gray-300 focus:border-secondary focus:ring-secondary/25 ";
+    ? "border-action-danger focus:border-action-danger focus:ring-action-danger/20 "
+    : "border-border-input focus:border-border-focus focus:ring-border-focus/25 ";
 
   const addRowText = creating ? "Creating supplier…" : `+ Add '${trimmedName}' as a new supplier`;
 
@@ -155,7 +155,7 @@ export function BillContactPicker({
         ref={menuRef}
         id={listboxId}
         role="listbox"
-        className="fixed z-[410] max-h-60 overflow-y-auto overflow-x-hidden rounded-lg border border-gray-300 bg-white py-1 shadow-lg ring-1 ring-black/5 [-webkit-overflow-scrolling:touch]"
+        className="fixed z-[410] max-h-60 overflow-y-auto overflow-x-hidden rounded-lg border border-border-input bg-surface-card py-1 shadow-lg ring-1 ring-border-subtle [-webkit-overflow-scrolling:touch]"
         style={{
           top: menuPos.top,
           left: menuPos.left,
@@ -166,7 +166,7 @@ export function BillContactPicker({
           // a note, never a choice
           <li
             role="presentation"
-            className="border-b border-gray-100 px-3 py-2 text-xs text-gray-700"
+            className="border-b border-border-subtle px-3 py-2 text-xs text-text-secondary"
           >
             {TYPE_TO_ADD}
           </li>
@@ -177,10 +177,10 @@ export function BillContactPicker({
             role="option"
             aria-selected={xeroContactId === c.xero_contact_id}
             className={
-              "cursor-pointer px-3 py-2.5 text-sm text-black transition-colors " +
+              "cursor-pointer px-3 py-2.5 text-sm text-text-primary transition-colors " +
               (xeroContactId === c.xero_contact_id
-                ? "bg-secondary/15 font-semibold text-secondary"
-                : "hover:bg-secondary/10")
+                ? "bg-state-selected font-semibold text-text-link"
+                : "hover:bg-state-selected")
             }
             onMouseDown={(e) => {
               e.preventDefault();
@@ -203,13 +203,13 @@ export function BillContactPicker({
                   : `Add ${trimmedName} as a new supplier`
             }
             className={
-              "cursor-pointer px-3 py-2.5 text-left text-sm font-medium break-words text-primary transition-colors " +
-              (filtered.length > 0 ? "border-t border-gray-100 " : "") +
+              "cursor-pointer px-3 py-2.5 text-left text-sm font-medium break-words text-text-secondary transition-colors " +
+              (filtered.length > 0 ? "border-t border-border-subtle " : "") +
               (nameTooLong
                 ? "cursor-not-allowed"
                 : creating || disabled
                   ? "cursor-not-allowed opacity-60"
-                  : "hover:bg-secondary/10")
+                  : "hover:bg-state-selected")
             }
             onMouseDown={(e) => {
               e.preventDefault();
@@ -222,7 +222,7 @@ export function BillContactPicker({
               <>
                 {/* The reason lives on the option too: the open menu covers the note under the field. */}
                 <span className="block opacity-60">{addRowText}</span>
-                <span className="mt-0.5 block text-xs font-normal text-red-600">
+                <span className="mt-0.5 block text-xs font-normal text-status-danger-ink">
                   {NAME_TOO_LONG}
                 </span>
               </>
@@ -260,11 +260,11 @@ export function BillContactPicker({
         />
       </div>
       {createError ? (
-        <p className="mt-1 text-xs text-red-600" role="alert">
+        <p className="mt-1 text-xs text-status-danger-ink" role="alert">
           {createError}
         </p>
       ) : nameTooLong ? (
-        <p className="mt-1 text-xs text-red-600" role="alert">
+        <p className="mt-1 text-xs text-status-danger-ink" role="alert">
           {NAME_TOO_LONG}
         </p>
       ) : null}

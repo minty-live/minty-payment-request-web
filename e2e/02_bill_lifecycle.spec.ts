@@ -72,7 +72,7 @@ test.describe.serial("payment request lifecycle", () => {
       await expect(dlg.getByRole("alert").filter({ hasText: /xero/i })).toBeVisible();
       await expect(page.getByRole("listbox")).toBeHidden();
       await expect(supplier).toHaveAttribute("aria-invalid", "true");
-      await expect(supplier).toHaveClass(/border-red-500/);
+      await expect(supplier).toHaveClass(/border-action-danger/);
       // editing the name clears the refusal
       await supplier.press("End");
       await supplier.press("Backspace");

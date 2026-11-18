@@ -9,7 +9,16 @@
 import { describe, expect, it } from "vitest";
 
 import { payment } from "@/lib/__fixtures__/bills";
-import { billStatusToDisplayLabel, statusDisplayBadgeClass } from "@/lib/billStatusDisplay";
+import { TONE_CLASS } from "@minty/shared/ui";
+
+import {
+  BILL_STATUS_TONE,
+  billStatusGradientFromClass,
+  billStatusToDisplayLabel,
+  billStatusTone,
+  billStatusToneClass,
+  statusDisplayBadgeClass,
+} from "@/lib/billStatusDisplay";
 import {
   billHasRemainingCountablePayments,
   billLockedForRole,
@@ -51,20 +60,39 @@ describe("billStatusToDisplayLabel", () => {
   });
 });
 
-describe("statusDisplayBadgeClass", () => {
-  it.each(["Paid", "Payment Requested", "Partially Paid", "Returned", "Voided", "Draft"])(
-    "gives %s its own badge",
-    (label) => {
-      expect(statusDisplayBadgeClass(label)).toContain("inline-flex");
-    },
-  );
-
-  it("gives every label a different badge", () => {
-    const labels = ["Paid", "Payment Requested", "Partially Paid", "Returned", "Voided", "Draft"];
-    expect(new Set(labels.map(statusDisplayBadgeClass)).size).toBe(labels.length);
+describe("the one bill-status colour map (owner, 2026-11-18)", () => {
+  it.each([
+    ["Draft", "neutral"],
+    ["Payment Requested", "info"],
+    ["Paid", "success"],
+    ["Partially Paid", "warning"],
+    ["Returned", "warning"],
+    ["Voided", "neutral"],
+    ["Payment failed", "danger"],
+    ["Upload failed", "danger"],
+  ] as const)("gives %s the %s tone", (label, tone) => {
+    expect(billStatusTone(label)).toBe(tone);
+    expect(billStatusToneClass(label)).toBe(TONE_CLASS[tone]);
+    expect(statusDisplayBadgeClass(label)).toContain(`bg-status-${tone}-bg`);
+    expect(statusDisplayBadgeClass(label)).toContain(`text-status-${tone}-ink`);
+    expect(billStatusGradientFromClass(label)).toBe(`from-status-${tone}-bg`);
   });
 
-  it("falls back to the Draft badge for a label it does not know", () => {
+  it("covers every status the API sends", () => {
+    for (const status of ["draft", "submitted", "paid", "partially_paid", "void", "returned"]) {
+      expect(Object.keys(BILL_STATUS_TONE)).toContain(billStatusToDisplayLabel(status));
+    }
+  });
+
+  it("keeps one badge geometry for every label", () => {
+    expect(statusDisplayBadgeClass("Paid")).toContain("inline-flex");
+    expect(statusDisplayBadgeClass("Paid").replace(TONE_CLASS.success, "")).toBe(
+      statusDisplayBadgeClass("Draft").replace(TONE_CLASS.neutral, ""),
+    );
+  });
+
+  it("falls back to Neutral for a label it does not know", () => {
+    expect(billStatusTone("Something New")).toBe("neutral");
     expect(statusDisplayBadgeClass("Something New")).toBe(statusDisplayBadgeClass("Draft"));
   });
 });

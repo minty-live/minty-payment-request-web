@@ -34,16 +34,16 @@ const APPLY_HELD_REASON = "Put the range in order to apply the filters.";
 
 /** Filter panel field labels — sentence case (not all-caps). */
 const fieldLabelClass =
-  "mb-1.5 block text-[11px] font-semibold tracking-wide text-gray-700 sm:text-xs";
+  "mb-1.5 block text-[11px] font-semibold tracking-wide text-text-secondary sm:text-xs";
 
 const textInputClass =
-  "box-border h-11 min-h-[44px] w-full rounded-2xl border border-gray-300 bg-white px-3 text-base text-black placeholder:text-gray-700 focus:border-secondary focus:outline-none focus:ring-2 focus:ring-secondary/25 sm:min-h-11 sm:text-sm";
+  "box-border h-11 min-h-[44px] w-full rounded-2xl border border-border-input bg-surface-card px-3 text-base text-text-primary placeholder:text-text-secondary focus:border-border-focus focus:outline-none focus:ring-2 focus:ring-border-focus/25 sm:min-h-11 sm:text-sm";
 
 const filterDateTextClass =
-  "relative z-[1] box-border h-11 min-h-[44px] w-full rounded-2xl border border-gray-300 bg-white py-0 pl-3 pr-11 text-base text-black placeholder:text-gray-700 focus:border-secondary focus:outline-none focus:ring-2 focus:ring-secondary/25 [color-scheme:light] sm:min-h-11 sm:text-sm";
+  "relative z-[1] box-border h-11 min-h-[44px] w-full rounded-2xl border border-border-input bg-surface-card py-0 pl-3 pr-11 text-base text-text-primary placeholder:text-text-secondary focus:border-border-focus focus:outline-none focus:ring-2 focus:ring-border-focus/25 [color-scheme:light] sm:min-h-11 sm:text-sm";
 /** Same calendar control styling as payment history (`RecordPaymentModal`). */
 const filterDateCalendarBtnClass =
-  "absolute right-0 top-0 z-[3] box-border flex h-11 min-h-[44px] w-11 min-w-[44px] cursor-pointer items-center justify-center rounded-r-2xl border border-gray-300 bg-gray-100 text-primary transition-colors hover:bg-gray-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary sm:min-h-11";
+  "absolute right-0 top-0 z-[3] box-border flex h-11 min-h-[44px] w-11 min-w-[44px] cursor-pointer items-center justify-center rounded-r-2xl border border-border-input bg-surface-sunk text-text-secondary transition-colors hover:bg-border-default focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus sm:min-h-11";
 
 export const PAYMENT_REQUEST_STATUS_FILTERS = [
   "All",
@@ -412,7 +412,7 @@ export function PaymentRequestToolbar({
 
   return (
     <>
-      <div className="mx-auto flex w-full min-w-0 max-w-[1920px] flex-col gap-3 bg-white px-4 py-3 sm:px-6 sm:py-4 xl:flex-row xl:items-center xl:justify-between xl:gap-6">
+      <div className="mx-auto flex w-full min-w-0 max-w-[1920px] flex-col gap-3 bg-surface-card px-4 py-3 sm:px-6 sm:py-4 xl:flex-row xl:items-center xl:justify-between xl:gap-6">
         <div className="-mx-4 flex min-w-0 flex-wrap items-center gap-2 px-4 sm:mx-0 sm:px-0">
           <button
             type="button"
@@ -426,7 +426,7 @@ export function PaymentRequestToolbar({
                 setBillModalOpen(true);
               }
             }}
-            className="box-border inline-flex h-10 min-h-10 shrink-0 cursor-pointer items-center justify-center gap-2 rounded-lg border border-transparent bg-secondary px-3 text-sm font-semibold text-white shadow-sm transition-opacity hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary disabled:cursor-not-allowed disabled:opacity-50 sm:h-[42px] sm:min-h-[42px] sm:px-4"
+            className="box-border inline-flex h-10 min-h-10 shrink-0 cursor-pointer items-center justify-center gap-2 rounded-lg border border-transparent bg-action-primary px-3 text-sm font-semibold text-action-on-primary shadow-sm transition-colors hover:bg-action-primary-hover active:bg-action-primary-pressed focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus disabled:cursor-not-allowed disabled:opacity-50 sm:h-[42px] sm:min-h-[42px] sm:px-4"
           >
             Add Payment
             <span className="material-symbols-outlined text-[22px] leading-none" aria-hidden>
@@ -444,11 +444,11 @@ export function PaymentRequestToolbar({
                 if (!statusButtonRef.current) return;
                 toggleStatusMenu(statusButtonRef.current);
               }}
-              className="box-border flex h-10 min-h-10 w-full cursor-pointer items-center justify-between gap-2 rounded-lg border border-primary/25 bg-white px-3 text-left text-sm font-medium text-primary transition-colors hover:bg-primary/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary"
+              className="box-border flex h-10 min-h-10 w-full cursor-pointer items-center justify-between gap-2 rounded-lg border border-border-default bg-surface-card px-3 text-left text-sm font-medium text-text-secondary transition-colors hover:bg-state-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus"
             >
               <span className="min-w-0 truncate">{mobileStatusLabel}</span>
               <span
-                className="material-symbols-outlined shrink-0 text-[22px] leading-none text-primary/70"
+                className="material-symbols-outlined shrink-0 text-[22px] leading-none text-text-secondary"
                 aria-hidden
               >
                 {statusOpen ? "expand_less" : "expand_more"}
@@ -460,7 +460,7 @@ export function PaymentRequestToolbar({
                     data-status-menu-panel
                     role="menu"
                     aria-label="Filter by status"
-                    className="fixed z-[400] max-h-[min(70vh,320px)] overflow-y-auto rounded-lg border border-gray-200 bg-white py-1 shadow-lg"
+                    className="fixed z-[400] max-h-[min(70vh,320px)] overflow-y-auto rounded-lg border border-border-default bg-surface-card py-1 shadow-lg"
                     style={{ top: statusMenu.top, left: statusMenu.left, width: statusMenu.width }}
                   >
                     {PAYMENT_REQUEST_STATUS_FILTERS.map((label) => {
@@ -473,7 +473,7 @@ export function PaymentRequestToolbar({
                           key={label}
                           type="button"
                           role="menuitem"
-                          className={`block w-full cursor-pointer px-3 py-2.5 text-left text-sm font-medium transition-colors ${isActive ? "bg-secondary/15 text-secondary" : "text-primary hover:bg-gray-100"}`}
+                          className={`block w-full cursor-pointer px-3 py-2.5 text-left text-sm font-medium transition-colors ${isActive ? "bg-state-selected text-text-link" : "text-text-secondary hover:bg-state-hover"}`}
                           onClick={() => {
                             onActiveStatusesChange(label === "All" ? [] : [label]);
                             setStatusOpen(false);
@@ -516,7 +516,7 @@ export function PaymentRequestToolbar({
                       onActiveStatusesChange([...activeStatuses, label]);
                     }
                   }}
-                  className={`box-border inline-flex h-10 min-h-10 shrink-0 cursor-pointer items-center justify-center whitespace-nowrap rounded-lg border px-2.5 text-xs font-medium transition-colors sm:h-[42px] sm:min-h-[42px] sm:px-4 sm:text-sm md:text-base ${isActive ? "border-secondary bg-secondary/15 text-secondary" : "border-primary/25 text-primary hover:bg-primary/10"}`}
+                  className={`box-border inline-flex h-10 min-h-10 shrink-0 cursor-pointer items-center justify-center whitespace-nowrap rounded-lg border px-2.5 text-xs font-medium transition-colors sm:h-[42px] sm:min-h-[42px] sm:px-4 sm:text-sm md:text-base ${isActive ? "border-action-secondary-border bg-state-selected text-action-secondary-text" : "border-border-default text-text-secondary hover:bg-state-hover"}`}
                 >
                   {label}
                 </button>
@@ -550,7 +550,7 @@ export function PaymentRequestToolbar({
               placeholder="Search by supplier, description or amount"
               autoComplete="off"
               enterKeyHint="search"
-              className="box-border h-11 min-h-[44px] w-full rounded-lg border border-primary/25 bg-white py-0 pl-3 pr-3 text-base leading-normal text-black placeholder:text-gray-700 focus:border-secondary focus:outline-none focus:ring-2 focus:ring-secondary/30 sm:h-[42px] sm:min-h-[42px] sm:text-sm"
+              className="box-border h-11 min-h-[44px] w-full rounded-lg border border-border-default bg-surface-card py-0 pl-3 pr-3 text-base leading-normal text-text-primary placeholder:text-text-secondary focus:border-border-focus focus:outline-none focus:ring-2 focus:ring-border-focus/30 sm:h-[42px] sm:min-h-[42px] sm:text-sm"
               suppressHydrationWarning
             />
           </form>
@@ -566,7 +566,7 @@ export function PaymentRequestToolbar({
                   if (!filterButtonRef.current) return;
                   toggleFilterMenu(filterButtonRef.current);
                 }}
-                className="box-border inline-flex h-11 min-h-[44px] w-11 min-w-[44px] cursor-pointer items-center justify-center rounded-lg border border-primary/25 text-primary transition-colors hover:bg-primary/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary sm:h-[42px] sm:min-h-[42px] sm:w-[42px] sm:min-w-[42px]"
+                className="box-border inline-flex h-11 min-h-[44px] w-11 min-w-[44px] cursor-pointer items-center justify-center rounded-lg border border-border-default text-text-secondary transition-colors hover:bg-state-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus sm:h-[42px] sm:min-h-[42px] sm:w-[42px] sm:min-w-[42px]"
               >
                 <span className="material-symbols-outlined text-[22px] leading-none">
                   filter_alt
@@ -578,16 +578,16 @@ export function PaymentRequestToolbar({
                       data-filter-menu-panel
                       role="dialog"
                       aria-label="Filters"
-                      className="fixed z-[400] overflow-hidden rounded-lg border border-gray-200 bg-white shadow-lg"
+                      className="fixed z-[400] overflow-hidden rounded-lg border border-border-default bg-surface-card shadow-lg"
                       style={{
                         top: filterMenu.top,
                         left: filterMenu.left,
                         width: filterMenu.width,
                       }}
                     >
-                      <div className="border-b border-gray-200 px-3 py-2">
-                        <h3 className="text-sm font-semibold text-primary">Filters</h3>
-                        <p className="mt-1 text-xs leading-snug text-primary/65">
+                      <div className="border-b border-border-default px-3 py-2">
+                        <h3 className="text-sm font-semibold text-text-secondary">Filters</h3>
+                        <p className="mt-1 text-xs leading-snug text-text-secondary">
                           Adjust criteria, then apply to update the list. Closing without applying
                           keeps the current filters.
                         </p>
@@ -612,7 +612,7 @@ export function PaymentRequestToolbar({
                                 placeholder="0.00"
                                 className={textInputClass}
                               />
-                              <span className="shrink-0 text-[11px] font-semibold uppercase tracking-wide text-gray-700 sm:text-xs">
+                              <span className="shrink-0 text-[11px] font-semibold uppercase tracking-wide text-text-secondary sm:text-xs">
                                 To
                               </span>
                               <input
@@ -629,7 +629,7 @@ export function PaymentRequestToolbar({
                             {amountsOutOfOrder ? (
                               <p
                                 id={`${filterFieldIds}-amount-order`}
-                                className="mt-1 text-xs text-red-600"
+                                className="mt-1 text-xs text-status-danger-ink"
                                 role="alert"
                               >
                                 {AMOUNTS_OUT_OF_ORDER}
@@ -710,7 +710,10 @@ export function PaymentRequestToolbar({
                               />
                             </div>
                             {datesOutOfOrder ? (
-                              <p className="text-xs text-red-600 sm:col-span-2" role="alert">
+                              <p
+                                className="text-xs text-status-danger-ink sm:col-span-2"
+                                role="alert"
+                              >
                                 {DATES_OUT_OF_ORDER}
                               </p>
                             ) : null}
@@ -718,14 +721,14 @@ export function PaymentRequestToolbar({
                         </div>
                       </div>
                       <div
-                        className="border-t border-gray-200 px-3 py-2 sm:px-4"
+                        className="border-t border-border-default px-3 py-2 sm:px-4"
                         onMouseDown={(e) => e.stopPropagation()}
                       >
                         <div className="flex items-center gap-2">
                           <button
                             type="button"
                             onClick={onResetFilterDraft}
-                            className="box-border h-12 min-h-[48px] w-full min-w-0 flex-1 rounded-lg border-2 border-secondary bg-white px-4 text-sm font-semibold text-secondary transition-colors hover:bg-secondary/10 sm:h-11 sm:min-h-[44px]"
+                            className="box-border h-12 min-h-[48px] w-full min-w-0 flex-1 rounded-lg border-2 border-action-secondary-border bg-surface-card px-4 text-sm font-semibold text-action-secondary-text transition-colors hover:bg-state-selected sm:h-11 sm:min-h-[44px]"
                           >
                             Reset
                           </button>
@@ -736,7 +739,7 @@ export function PaymentRequestToolbar({
                             aria-describedby={
                               filtersOutOfOrder ? `${filterFieldIds}-apply-reason` : undefined
                             }
-                            className="box-border h-12 min-h-[48px] w-full min-w-0 flex-1 rounded-lg border border-transparent bg-secondary px-5 text-sm font-bold text-white shadow-sm transition-opacity hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary disabled:cursor-not-allowed disabled:opacity-50 sm:h-11 sm:min-h-[44px]"
+                            className="box-border h-12 min-h-[48px] w-full min-w-0 flex-1 rounded-lg border border-transparent bg-action-primary px-5 text-sm font-bold text-action-on-primary shadow-sm transition-colors hover:bg-action-primary-hover active:bg-action-primary-pressed focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus disabled:cursor-not-allowed disabled:opacity-50 sm:h-11 sm:min-h-[44px]"
                           >
                             Apply
                           </button>
@@ -744,7 +747,7 @@ export function PaymentRequestToolbar({
                         {filtersOutOfOrder ? (
                           <p
                             id={`${filterFieldIds}-apply-reason`}
-                            className="mt-1.5 text-right text-xs text-gray-700"
+                            className="mt-1.5 text-right text-xs text-text-secondary"
                           >
                             {APPLY_HELD_REASON}
                           </p>
@@ -777,7 +780,7 @@ export function PaymentRequestToolbar({
                   if (!bulkButtonRef.current) return;
                   toggleBulkMenu(bulkButtonRef.current);
                 }}
-                className={`box-border inline-flex h-11 min-h-[44px] items-center justify-center rounded-lg border px-3 text-sm font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary sm:h-[42px] sm:min-h-[42px] sm:px-4 ${bulkActionsEnabled ? "cursor-pointer border-primary/25 text-primary hover:bg-primary/10" : "cursor-not-allowed border-primary/20 bg-[#F5F5F5] text-primary/45"}`}
+                className={`box-border inline-flex h-11 min-h-[44px] items-center justify-center rounded-lg border px-3 text-sm font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus sm:h-[42px] sm:min-h-[42px] sm:px-4 ${bulkActionsEnabled ? "cursor-pointer border-border-default text-text-secondary hover:bg-state-hover" : "cursor-not-allowed border-border-default bg-surface-sunk text-text-muted"}`}
               >
                 {bulkSelectedCount > 0 ? `Bulk Actions (${bulkSelectedCount})` : "Bulk Actions"}
               </button>
@@ -787,7 +790,7 @@ export function PaymentRequestToolbar({
                       data-bulk-menu-panel
                       role="menu"
                       aria-label="Bulk actions"
-                      className="fixed z-[400] rounded-lg border border-gray-200 bg-white py-1 shadow-lg"
+                      className="fixed z-[400] rounded-lg border border-border-default bg-surface-card py-1 shadow-lg"
                       style={{
                         top: bulkMenu.top,
                         left: bulkMenu.left,
@@ -798,7 +801,7 @@ export function PaymentRequestToolbar({
                         <button
                           type="button"
                           role="menuitem"
-                          className="block w-full cursor-pointer px-3 py-2 text-left text-sm font-medium text-primary transition-colors hover:bg-gray-100"
+                          className="block w-full cursor-pointer px-3 py-2 text-left text-sm font-medium text-text-secondary transition-colors hover:bg-state-hover"
                           onClick={() => {
                             onBulkPublishSelected?.();
                             setBulkOpen(false);
@@ -812,7 +815,7 @@ export function PaymentRequestToolbar({
                         <button
                           type="button"
                           role="menuitem"
-                          className="block w-full cursor-pointer px-3 py-2 text-left text-sm font-medium text-red-600 transition-colors hover:bg-red-50"
+                          className="block w-full cursor-pointer px-3 py-2 text-left text-sm font-medium text-status-danger-ink transition-colors hover:bg-status-danger-bg"
                           onClick={() => {
                             onBulkDeleteSelected?.();
                             setBulkOpen(false);
@@ -823,7 +826,7 @@ export function PaymentRequestToolbar({
                         </button>
                       ) : null}
                       {isViewOnly ? (
-                        <div className="px-3 py-2 text-sm text-gray-400 select-none">
+                        <div className="px-3 py-2 text-sm text-text-disabled select-none">
                           View-only access
                         </div>
                       ) : null}

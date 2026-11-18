@@ -121,81 +121,84 @@ function validateDetailRequiredForSubmit(
 function PaymentRequestDetailCardSkeleton() {
   return (
     <section
-      className="rounded-xl border border-gray-200/90 bg-white p-4 sm:p-5 md:p-6"
+      className="rounded-xl border border-border-default bg-surface-card p-4 sm:p-5 md:p-6"
       role="status"
       aria-busy="true"
       aria-label="Loading detailed information"
     >
       <div className="mb-4 sm:mb-5">
-        <div className="h-6 w-48 max-w-[85%] animate-pulse rounded-md bg-gray-200" aria-hidden />
+        <div
+          className="h-6 w-48 max-w-[85%] animate-pulse rounded-md bg-border-default"
+          aria-hidden
+        />
       </div>
 
       <div className="flex flex-col gap-5">
         <div>
-          <div className="mb-1.5 h-3 w-14 animate-pulse rounded bg-gray-200" aria-hidden />
+          <div className="mb-1.5 h-3 w-14 animate-pulse rounded bg-border-default" aria-hidden />
           <div
-            className="h-11 min-h-[44px] w-full animate-pulse rounded-2xl bg-gray-100"
+            className="h-11 min-h-[44px] w-full animate-pulse rounded-2xl bg-surface-sunk"
             aria-hidden
           />
         </div>
 
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-4">
           <div>
-            <div className="mb-1.5 h-3 w-24 animate-pulse rounded bg-gray-200" aria-hidden />
+            <div className="mb-1.5 h-3 w-24 animate-pulse rounded bg-border-default" aria-hidden />
             <div
-              className="h-11 min-h-[44px] w-full animate-pulse rounded-2xl bg-gray-100"
+              className="h-11 min-h-[44px] w-full animate-pulse rounded-2xl bg-surface-sunk"
               aria-hidden
             />
           </div>
           <div>
-            <div className="mb-1.5 h-3 w-20 animate-pulse rounded bg-gray-200" aria-hidden />
+            <div className="mb-1.5 h-3 w-20 animate-pulse rounded bg-border-default" aria-hidden />
             <div
-              className="h-11 min-h-[44px] w-full animate-pulse rounded-2xl bg-gray-100"
+              className="h-11 min-h-[44px] w-full animate-pulse rounded-2xl bg-surface-sunk"
               aria-hidden
             />
           </div>
         </div>
 
         <div>
-          <div className="mb-1.5 h-3 w-16 animate-pulse rounded bg-gray-200" aria-hidden />
+          <div className="mb-1.5 h-3 w-16 animate-pulse rounded bg-border-default" aria-hidden />
           <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:gap-0">
             <div
-              className="h-11 min-h-[44px] w-full shrink-0 animate-pulse rounded-2xl bg-gray-100 sm:w-24 sm:rounded-r-none"
+              className="h-11 min-h-[44px] w-full shrink-0 animate-pulse rounded-2xl bg-surface-sunk sm:w-24 sm:rounded-r-none"
               aria-hidden
             />
             <div
-              className="h-11 min-h-[44px] w-full flex-1 animate-pulse rounded-2xl bg-gray-100 sm:rounded-l-none sm:rounded-r-2xl"
+              className="h-11 min-h-[44px] w-full flex-1 animate-pulse rounded-2xl bg-surface-sunk sm:rounded-l-none sm:rounded-r-2xl"
               aria-hidden
             />
           </div>
         </div>
 
         <div>
-          <div className="mb-1.5 h-3 w-24 animate-pulse rounded bg-gray-200" aria-hidden />
+          <div className="mb-1.5 h-3 w-24 animate-pulse rounded bg-border-default" aria-hidden />
           <div
-            className="h-11 min-h-[44px] w-full animate-pulse rounded-2xl bg-gray-100"
+            className="h-11 min-h-[44px] w-full animate-pulse rounded-2xl bg-surface-sunk"
             aria-hidden
           />
         </div>
 
         <div>
-          <div className="mb-1.5 h-3 w-16 animate-pulse rounded bg-gray-200" aria-hidden />
+          <div className="mb-1.5 h-3 w-16 animate-pulse rounded bg-border-default" aria-hidden />
           <div className="flex items-center gap-2 sm:gap-3">
             <div
-              className="h-11 min-h-[44px] min-w-0 flex-1 animate-pulse rounded-lg bg-gray-100"
+              className="h-11 min-h-[44px] min-w-0 flex-1 animate-pulse rounded-lg bg-surface-sunk"
               aria-hidden
             />
             <div
-              className="h-9 w-[8.5rem] shrink-0 animate-pulse rounded-lg bg-gray-200 sm:h-10 sm:w-[9.75rem]"
+              className="h-9 w-[8.5rem] shrink-0 animate-pulse rounded-lg bg-border-default sm:h-10 sm:w-[9.75rem]"
               aria-hidden
             />
           </div>
         </div>
 
         <div>
-          <div className="mb-1.5 h-3 w-28 animate-pulse rounded bg-gray-200" aria-hidden />
+          <div className="mb-1.5 h-3 w-28 animate-pulse rounded bg-border-default" aria-hidden />
           <div
-            className="h-11 min-h-[44px] w-full animate-pulse rounded-2xl bg-gray-100"
+            className="h-11 min-h-[44px] w-full animate-pulse rounded-2xl bg-surface-sunk"
             aria-hidden
           />
         </div>
@@ -1384,7 +1387,7 @@ export function PaymentRequestDetailBody({ onBillUpdated }: PaymentRequestDetail
                   type="button"
                   onClick={handleEdit}
                   disabled={detailToolbarActionsDisabled}
-                  className="inline-flex h-10 min-h-[44px] w-auto max-w-full shrink-0 cursor-pointer items-center justify-center rounded-full border border-primary/25 bg-white px-2.5 text-sm font-medium text-primary transition-colors hover:bg-primary/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary disabled:cursor-not-allowed disabled:opacity-50 sm:px-4"
+                  className="inline-flex h-10 min-h-[44px] w-auto max-w-full shrink-0 cursor-pointer items-center justify-center rounded-full border border-border-default bg-surface-card px-2.5 text-sm font-medium text-text-secondary transition-colors hover:bg-state-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus disabled:cursor-not-allowed disabled:opacity-50 sm:px-4"
                 >
                   Edit
                 </button>
@@ -1432,7 +1435,7 @@ export function PaymentRequestDetailBody({ onBillUpdated }: PaymentRequestDetail
           {loadingBill ? (
             <PaymentRequestDetailCardSkeleton />
           ) : loadError ? (
-            <div className="rounded-xl border border-rose-200 bg-rose-50 p-5 text-sm text-rose-800">
+            <div className="rounded-xl border border-status-danger-bg bg-status-danger-bg p-5 text-sm text-status-danger-ink">
               {loadError}
             </div>
           ) : formData ? (
@@ -1473,7 +1476,7 @@ export function PaymentRequestDetailBody({ onBillUpdated }: PaymentRequestDetail
                       type="button"
                       aria-expanded={paymentHistoryMenuOpen}
                       aria-controls="payment-history-dropdown-panel"
-                      className="inline-flex h-9 max-w-full min-w-0 shrink-0 cursor-pointer items-center gap-1 rounded-lg border-0 bg-secondary/15 px-2.5 py-1.5 text-xs font-semibold text-secondary transition-colors hover:bg-secondary/25 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary sm:h-10 sm:gap-1.5 sm:px-3 sm:text-sm"
+                      className="inline-flex h-9 max-w-full min-w-0 shrink-0 cursor-pointer items-center gap-1 rounded-lg border-0 bg-state-selected px-2.5 py-1.5 text-xs font-semibold text-text-link transition-colors hover:brightness-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus sm:h-10 sm:gap-1.5 sm:px-3 sm:text-sm"
                       onClick={() => setPaymentHistoryMenuOpen((v) => !v)}
                     >
                       <span className="whitespace-nowrap">View Payment History</span>
@@ -1490,12 +1493,12 @@ export function PaymentRequestDetailBody({ onBillUpdated }: PaymentRequestDetail
                         role="dialog"
                         aria-labelledby="payment-history-dropdown-heading"
                         style={paymentHistoryPanelStyle}
-                        className="overflow-y-auto overscroll-y-contain rounded-lg border border-gray-200 bg-white shadow-lg"
+                        className="overflow-y-auto overscroll-y-contain rounded-lg border border-border-default bg-surface-card shadow-lg"
                       >
-                        <div className="border-b border-gray-100 px-4 py-3 sm:px-5 sm:py-3.5">
+                        <div className="border-b border-border-subtle px-4 py-3 sm:px-5 sm:py-3.5">
                           <h2
                             id="payment-history-dropdown-heading"
-                            className="text-base font-semibold text-primary sm:text-lg"
+                            className="text-base font-semibold text-text-secondary sm:text-lg"
                           >
                             Payment History
                           </h2>
@@ -1592,7 +1595,7 @@ export function PaymentRequestDetailBody({ onBillUpdated }: PaymentRequestDetail
                       ? "View payments"
                       : "Insufficient permissions — view payments not available"
                   }
-                  className="box-border inline-flex h-12 w-fit max-w-full min-w-0 shrink-0 cursor-pointer items-center justify-start gap-1.5 rounded-lg border-0 bg-secondary/15 px-3 text-left text-base font-medium text-secondary transition-colors hover:bg-secondary/25 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary disabled:cursor-not-allowed disabled:bg-[#F5F5F5] disabled:text-primary/40 disabled:hover:bg-[#F5F5F5] sm:h-[46px] sm:px-3.5"
+                  className="box-border inline-flex h-12 w-fit max-w-full min-w-0 shrink-0 cursor-pointer items-center justify-start gap-1.5 rounded-lg border-0 bg-state-selected px-3 text-left text-base font-medium text-text-link transition-colors hover:brightness-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus disabled:cursor-not-allowed disabled:bg-action-disabled disabled:text-text-disabled disabled:hover:bg-action-disabled sm:h-[46px] sm:px-3.5"
                 >
                   View payments
                 </button>

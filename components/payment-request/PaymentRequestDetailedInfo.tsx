@@ -59,31 +59,31 @@ export type PaymentRequestDetailedInfoProps = {
 
 /** Shared with easy-view draft detailed card so labels match the detail page. */
 export const paymentRequestDetailFieldLabelClass =
-  "mb-1.5 block text-[11px] font-semibold tracking-wide text-gray-700 sm:text-xs";
+  "mb-1.5 block text-[11px] font-semibold tracking-wide text-text-secondary sm:text-xs";
 
 /** Same as modal text inputs (Bill No., Description, etc.) — shared with easy-view draft inline edit. */
 export const paymentRequestDetailModalTextInputClass =
-  "box-border h-11 min-h-[44px] w-full rounded-2xl border border-gray-300 bg-white px-3 text-base text-black placeholder:text-gray-700 focus:border-secondary focus:outline-none focus:ring-2 focus:ring-secondary/25 sm:min-h-11 sm:text-sm";
+  "box-border h-11 min-h-[44px] w-full rounded-2xl border border-border-input bg-surface-card px-3 text-base text-text-primary placeholder:text-text-secondary focus:border-border-focus focus:outline-none focus:ring-2 focus:ring-border-focus/25 sm:min-h-11 sm:text-sm";
 
 /** The amount input: the right half of one row with the currency cell, at every width. */
 export const paymentRequestDetailAmountValueInputClass =
-  "box-border h-11 min-h-[44px] min-w-0 flex-1 rounded-l-none rounded-r-2xl border border-l-0 border-gray-300 bg-white px-3 text-base text-black placeholder:text-gray-700 focus:outline-none focus:ring-2 sm:min-h-11 sm:text-sm focus:border-secondary focus:ring-secondary/25";
+  "box-border h-11 min-h-[44px] min-w-0 flex-1 rounded-l-none rounded-r-2xl border border-l-0 border-border-input bg-surface-card px-3 text-base text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 sm:min-h-11 sm:text-sm focus:border-border-focus focus:ring-border-focus/25";
 
 /** Static currency cell left of the amount input — mirrors the amount input's border/size. */
 export const paymentRequestDetailCurrencyCellClass =
-  "box-border flex h-11 min-h-[44px] w-20 shrink-0 items-center justify-center rounded-l-2xl rounded-r-none border border-r-0 bg-white px-2 text-base text-black sm:min-h-11 sm:w-24 sm:px-3 sm:text-sm";
+  "box-border flex h-11 min-h-[44px] w-20 shrink-0 items-center justify-center rounded-l-2xl rounded-r-none border border-r-0 bg-surface-card px-2 text-base text-text-primary sm:min-h-11 sm:w-24 sm:px-3 sm:text-sm";
 
 export const paymentRequestDetailDateTextInputClass =
-  "relative z-[1] box-border h-11 min-h-[44px] w-full rounded-2xl border border-gray-300 bg-white py-0 pl-3 pr-3 text-base text-black placeholder:text-gray-700 focus:border-secondary focus:outline-none focus:ring-2 focus:ring-secondary/25 [color-scheme:light] sm:min-h-11 sm:text-sm";
+  "relative z-[1] box-border h-11 min-h-[44px] w-full rounded-2xl border border-border-input bg-surface-card py-0 pl-3 pr-3 text-base text-text-primary placeholder:text-text-secondary focus:border-border-focus focus:outline-none focus:ring-2 focus:ring-border-focus/25 [color-scheme:light] sm:min-h-11 sm:text-sm";
 
 export const paymentRequestDetailDateTextInputClassError =
-  "relative z-[1] box-border h-11 min-h-[44px] w-full rounded-2xl border border-red-500 bg-white py-0 pl-3 pr-3 text-base text-black placeholder:text-gray-700 focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-200/50 [color-scheme:light] sm:min-h-11 sm:text-sm";
+  "relative z-[1] box-border h-11 min-h-[44px] w-full rounded-2xl border border-action-danger bg-surface-card py-0 pl-3 pr-3 text-base text-text-primary placeholder:text-text-secondary focus:border-action-danger focus:outline-none focus:ring-2 focus:ring-action-danger/20 [color-scheme:light] sm:min-h-11 sm:text-sm";
 
 const cancelButtonClass =
-  "box-border h-11 min-h-[44px] shrink-0 cursor-pointer rounded-lg border-2 border-secondary bg-white px-4 text-sm font-semibold text-secondary transition-colors hover:bg-secondary/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-[44px] sm:px-5";
+  "box-border h-11 min-h-[44px] shrink-0 cursor-pointer rounded-lg border-2 border-action-secondary-border bg-surface-card px-4 text-sm font-semibold text-action-secondary-text transition-colors hover:bg-state-selected focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-[44px] sm:px-5";
 
 const saveButtonClass =
-  "box-border h-11 min-h-[44px] shrink-0 cursor-pointer rounded-lg border border-transparent bg-secondary px-5 text-sm font-bold text-white shadow-sm transition-opacity hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary disabled:cursor-not-allowed disabled:opacity-60 sm:min-h-[44px] sm:px-6";
+  "box-border h-11 min-h-[44px] shrink-0 cursor-pointer rounded-lg border border-transparent bg-action-primary px-5 text-sm font-bold text-action-on-primary shadow-sm transition-colors hover:bg-action-primary-hover active:bg-action-primary-pressed focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus disabled:cursor-not-allowed disabled:opacity-60 sm:min-h-[44px] sm:px-6";
 
 /** Matches card header actions; use in BillActionBar when `editInCardHeader` is false. */
 export {
@@ -96,7 +96,7 @@ export const paymentRequestDetailHeaderActionsClass =
   "flex min-h-[44px] w-full shrink-0 flex-wrap items-center gap-2 sm:w-auto sm:justify-end";
 
 export const paymentRequestDetailEditToggleButtonClass =
-  "inline-flex h-11 min-h-[44px] shrink-0 cursor-pointer items-center gap-1.5 rounded-lg bg-secondary px-4 text-sm font-semibold text-white shadow-sm transition-[filter] hover:brightness-95 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50";
+  "inline-flex h-11 min-h-[44px] shrink-0 cursor-pointer items-center gap-1.5 rounded-lg bg-action-primary px-4 text-sm font-semibold text-action-on-primary shadow-sm transition-colors hover:bg-action-primary-hover active:bg-action-primary-pressed focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50";
 
 function FieldLabel({
   htmlFor,
@@ -135,7 +135,7 @@ export function PaymentRequestReadOnlyTextBox({
 }) {
   return (
     <div
-      className={`flex h-11 min-h-[44px] w-full items-center rounded-lg bg-transparent px-3 text-base text-black sm:min-h-11 sm:text-sm ${emphasis === "semibold" ? "font-semibold" : "font-normal"} ${highlightError ? "ring-2 ring-inset ring-red-500" : ""}`}
+      className={`flex h-11 min-h-[44px] w-full items-center rounded-lg bg-transparent px-3 text-base text-text-primary sm:min-h-11 sm:text-sm ${emphasis === "semibold" ? "font-semibold" : "font-normal"} ${highlightError ? "ring-2 ring-inset ring-action-danger" : ""}`}
     >
       <span className="min-w-0 flex-1 truncate">{children}</span>
     </div>
@@ -153,7 +153,7 @@ export function PaymentRequestReadOnlySelectShell({
   const display = (value ?? "").trim() || "—";
   return (
     <div
-      className={`box-border flex h-11 min-h-[44px] min-w-0 w-full cursor-default overflow-hidden rounded-lg bg-transparent p-0 text-left text-base font-normal text-black sm:min-h-11 sm:text-sm ${highlightError ? "ring-2 ring-inset ring-red-500" : ""}`}
+      className={`box-border flex h-11 min-h-[44px] min-w-0 w-full cursor-default overflow-hidden rounded-lg bg-transparent p-0 text-left text-base font-normal text-text-primary sm:min-h-11 sm:text-sm ${highlightError ? "ring-2 ring-inset ring-action-danger" : ""}`}
       aria-readonly="true"
     >
       <span className="flex min-h-[44px] min-w-0 flex-1 items-center py-0 pl-3 pr-3 sm:min-h-11">
@@ -218,29 +218,26 @@ function FitAmountText({ children }: { children: ReactNode }) {
   );
 }
 
-/** Same layout as amount row in modal: gray #EDEDED currency cell + white amount cell. */
+/** Same layout as amount row in modal: a sunk currency cell + the amount cell. Amounts are plain text, never coloured (Part 13). */
 export function PaymentRequestReadOnlyAmountRow({
   currencyDisplayLabel,
   amount,
   highlightError = false,
-  tone = "default",
 }: {
   currencyDisplayLabel: string;
   amount: string;
   highlightError?: boolean;
-  tone?: "default" | "secondary";
 }) {
-  const amountColorClass = tone === "secondary" ? "text-secondary" : "text-black";
   return (
     <div className="flex min-w-0 items-center">
       <div
-        className="box-border flex h-11 min-h-[44px] w-20 shrink-0 items-center justify-between gap-2 rounded-l-lg rounded-r-none bg-transparent px-2 pl-3 pr-2 text-base font-semibold text-black sm:w-24 sm:px-3 sm:text-sm"
+        className="box-border flex h-11 min-h-[44px] w-20 shrink-0 items-center justify-between gap-2 rounded-l-lg rounded-r-none bg-transparent px-2 pl-3 pr-2 text-base font-semibold text-text-primary sm:w-24 sm:px-3 sm:text-sm"
         aria-label="Currency"
       >
         <span className="min-w-0 flex-1 truncate">{currencyDisplayLabel}</span>
       </div>
       <div
-        className={`box-border flex min-h-[52px] min-w-0 flex-1 items-center rounded-l-none rounded-r-lg bg-transparent px-3 py-1 font-semibold tabular-nums ${amountColorClass} sm:min-h-14 sm:leading-snug ${highlightError ? "ring-2 ring-inset ring-red-500" : ""}`}
+        className={`box-border flex min-h-[52px] min-w-0 flex-1 items-center rounded-l-none rounded-r-lg bg-transparent px-3 py-1 font-semibold tabular-nums text-text-primary sm:min-h-14 sm:leading-snug ${highlightError ? "ring-2 ring-inset ring-action-danger" : ""}`}
         aria-readonly="true"
       >
         <FitAmountText>{amount || "—"}</FitAmountText>
@@ -258,7 +255,7 @@ export function PaymentRequestReadOnlyDateRow({
 }) {
   return (
     <div
-      className={`flex h-11 min-h-[44px] w-full items-center rounded-lg bg-transparent px-3 text-base font-semibold text-black sm:min-h-11 sm:text-sm ${highlightError ? "ring-2 ring-inset ring-red-500" : ""}`}
+      className={`flex h-11 min-h-[44px] w-full items-center rounded-lg bg-transparent px-3 text-base font-semibold text-text-primary sm:min-h-11 sm:text-sm ${highlightError ? "ring-2 ring-inset ring-action-danger" : ""}`}
     >
       <span className="min-w-0 flex-1 truncate">{display}</span>
     </div>
@@ -331,12 +328,12 @@ export function PaymentRequestDetailedInfo({
 
   return (
     <section
-      className={`rounded-xl border border-gray-200/90 bg-white p-4 sm:p-5 md:p-6 ${className}`}
+      className={`rounded-xl border border-border-default bg-surface-card p-4 sm:p-5 md:p-6 ${className}`}
     >
       <div
         className={`mb-4 flex flex-col gap-3 sm:mb-5 ${editInCardHeader ? "sm:flex-row sm:items-start sm:justify-between sm:gap-4" : ""}`}
       >
-        <h2 className="min-w-0 text-base font-medium leading-snug text-primary sm:text-lg">
+        <h2 className="min-w-0 text-base font-medium leading-snug text-text-secondary sm:text-lg">
           Detailed Information
         </h2>
         {editInCardHeader ? (
@@ -393,14 +390,14 @@ export function PaymentRequestDetailedInfo({
                 aria-describedby={billNoError ? idBillNoError : undefined}
                 className={
                   billNoError
-                    ? "box-border h-11 min-h-[44px] w-full rounded-2xl border border-red-500 bg-white px-3 text-base text-black placeholder:text-gray-700 focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-200/50 sm:min-h-11 sm:text-sm"
+                    ? "box-border h-11 min-h-[44px] w-full rounded-2xl border border-action-danger bg-surface-card px-3 text-base text-text-primary placeholder:text-text-secondary focus:border-action-danger focus:outline-none focus:ring-2 focus:ring-action-danger/20 sm:min-h-11 sm:text-sm"
                     : paymentRequestDetailModalTextInputClass
                 }
                 placeholder="MBIOVI-115803031626"
                 disabled={disabled}
               />
               {billNoError ? (
-                <p id={idBillNoError} className="mt-1 text-xs text-red-600" role="alert">
+                <p id={idBillNoError} className="mt-1 text-xs text-status-danger-ink" role="alert">
                   {billNoError}
                 </p>
               ) : null}
@@ -413,7 +410,7 @@ export function PaymentRequestDetailedInfo({
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-4">
           <div>
             <FieldLabel htmlFor={idInvoiceDate} editing={isEditing}>
-              Invoice Date<span className="text-red-500"> *</span>
+              Invoice Date<span className="text-status-danger-ink"> *</span>
             </FieldLabel>
             {isEditing ? (
               <>
@@ -432,7 +429,11 @@ export function PaymentRequestDetailedInfo({
                   calendarButtonClassName="hidden"
                 />
                 {invoiceDateError ? (
-                  <p id={idInvoiceDateError} className="mt-1 text-xs text-red-600" role="alert">
+                  <p
+                    id={idInvoiceDateError}
+                    className="mt-1 text-xs text-status-danger-ink"
+                    role="alert"
+                  >
                     {invoiceDateError}
                   </p>
                 ) : null}
@@ -446,7 +447,7 @@ export function PaymentRequestDetailedInfo({
           </div>
           <div>
             <FieldLabel htmlFor={idDueDate} editing={isEditing}>
-              Due Date<span className="text-red-500"> *</span>
+              Due Date<span className="text-status-danger-ink"> *</span>
             </FieldLabel>
             {isEditing ? (
               <>
@@ -465,7 +466,11 @@ export function PaymentRequestDetailedInfo({
                   calendarButtonClassName="hidden"
                 />
                 {dueDateError ? (
-                  <p id={idDueDateError} className="mt-1 text-xs text-red-600" role="alert">
+                  <p
+                    id={idDueDateError}
+                    className="mt-1 text-xs text-status-danger-ink"
+                    role="alert"
+                  >
                     {dueDateError}
                   </p>
                 ) : null}
@@ -488,7 +493,7 @@ export function PaymentRequestDetailedInfo({
         >
           <div>
             <FieldLabel htmlFor={idAmount} editing={isEditing}>
-              Amount<span className="text-red-500"> *</span>
+              Amount<span className="text-status-danger-ink"> *</span>
             </FieldLabel>
             {isEditing ? (
               <>
@@ -498,7 +503,7 @@ export function PaymentRequestDetailedInfo({
                     aria-label="Currency"
                     className={
                       `${paymentRequestDetailCurrencyCellClass} ` +
-                      (amountError ? "border-red-500" : "border-gray-300")
+                      (amountError ? "border-action-danger" : "border-border-input")
                     }
                   >
                     {currencyDisplayLabel}
@@ -511,15 +516,19 @@ export function PaymentRequestDetailedInfo({
                     aria-describedby={amountError ? idAmountError : undefined}
                     className={
                       amountError
-                        ? `${paymentRequestDetailAmountValueInputClass} placeholder:text-gray-400 placeholder:opacity-60 border-red-500 focus:border-red-500 focus:ring-red-200/50`
-                        : `${paymentRequestDetailAmountValueInputClass} placeholder:text-gray-400 placeholder:opacity-60`
+                        ? `${paymentRequestDetailAmountValueInputClass} placeholder:text-text-disabled placeholder:opacity-60 border-action-danger focus:border-action-danger focus:ring-action-danger/20`
+                        : `${paymentRequestDetailAmountValueInputClass} placeholder:text-text-disabled placeholder:opacity-60`
                     }
 
                     disabled={disabled}
                   />
                 </div>
                 {amountError ? (
-                  <p id={idAmountError} className="mt-1 text-xs text-red-600" role="alert">
+                  <p
+                    id={idAmountError}
+                    className="mt-1 text-xs text-status-danger-ink"
+                    role="alert"
+                  >
                     {amountError}
                   </p>
                 ) : null}
@@ -539,7 +548,6 @@ export function PaymentRequestDetailedInfo({
               <PaymentRequestReadOnlyAmountRow
                 currencyDisplayLabel={currencyDisplayLabel}
                 amount={unpaidAmount}
-                tone="secondary"
               />
             </div>
           ) : null}
@@ -566,7 +574,7 @@ export function PaymentRequestDetailedInfo({
 
         <div>
           <FieldLabel htmlFor={idContact} editing={isEditing}>
-            Supplier<span className="text-red-500"> *</span>
+            Supplier<span className="text-status-danger-ink"> *</span>
           </FieldLabel>
           <div className={contactHeaderEnd ? "flex items-center gap-2 sm:gap-3" : undefined}>
             <div className={contactHeaderEnd ? "min-w-0 flex-1" : undefined}>
@@ -585,7 +593,11 @@ export function PaymentRequestDetailedInfo({
                     error={!!contactError}
                   />
                   {contactError ? (
-                    <p id={idContactError} className="mt-1 text-xs text-red-600" role="alert">
+                    <p
+                      id={idContactError}
+                      className="mt-1 text-xs text-status-danger-ink"
+                      role="alert"
+                    >
                       {contactError}
                     </p>
                   ) : null}
@@ -603,7 +615,7 @@ export function PaymentRequestDetailedInfo({
 
         <div>
           <FieldLabel htmlFor={idAccount} editing={isEditing}>
-            Account Code<span className="text-red-500"> *</span>
+            Account Code<span className="text-status-danger-ink"> *</span>
           </FieldLabel>
           {isEditing ? (
             <>
@@ -620,7 +632,7 @@ export function PaymentRequestDetailedInfo({
                 searchable
               />
               {accountCodeError ? (
-                <p id={idAccountError} className="mt-1 text-xs text-red-600" role="alert">
+                <p id={idAccountError} className="mt-1 text-xs text-status-danger-ink" role="alert">
                   {accountCodeError}
                 </p>
               ) : null}

@@ -76,7 +76,7 @@ const defaultRows: PaymentHistoryRow[] = [
 export function PaymentHistoryListPanel({ rows = defaultRows }: PaymentHistoryListPanelProps) {
   return (
     <div className="px-4 pb-4 pt-3 sm:px-5 sm:pb-5 sm:pt-4">
-      <div className="mb-4 hidden grid-cols-[2rem_minmax(9rem,1fr)_minmax(6.5rem,9rem)_minmax(8rem,10rem)_minmax(11rem,1fr)] gap-2 px-3 text-[11px] font-semibold uppercase tracking-wide text-primary/55 sm:grid sm:gap-4 sm:px-4">
+      <div className="mb-4 hidden grid-cols-[2rem_minmax(9rem,1fr)_minmax(6.5rem,9rem)_minmax(8rem,10rem)_minmax(11rem,1fr)] gap-2 px-3 text-[11px] font-semibold uppercase tracking-wide text-text-muted sm:grid sm:gap-4 sm:px-4">
         <span aria-hidden />
         <span className="block w-full text-left">Payment Date</span>
         <span className="block w-full text-left">Status</span>
@@ -92,24 +92,26 @@ export function PaymentHistoryListPanel({ rows = defaultRows }: PaymentHistoryLi
           {rows.map((row) => (
             <li
               key={row.id}
-              className="grid grid-cols-1 items-center gap-2 rounded-lg bg-gray-50 px-3 py-3 sm:grid-cols-[2rem_minmax(9rem,1fr)_minmax(6.5rem,9rem)_minmax(8rem,10rem)_minmax(11rem,1fr)] sm:gap-4 sm:px-4"
+              className="grid grid-cols-1 items-center gap-2 rounded-lg bg-surface-sunk px-3 py-3 sm:grid-cols-[2rem_minmax(9rem,1fr)_minmax(6.5rem,9rem)_minmax(8rem,10rem)_minmax(11rem,1fr)] sm:gap-4 sm:px-4"
             >
               <span
-                className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#54D3DA]/15 text-[#54D3DA]"
+                className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-state-selected text-text-link"
                 aria-hidden
               >
                 <span className="material-symbols-outlined text-[20px]">history</span>
               </span>
-              <span className="text-sm font-medium text-primary sm:min-w-[7rem]">{row.date}</span>
-              <span className="block w-full text-left text-sm font-medium text-primary sm:min-w-[5.5rem]">
+              <span className="text-sm font-medium text-text-secondary sm:min-w-[7rem]">
+                {row.date}
+              </span>
+              <span className="block w-full text-left text-sm font-medium text-text-secondary sm:min-w-[5.5rem]">
                 {row.statusLabel}
               </span>
-              <span className="block w-full text-left text-sm font-semibold text-primary">
+              <span className="block w-full text-left text-sm font-semibold text-text-secondary">
                 {row.amountLabel}
               </span>
               <Link
                 href={row.invoiceHref ?? "#"}
-                className="block w-full min-w-0 truncate text-left text-sm font-medium text-[#54d3da] underline underline-offset-2 hover:text-[#54d3da]"
+                className="block w-full min-w-0 truncate text-left text-sm font-medium text-text-link underline underline-offset-2 hover:text-text-link"
               >
                 {row.invoiceNo}
               </Link>

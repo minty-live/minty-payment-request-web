@@ -17,6 +17,7 @@ import { unsignedToken } from "@/lib/__fixtures__/tokens";
 import { setAuth } from "@/lib/auth";
 import { INVOICE_LATCH } from "@/lib/invoiceReader";
 import { todayLocalISODate, formatIsoDateAsDdMmmYyyy } from "@/lib/dateDisplayFormat";
+import { SUGGESTED_RING } from "@minty/shared/reader";
 
 const ENTITY_ID = "360812e1-9f3a-4c21-8e5b-1a2b3c4d5e6f";
 
@@ -135,7 +136,7 @@ describe("the invoice reader", () => {
     expect(byId("pr-contact")).toHaveValue("ABC Furniture");
     expect(byId("pr-account")).toHaveValue("429 - General Expenses");
     expect(byId("pr-amount")).toHaveAccessibleDescription("Suggested from the invoice.");
-    expect(byId("pr-amount")).toHaveClass("ring-[#54D3DA]");
+    expect(byId("pr-amount")).toHaveClass(...SUGGESTED_RING.split(" "));
     expect(
       within(dialog()).getAllByText("Suggested from the invoice. Check it before you submit."),
     ).toHaveLength(1); // the medium-band account

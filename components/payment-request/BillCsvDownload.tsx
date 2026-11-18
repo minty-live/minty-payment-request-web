@@ -100,7 +100,7 @@ export function BillCsvDownload({ ids, ticked, startDate, endDate }: BillCsvDown
         aria-label={empty ? "Download CSV" : label}
         aria-describedby={empty ? reasonId : undefined}
         title={empty ? NOTHING_TO_DOWNLOAD : label}
-        className="box-border inline-flex h-11 min-h-[44px] shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-primary/25 px-3 text-sm font-semibold text-primary transition-colors hover:bg-primary/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary disabled:cursor-not-allowed disabled:bg-[#F5F5F5] disabled:text-primary/45 sm:px-4"
+        className="box-border inline-flex h-11 min-h-[44px] shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-border-default px-3 text-sm font-semibold text-text-secondary transition-colors hover:bg-state-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus disabled:cursor-not-allowed disabled:bg-action-disabled disabled:text-text-muted sm:px-4"
       >
         <span className="material-symbols-outlined text-[22px] leading-none" aria-hidden>
           download

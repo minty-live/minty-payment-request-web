@@ -34,15 +34,16 @@ export type EasyViewDraftDetailActions = {
 
 /** Matches Record Payment easy-inline / modal accent (`border-secondary/50`). */
 const easyViewDetailedInformationShellClass =
-  "w-full min-w-0 max-w-full overflow-hidden rounded-xl border border-secondary/50 bg-white";
+  "w-full min-w-0 max-w-full overflow-hidden rounded-xl border border-border-selected bg-surface-card";
 
-const easyViewDetailSkeletonField = "h-11 min-h-[44px] w-full animate-pulse rounded-lg bg-gray-100";
+const easyViewDetailSkeletonField =
+  "h-11 min-h-[44px] w-full animate-pulse rounded-lg bg-surface-sunk";
 
 function EasyViewDetailSkeletonLabel() {
   return (
     <div className={paymentRequestDetailFieldLabelClass}>
       <span
-        className="inline-block h-2.5 w-16 max-w-full rounded bg-gray-200/90 animate-pulse"
+        className="inline-block h-2.5 w-16 max-w-full rounded bg-border-default/90 animate-pulse"
         aria-hidden
       />
     </div>
@@ -64,14 +65,14 @@ export function EasyViewDetailedInformationSkeleton({
   const header =
     mode === "draftCard" ? (
       <div className="mb-4 flex flex-col gap-3 sm:mb-5 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
-        <div className="h-6 w-[min(100%,12rem)] max-w-full animate-pulse rounded-md bg-gray-200 sm:h-7" />
+        <div className="h-6 w-[min(100%,12rem)] max-w-full animate-pulse rounded-md bg-border-default sm:h-7" />
         <div className={paymentRequestDetailHeaderActionsClass}>
-          <div className="h-11 min-h-[44px] w-[7.5rem] max-w-full shrink-0 animate-pulse rounded-lg bg-gray-100" />
+          <div className="h-11 min-h-[44px] w-[7.5rem] max-w-full shrink-0 animate-pulse rounded-lg bg-surface-sunk" />
         </div>
       </div>
     ) : (
       <div className="mb-4 sm:mb-5">
-        <div className="h-6 w-[min(100%,12rem)] max-w-full animate-pulse rounded-md bg-gray-200 sm:h-7" />
+        <div className="h-6 w-[min(100%,12rem)] max-w-full animate-pulse rounded-md bg-border-default sm:h-7" />
       </div>
     );
 
@@ -96,8 +97,8 @@ export function EasyViewDetailedInformationSkeleton({
           <div className="min-w-0">
             <EasyViewDetailSkeletonLabel />
             <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:gap-0">
-              <div className="h-11 min-h-[44px] w-full shrink-0 animate-pulse rounded-lg bg-gray-100 sm:w-24 sm:rounded-l-lg sm:rounded-r-none" />
-              <div className="h-11 min-h-[44px] w-full flex-1 animate-pulse rounded-lg bg-gray-100 sm:rounded-l-none sm:rounded-r-lg" />
+              <div className="h-11 min-h-[44px] w-full shrink-0 animate-pulse rounded-lg bg-surface-sunk sm:w-24 sm:rounded-l-lg sm:rounded-r-none" />
+              <div className="h-11 min-h-[44px] w-full flex-1 animate-pulse rounded-lg bg-surface-sunk sm:rounded-l-none sm:rounded-r-lg" />
             </div>
           </div>
         </div>
@@ -119,13 +120,13 @@ export function EasyViewDetailedInformationSkeleton({
 
         {mode === "draftCard" ? (
           <div className="mt-8 flex w-full min-w-0 flex-row flex-wrap items-center justify-end gap-2 sm:gap-3">
-            <div className="h-10 min-h-[44px] w-[8.5rem] max-w-full shrink-0 animate-pulse rounded-md bg-gray-100" />
+            <div className="h-10 min-h-[44px] w-[8.5rem] max-w-full shrink-0 animate-pulse rounded-md bg-surface-sunk" />
           </div>
         ) : null}
         {showFooterActionsSkeleton ? (
           <div className="mt-8 flex w-full min-w-0 flex-row flex-wrap items-center justify-end gap-2 sm:gap-3">
-            <div className="h-10 min-h-[44px] w-[6.5rem] shrink-0 animate-pulse rounded-md bg-gray-100" />
-            <div className="h-10 min-h-[44px] w-[10rem] max-w-full shrink-0 animate-pulse rounded-full bg-gray-100" />
+            <div className="h-10 min-h-[44px] w-[6.5rem] shrink-0 animate-pulse rounded-md bg-surface-sunk" />
+            <div className="h-10 min-h-[44px] w-[10rem] max-w-full shrink-0 animate-pulse rounded-full bg-surface-sunk" />
           </div>
         ) : null}
       </section>
@@ -150,7 +151,7 @@ export function EasyViewDraftBillActionsRow({
         type="button"
         onClick={actions.onRequestDelete}
         disabled={actions.deleteDisabled}
-        className="inline-flex h-10 min-h-[44px] w-auto shrink-0 cursor-pointer items-center justify-center gap-2 rounded-md bg-rose-50 px-3 text-sm font-medium text-rose-600 transition-colors hover:bg-rose-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-400 disabled:cursor-not-allowed disabled:opacity-50 sm:px-4"
+        className="inline-flex h-10 min-h-[44px] w-auto shrink-0 cursor-pointer items-center justify-center gap-2 rounded-md bg-status-danger-bg px-3 text-sm font-medium text-status-danger-ink transition-colors hover:brightness-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-action-danger disabled:cursor-not-allowed disabled:opacity-50 sm:px-4"
       >
         Delete Payment
         <span className="material-symbols-outlined text-[20px] leading-none" aria-hidden>
@@ -193,7 +194,7 @@ export function EasyViewDraftDetailedInformation({
               : "mb-4 flex flex-col gap-3 sm:mb-5 sm:flex-row sm:items-start sm:justify-between sm:gap-4"
           }
         >
-          <h2 className="min-w-0 text-base font-medium leading-snug text-primary sm:text-lg">
+          <h2 className="min-w-0 text-base font-medium leading-snug text-text-secondary sm:text-lg">
             Detailed Information
           </h2>
           {!readOnly && onEdit ? (
@@ -221,13 +222,13 @@ export function EasyViewDraftDetailedInformation({
           </div>
           <div className="min-w-0">
             <div className={paymentRequestDetailFieldLabelClass}>
-              Due Date<span className="text-red-500"> *</span>
+              Due Date<span className="text-status-danger-ink"> *</span>
             </div>
             <PaymentRequestReadOnlyDateRow display={formatPaymentRequestDetailLongDate(dueDate)} />
           </div>
           <div className="min-w-0">
             <div className={paymentRequestDetailFieldLabelClass}>
-              Invoice Date<span className="text-red-500"> *</span>
+              Invoice Date<span className="text-status-danger-ink"> *</span>
             </div>
             <PaymentRequestReadOnlyDateRow
               display={formatPaymentRequestDetailLongDate(invoiceDate)}
@@ -235,7 +236,7 @@ export function EasyViewDraftDetailedInformation({
           </div>
           <div className="min-w-0">
             <div className={paymentRequestDetailFieldLabelClass}>
-              Amount<span className="text-red-500"> *</span>
+              Amount<span className="text-status-danger-ink"> *</span>
             </div>
             <PaymentRequestReadOnlyAmountRow
               currencyDisplayLabel={currencyDisplayLabel}
@@ -247,7 +248,7 @@ export function EasyViewDraftDetailedInformation({
         <div className="mt-6 grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-2 lg:grid-cols-3 lg:gap-y-4">
           <div className="min-w-0 lg:col-span-1">
             <div className={paymentRequestDetailFieldLabelClass}>
-              Supplier<span className="text-red-500"> *</span>
+              Supplier<span className="text-status-danger-ink"> *</span>
             </div>
             <PaymentRequestReadOnlySelectShell value={contact} />
           </div>
@@ -257,7 +258,7 @@ export function EasyViewDraftDetailedInformation({
           </div>
           <div className="min-w-0 sm:col-span-2 lg:col-span-1">
             <div className={paymentRequestDetailFieldLabelClass}>
-              Account Code<span className="text-red-500"> *</span>
+              Account Code<span className="text-status-danger-ink"> *</span>
             </div>
             <PaymentRequestReadOnlySelectShell value={accountCode} />
           </div>
@@ -346,7 +347,7 @@ export function EasyViewDraftDetailedInformationEdit({
     <div className={easyViewDetailedInformationShellClass}>
       <section className="w-full min-w-0 max-w-full border-0 bg-transparent p-4 sm:p-5 md:p-6 lg:p-7">
         <div className="mb-5 flex flex-col gap-3 sm:mb-6 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
-          <h2 className="min-w-0 text-base font-medium leading-snug text-primary sm:text-lg">
+          <h2 className="min-w-0 text-base font-medium leading-snug text-text-secondary sm:text-lg">
             Detailed Information
           </h2>
           <div className={easyDraftHeaderActionsClass}>
@@ -383,12 +384,12 @@ export function EasyViewDraftDetailedInformationEdit({
               aria-invalid={!!billNoError}
               className={
                 billNoError
-                  ? "box-border h-11 min-h-[44px] w-full rounded-2xl border border-red-500 bg-white px-3 text-base text-black placeholder:text-gray-700 focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-200/50 sm:min-h-11 sm:text-sm"
+                  ? "box-border h-11 min-h-[44px] w-full rounded-2xl border border-action-danger bg-surface-card px-3 text-base text-text-primary placeholder:text-text-secondary focus:border-action-danger focus:outline-none focus:ring-2 focus:ring-action-danger/20 sm:min-h-11 sm:text-sm"
                   : paymentRequestDetailModalTextInputClass
               }
             />
             {billNoError ? (
-              <p className="mt-1 text-xs text-red-600" role="alert">
+              <p className="mt-1 text-xs text-status-danger-ink" role="alert">
                 {billNoError}
               </p>
             ) : null}
@@ -396,7 +397,7 @@ export function EasyViewDraftDetailedInformationEdit({
 
           <div className="min-w-0">
             <label htmlFor={idDue} className={paymentRequestDetailFieldLabelClass}>
-              Due Date<span className="text-red-500"> *</span>
+              Due Date<span className="text-status-danger-ink"> *</span>
             </label>
             <DateTextField
               id={idDue}
@@ -413,7 +414,7 @@ export function EasyViewDraftDetailedInformationEdit({
               calendarButtonClassName="hidden"
             />
             {dueDateError ? (
-              <p className="mt-1 text-xs text-red-600" role="alert">
+              <p className="mt-1 text-xs text-status-danger-ink" role="alert">
                 {dueDateError}
               </p>
             ) : null}
@@ -421,7 +422,7 @@ export function EasyViewDraftDetailedInformationEdit({
 
           <div className="min-w-0">
             <label htmlFor={idInv} className={paymentRequestDetailFieldLabelClass}>
-              Invoice Date<span className="text-red-500"> *</span>
+              Invoice Date<span className="text-status-danger-ink"> *</span>
             </label>
             <DateTextField
               id={idInv}
@@ -438,7 +439,7 @@ export function EasyViewDraftDetailedInformationEdit({
               calendarButtonClassName="hidden"
             />
             {invoiceDateError ? (
-              <p className="mt-1 text-xs text-red-600" role="alert">
+              <p className="mt-1 text-xs text-status-danger-ink" role="alert">
                 {invoiceDateError}
               </p>
             ) : null}
@@ -446,7 +447,7 @@ export function EasyViewDraftDetailedInformationEdit({
 
           <div className="min-w-0">
             <label htmlFor={idAmt} className={paymentRequestDetailFieldLabelClass}>
-              Amount<span className="text-red-500"> *</span>
+              Amount<span className="text-status-danger-ink"> *</span>
             </label>
             <div className="mt-0.5 flex min-w-0">
               <div
@@ -454,7 +455,7 @@ export function EasyViewDraftDetailedInformationEdit({
                 aria-label="Currency"
                 className={
                   `${paymentRequestDetailCurrencyCellClass} ` +
-                  (amountError ? "border-red-500" : "border-gray-300")
+                  (amountError ? "border-action-danger" : "border-border-input")
                 }
               >
                 {entityCurrency}
@@ -467,13 +468,13 @@ export function EasyViewDraftDetailedInformationEdit({
                 aria-invalid={!!amountError}
                 className={
                   amountError
-                    ? `${paymentRequestDetailAmountValueInputClass} border-red-500 focus:border-red-500 focus:ring-red-200/50`
+                    ? `${paymentRequestDetailAmountValueInputClass} border-action-danger focus:border-action-danger focus:ring-action-danger/20`
                     : paymentRequestDetailAmountValueInputClass
                 }
               />
             </div>
             {amountError ? (
-              <p className="mt-1 text-xs text-red-600" role="alert">
+              <p className="mt-1 text-xs text-status-danger-ink" role="alert">
                 {amountError}
               </p>
             ) : null}
@@ -483,7 +484,7 @@ export function EasyViewDraftDetailedInformationEdit({
         <div className="mt-6 grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-2 lg:grid-cols-3 lg:gap-y-4">
           <div className="min-w-0 lg:col-span-1">
             <label htmlFor={idContact} className={paymentRequestDetailFieldLabelClass}>
-              Supplier<span className="text-red-500"> *</span>
+              Supplier<span className="text-status-danger-ink"> *</span>
             </label>
             <BillContactPicker
               id={idContact}
@@ -498,7 +499,7 @@ export function EasyViewDraftDetailedInformationEdit({
               error={!!contactError}
             />
             {contactError ? (
-              <p className="mt-1 text-xs text-red-600" role="alert">
+              <p className="mt-1 text-xs text-status-danger-ink" role="alert">
                 {contactError}
               </p>
             ) : null}
@@ -521,7 +522,7 @@ export function EasyViewDraftDetailedInformationEdit({
 
           <div className="min-w-0 sm:col-span-2 lg:col-span-1">
             <label htmlFor={idAccount} className={paymentRequestDetailFieldLabelClass}>
-              Account Code<span className="text-red-500"> *</span>
+              Account Code<span className="text-status-danger-ink"> *</span>
             </label>
             <ThemedSelect
               id={idAccount}
@@ -536,7 +537,7 @@ export function EasyViewDraftDetailedInformationEdit({
               searchable
             />
             {accountCodeError ? (
-              <p className="mt-1 text-xs text-red-600" role="alert">
+              <p className="mt-1 text-xs text-status-danger-ink" role="alert">
                 {accountCodeError}
               </p>
             ) : null}

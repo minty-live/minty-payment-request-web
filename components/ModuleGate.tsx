@@ -32,8 +32,6 @@ import { useUserRole } from "@/lib/useUserRole";
  * "nobody has bought this yet" sends them to the wrong person.
  */
 
-const TEAL = "#54D3DA";
-
 function CardIcon({ className }: { className: string }) {
   return (
     <svg
@@ -112,24 +110,26 @@ export function ModuleNotActive({ variant = "module" }: { variant?: "module" | "
     : entityListUrl;
 
   return (
-    <div className="flex min-h-dvh min-h-screen flex-col bg-gray-50">
+    <div className="flex min-h-dvh min-h-screen flex-col bg-surface-sunk">
       <div className="relative flex flex-shrink-0 items-center justify-center px-4 py-3">
-        <h1 className="text-lg font-semibold text-[#474747]">{title}</h1>
+        <h1 className="text-lg font-semibold text-text-secondary">{title}</h1>
       </div>
 
       <main className="flex flex-1 flex-col items-center justify-center px-6 pb-16">
         <div className="flex flex-col items-center gap-8 p-5">
           <div
             className={`flex h-20 w-20 items-center justify-center rounded-full shadow-inner ${
-              inactive ? "bg-amber-100 text-amber-600" : "bg-red-100 text-red-600"
+              inactive
+                ? "bg-status-warning-bg text-status-warning-ink"
+                : "bg-status-danger-bg text-status-danger-ink"
             }`}
           >
             {inactive ? <CardIcon className="h-10 w-10" /> : <LockIcon className="h-10 w-10" />}
           </div>
 
-          <h2 className="text-2xl font-bold text-gray-900">{title}</h2>
+          <h2 className="text-2xl font-bold text-text-primary">{title}</h2>
 
-          <p className="max-w-sm text-center text-gray-600">
+          <p className="max-w-sm text-center text-text-secondary">
             {inactive ? (
               <>
                 This module isn&apos;t active for this entity. That usually means it was switched
@@ -152,15 +152,14 @@ export function ModuleNotActive({ variant = "module" }: { variant?: "module" | "
             <>
               <a
                 href={subscriptionUrl}
-                className="flex w-full items-center justify-center gap-2 rounded-xl py-3 font-medium text-white shadow-md transition-opacity hover:opacity-90"
-                style={{ backgroundColor: TEAL }}
+                className="flex w-full items-center justify-center gap-2 rounded-xl py-3 font-medium text-action-on-primary shadow-md bg-action-primary transition-colors hover:bg-action-primary-hover active:bg-action-primary-pressed"
               >
                 <CardIcon className="h-5 w-5" />
                 <span>Check subscription settings</span>
               </a>
               <a
                 href={entityListUrl}
-                className="flex w-full items-center justify-center gap-2 rounded-xl border border-gray-300 bg-white py-3 font-medium text-[#474747] transition-colors hover:bg-gray-100"
+                className="flex w-full items-center justify-center gap-2 rounded-xl border border-border-input bg-surface-card py-3 font-medium text-text-secondary transition-colors hover:bg-state-hover"
               >
                 <ArrowLeftIcon />
                 <span>Back to Entity List</span>
@@ -169,8 +168,7 @@ export function ModuleNotActive({ variant = "module" }: { variant?: "module" | "
           ) : (
             <a
               href={entityListUrl}
-              className="flex w-full items-center justify-center gap-2 rounded-xl py-3 font-medium text-white shadow-md transition-opacity hover:opacity-90"
-              style={{ backgroundColor: TEAL }}
+              className="flex w-full items-center justify-center gap-2 rounded-xl py-3 font-medium text-action-on-primary shadow-md bg-action-primary transition-colors hover:bg-action-primary-hover active:bg-action-primary-pressed"
             >
               <ArrowLeftIcon />
               <span>Back to Entity List</span>

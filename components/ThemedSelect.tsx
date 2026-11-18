@@ -141,7 +141,7 @@ export function ThemedSelect({
   const displayLabel = placeholderShowing
     ? placeholder
     : (selected?.label ?? options[0]?.label ?? "");
-  const displayTextClass = `${placeholderShowing ? "text-gray-700" : ""} ${centerValue ? "text-center" : ""}`;
+  const displayTextClass = `${placeholderShowing ? "text-text-secondary" : ""} ${centerValue ? "text-center" : ""}`;
 
   const closedInputValue = placeholderShowing ? "" : (selected?.label ?? "");
 
@@ -165,32 +165,32 @@ export function ThemedSelect({
   }, [disabled, closedInputValue]);
 
   const uniformBase =
-    "box-border flex h-11 min-h-[44px] min-w-0 cursor-pointer items-center justify-between gap-2 rounded-lg border py-0 pl-3 pr-2 text-left text-base font-normal transition-colors focus:outline-none focus:ring-2 focus:ring-secondary/25 sm:min-h-11 sm:text-sm " +
+    "box-border flex h-11 min-h-[44px] min-w-0 cursor-pointer items-center justify-between gap-2 rounded-lg border py-0 pl-3 pr-2 text-left text-base font-normal transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus/25 sm:min-h-11 sm:text-sm " +
     (fullWidth ? "w-full " : "w-auto ") +
     (error
-      ? "border-red-500 bg-red-50 text-black focus:border-red-500 focus:ring-red-200/50 "
-      : "border-gray-300 bg-[#EDEDED] text-[#656565] hover:bg-[#E4E4E4] focus:border-secondary focus:ring-secondary/25 ");
+      ? "border-action-danger bg-status-danger-bg text-text-primary focus:border-action-danger focus:ring-action-danger/20 "
+      : "border-border-input bg-surface-sunk text-text-secondary hover:bg-surface-document focus:border-border-focus focus:ring-border-focus/25 ");
 
   const splitBase =
-    "box-border flex h-11 min-h-[44px] min-w-0 cursor-pointer items-stretch gap-0 overflow-hidden rounded-lg border bg-white p-0 text-left text-base font-normal text-black transition-colors focus:outline-none focus:ring-2 focus:ring-secondary/25 sm:min-h-11 sm:text-sm " +
+    "box-border flex h-11 min-h-[44px] min-w-0 cursor-pointer items-stretch gap-0 overflow-hidden rounded-lg border bg-surface-card p-0 text-left text-base font-normal text-text-primary transition-colors focus:outline-none focus:ring-2 focus:ring-border-focus/25 sm:min-h-11 sm:text-sm " +
     (fullWidth ? "w-full " : "w-auto ") +
     (error
-      ? "border-red-500 focus:border-red-500 focus:ring-red-200/50 "
-      : "border-gray-300 focus:border-secondary focus:ring-secondary/25 ");
+      ? "border-action-danger focus:border-action-danger focus:ring-action-danger/20 "
+      : "border-border-input focus:border-border-focus focus:ring-border-focus/25 ");
 
   const splitSearchableOuter =
-    "box-border flex h-11 min-h-[44px] min-w-0 cursor-default items-stretch gap-0 overflow-hidden rounded-lg border bg-white p-0 text-left text-base font-normal text-black transition-colors focus-within:outline-none focus-within:ring-2 focus-within:ring-secondary/25 sm:min-h-11 sm:text-sm " +
+    "box-border flex h-11 min-h-[44px] min-w-0 cursor-default items-stretch gap-0 overflow-hidden rounded-lg border bg-surface-card p-0 text-left text-base font-normal text-text-primary transition-colors focus-within:outline-none focus-within:ring-2 focus-within:ring-border-focus/25 sm:min-h-11 sm:text-sm " +
     (fullWidth ? "w-full " : "w-auto ") +
     (error
-      ? "border-red-500 focus-within:border-red-500 focus-within:ring-red-200/50 "
-      : "border-gray-300 focus-within:border-secondary focus-within:ring-secondary/25 ");
+      ? "border-action-danger focus-within:border-action-danger focus-within:ring-action-danger/20 "
+      : "border-border-input focus-within:border-border-focus focus-within:ring-border-focus/25 ");
 
   const uniformSearchableOuter =
-    "box-border flex h-11 min-h-[44px] min-w-0 cursor-default items-center justify-between gap-2 rounded-lg border py-0 pl-3 pr-2 text-left text-base font-normal transition-colors focus-within:outline-none focus-within:ring-2 focus-within:ring-secondary/25 sm:min-h-11 sm:text-sm " +
+    "box-border flex h-11 min-h-[44px] min-w-0 cursor-default items-center justify-between gap-2 rounded-lg border py-0 pl-3 pr-2 text-left text-base font-normal transition-colors focus-within:outline-none focus-within:ring-2 focus-within:ring-border-focus/25 sm:min-h-11 sm:text-sm " +
     (fullWidth ? "w-full " : "w-auto ") +
     (error
-      ? "border-red-500 bg-red-50 text-black focus-within:border-red-500 focus-within:ring-red-200/50 "
-      : "border-gray-300 bg-[#EDEDED] text-[#656565] hover:bg-[#E4E4E4] focus-within:border-secondary focus-within:ring-secondary/25 ");
+      ? "border-action-danger bg-status-danger-bg text-text-primary focus-within:border-action-danger focus-within:ring-action-danger/20 "
+      : "border-border-input bg-surface-sunk text-text-secondary hover:bg-surface-document focus-within:border-border-focus focus-within:ring-border-focus/25 ");
 
   const menu = isOpen ? (
     <ul
@@ -198,7 +198,7 @@ export function ThemedSelect({
       id={listboxId}
       role="listbox"
       data-themed-select-menu
-      className="fixed z-[400] overflow-auto rounded-lg border border-gray-300 bg-white py-1 shadow-lg ring-1 ring-black/5"
+      className="fixed z-[400] overflow-auto rounded-lg border border-border-input bg-surface-card py-1 shadow-lg ring-1 ring-border-subtle"
       style={{
         ...(menuPos.placement === "above"
           ? { top: "auto", bottom: menuPos.bottom }
@@ -209,7 +209,7 @@ export function ThemedSelect({
       }}
     >
       {listOptions.length === 0 ? (
-        <li className="px-3 py-2.5 text-sm text-gray-500" role="presentation">
+        <li className="px-3 py-2.5 text-sm text-text-muted" role="presentation">
           No matches
         </li>
       ) : (
@@ -221,10 +221,10 @@ export function ThemedSelect({
               role="option"
               aria-selected={isSelected}
               className={
-                "cursor-pointer px-3 py-2.5 text-sm text-black transition-colors " +
+                "cursor-pointer px-3 py-2.5 text-sm text-text-primary transition-colors " +
                 (isSelected
-                  ? "bg-secondary/15 font-semibold text-secondary"
-                  : "hover:bg-secondary/10")
+                  ? "bg-state-selected font-semibold text-text-link"
+                  : "hover:bg-state-selected")
               }
               onMouseDown={(e) => {
                 e.preventDefault();
@@ -244,7 +244,7 @@ export function ThemedSelect({
 
   const chevron = (
     <span
-      className="material-symbols-outlined shrink-0 text-[22px] leading-none text-primary"
+      className="material-symbols-outlined shrink-0 text-[22px] leading-none text-text-secondary"
       aria-hidden
     >
       {isOpen ? "expand_less" : "expand_more"}
@@ -252,8 +252,8 @@ export function ThemedSelect({
   );
 
   const inputClassName =
-    "min-w-0 flex-1 border-0 bg-transparent p-0 text-base outline-none placeholder:text-gray-700 sm:text-sm " +
-    (uniformFill ? "text-[#656565] " : "text-black ") +
+    "min-w-0 flex-1 border-0 bg-transparent p-0 text-base outline-none placeholder:text-text-secondary sm:text-sm " +
+    (uniformFill ? "text-text-secondary " : "text-text-primary ") +
     "disabled:cursor-not-allowed disabled:opacity-50";
 
   const chevronToggleMouseDown = (e: { preventDefault: () => void }) => {
@@ -323,7 +323,7 @@ export function ThemedSelect({
               className={
                 plainChevron
                   ? "flex shrink-0 cursor-pointer items-center justify-center px-3 sm:min-h-11"
-                  : "flex w-11 min-w-[44px] shrink-0 cursor-pointer items-center justify-center border-l border-gray-300 bg-[#EDEDED] transition-colors hover:bg-[#E4E4E4] sm:min-h-11"
+                  : "flex w-11 min-w-[44px] shrink-0 cursor-pointer items-center justify-center border-l border-border-input bg-surface-sunk transition-colors hover:bg-surface-document sm:min-h-11"
               }
               onMouseDown={chevronToggleMouseDown}
             >
@@ -369,7 +369,7 @@ export function ThemedSelect({
             className={
               plainChevron
                 ? "flex shrink-0 items-center justify-center px-3 sm:min-h-11"
-                : "flex w-11 min-w-[44px] shrink-0 items-center justify-center border-l border-gray-300 bg-[#EDEDED] transition-colors hover:bg-[#E4E4E4] sm:min-h-11"
+                : "flex w-11 min-w-[44px] shrink-0 items-center justify-center border-l border-border-input bg-surface-sunk transition-colors hover:bg-surface-document sm:min-h-11"
             }
           >
             {chevron}

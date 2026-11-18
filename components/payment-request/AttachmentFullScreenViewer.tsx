@@ -98,19 +98,19 @@ export function PreviewBlock({
         referrerPolicy="no-referrer"
         className={
           layout === "fullscreen"
-            ? "block h-[calc(100dvh-7rem)] w-full bg-white"
-            : "block h-[min(75vh,56rem)] w-full bg-white"
+            ? "block h-[calc(100dvh-7rem)] w-full bg-surface-card"
+            : "block h-[min(75vh,56rem)] w-full bg-surface-card"
         }
       />
     );
   }
   return (
-    <div className="flex flex-col items-center justify-center gap-2 bg-gray-50 px-4 py-8 text-center">
-      <span className="material-symbols-outlined text-[40px] text-primary/35" aria-hidden>
+    <div className="flex flex-col items-center justify-center gap-2 bg-surface-sunk px-4 py-8 text-center">
+      <span className="material-symbols-outlined text-[40px] text-text-disabled" aria-hidden>
         draft
       </span>
-      <p className="text-sm font-medium text-primary">{name || "File"}</p>
-      <p className="text-xs text-primary/50">Preview is not available for this file type.</p>
+      <p className="text-sm font-medium text-text-secondary">{name || "File"}</p>
+      <p className="text-xs text-text-muted">Preview is not available for this file type.</p>
     </div>
   );
 }
@@ -282,7 +282,7 @@ export function AttachmentFullScreenViewer({
             className="flex w-full flex-col p-2"
             style={{ transform: `scale(${scale})`, transformOrigin: "top center" }}
           >
-            <figure className="relative mx-auto w-full min-w-0 overflow-hidden rounded-lg border border-white/10 bg-white shadow-lg">
+            <figure className="relative mx-auto w-full min-w-0 overflow-hidden rounded-lg border border-white/10 bg-surface-card shadow-lg">
               <PreviewBlock {...item} layout="fullscreen" />
             </figure>
           </div>
@@ -298,7 +298,7 @@ export function ViewFullButton({ name, onClick }: { name: string; onClick: () =>
   return (
     <button
       type="button"
-      className="absolute right-2 top-2 z-10 inline-flex h-11 w-11 cursor-pointer items-center justify-center rounded-md border border-gray-200/90 bg-white/95 text-primary shadow-sm backdrop-blur-[1px] transition-colors hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary"
+      className="absolute right-2 top-2 z-10 inline-flex h-11 w-11 cursor-pointer items-center justify-center rounded-md border border-border-default bg-surface-card/95 text-text-secondary shadow-sm backdrop-blur-[1px] transition-colors hover:bg-surface-card focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus"
       aria-label={`View full — ${name}`}
       title="View full"
       onClick={(e) => {

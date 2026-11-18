@@ -14,15 +14,15 @@ export type SubscriptionNoticeModalProps = {
 
 /** Per-item card colouring. Severity is the server's call, not the component's. */
 const itemToneClass: Record<NoticeSeverity, string> = {
-  critical: "border-red-200 bg-red-50",
-  warning: "border-amber-200 bg-amber-50",
-  info: "border-gray-200 bg-gray-50",
+  critical: "border-status-danger-bg bg-status-danger-bg",
+  warning: "border-status-warning-bg bg-status-warning-bg",
+  info: "border-border-default bg-surface-sunk",
 };
 
 const itemTitleClass: Record<NoticeSeverity, string> = {
-  critical: "text-red-900",
-  warning: "text-amber-900",
-  info: "text-primary",
+  critical: "text-status-danger-ink",
+  warning: "text-status-warning-ink",
+  info: "text-text-secondary",
 };
 
 /**
@@ -73,7 +73,7 @@ export function SubscriptionNoticeModal({ notice, onClose }: SubscriptionNoticeM
               <p className={`text-sm font-semibold ${itemTitleClass[item.severity]}`}>
                 {item.title}
               </p>
-              <p className="mt-1 text-sm leading-relaxed text-primary/70">{item.detail}</p>
+              <p className="mt-1 text-sm leading-relaxed text-text-secondary">{item.detail}</p>
             </li>
           ))}
         </ul>
