@@ -168,6 +168,26 @@ describe("the picker", () => {
       }),
     );
     expect(refetchContacts).toHaveBeenCalledWith(created);
+    expect(await screen.findByText("Supplier added to Xero.")).toBeInTheDocument();
+  });
+
+  it("a company without Xero keeps the supplier in Minty, and the message never says Xero", async () => {
+    // the API answers a Minty-only supplier with no Xero organisation (its row id as the id)
+    const created = entityBillContact({
+      id: "row-1",
+      xero_contact_id: "row-1",
+      xero_org_id: null,
+      name: "Corner Bakery",
+    });
+    fetchMock.mockResolvedValueOnce(answer(201, created));
+    show({ contactName: "Corner Bakery" });
+    await userEvent.click(field());
+
+    await userEvent.click(screen.getByRole("option", { name: /as a new supplier/ }));
+
+    expect(await screen.findByText("Supplier added.")).toBeInTheDocument();
+    expect(screen.queryByText(/Xero/)).not.toBeInTheDocument();
+    expect(onChange).toHaveBeenCalledWith({ xero_contact_id: "row-1", contact: "Corner Bakery" });
   });
 
   it("says so when creating the supplier is refused, and chooses nothing", async () => {

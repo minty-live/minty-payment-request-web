@@ -334,6 +334,37 @@ describe("the per-row payment action", () => {
   });
 });
 
+describe("Xero on each row (Xero optional, 2026-11-10)", () => {
+  const openMenu = async (supplier: string) =>
+    userEvent.click(table().getByRole("button", { name: `More options for ${supplier}` }));
+
+  it("a Xero company sees each row's publish state and can republish from the row menu", async () => {
+    show();
+
+    expect(table().getByAltText("Published to Xero")).toBeInTheDocument();
+    await openMenu("Young Bros Transport");
+    expect(screen.getByRole("menuitem", { name: "Republish" })).toBeInTheDocument();
+  });
+
+  it("a company keeping its books in Minty sees no Xero mark and no Publish or Republish", async () => {
+    const unpublished = billRow({
+      id: "r-new",
+      contactTitle: "Corner Bakery",
+      status: "Payment Requested",
+      xeroActive: false,
+    });
+    show({ mintyOnly: true, rows: [...ROWS, unpublished] });
+
+    expect(table().queryByAltText(/Xero|published/i)).toBeNull();
+    expect(table().getByRole("columnheader", { name: "Actions" })).toHaveAttribute("colspan", "1");
+    await openMenu("Young Bros Transport");
+    expect(screen.queryByRole("menuitem", { name: "Republish" })).toBeNull();
+    await userEvent.keyboard("{Escape}");
+    await openMenu("Corner Bakery");
+    expect(screen.queryByRole("menuitem", { name: "Publish" })).toBeNull();
+  });
+});
+
 describe("the card list beside it", () => {
   it("carries the same rows, for a phone", () => {
     show();

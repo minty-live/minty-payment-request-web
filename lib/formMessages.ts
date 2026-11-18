@@ -11,7 +11,7 @@ export const AMOUNT_EMPTY = "The amount is still empty. Add the amount to contin
 export const AMOUNT_TOO_LONG = `The amount is too long. Use up to ${MAX_AMOUNT_INT_DIGITS} digits before the decimal point.`;
 export const AMOUNT_ZERO = "The amount is zero. Add an amount above 0 to continue.";
 export const SUPPLIER_EMPTY = "The supplier is still empty. Choose a supplier to continue.";
-export const ACCOUNT_EMPTY = "The account is still empty. Choose the Xero account to continue.";
+export const ACCOUNT_EMPTY = "The account is still empty. Choose an account to continue.";
 export const INVOICE_DATE_EMPTY =
   "The invoice date is still empty. Add the invoice date to continue.";
 export const DUE_DATE_EMPTY = "The due date is still empty. Add the due date to continue.";
@@ -32,3 +32,5 @@ export function filesNotOpenable(names: string[]): string {
 
 /** A new supplier, created in the company's Xero organisation. */
 export const SUPPLIER_ADDED = "Supplier added to Xero.";
+/** A new supplier of a company without Xero: kept in Minty, sent to Xero when the company connects. */
+export const SUPPLIER_ADDED_IN_MINTY = "Supplier added.";

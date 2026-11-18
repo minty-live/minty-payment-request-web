@@ -223,7 +223,7 @@ describe("what it refuses", () => {
     await userEvent.click(confirm());
 
     expect(
-      await screen.findByText("The account is still empty. Choose the Xero account to continue.", {
+      await screen.findByText("The account is still empty. Choose an account to continue.", {
         selector: "p",
       }),
     ).toBeInTheDocument();
@@ -758,7 +758,7 @@ describe("the error summary", () => {
       "The due date is still empty. Add the due date to continue.",
       "The amount is still empty. Add the amount to continue.",
       "The supplier is still empty. Choose a supplier to continue.",
-      "The account is still empty. Choose the Xero account to continue.",
+      "The account is still empty. Choose an account to continue.",
     ]);
     await userEvent.click(within(box).getByRole("link", { name: /amount is still empty/ }));
     expect(document.getElementById("pr-amount")).toHaveFocus();

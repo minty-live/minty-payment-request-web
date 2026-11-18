@@ -4,7 +4,7 @@ import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from
 import { createPortal } from "react-dom";
 import { ApiError, createEntityBillContact, type EntityBillContact } from "@/lib/api";
 import { useToast } from "@/components/Toast";
-import { SUPPLIER_ADDED } from "@/lib/formMessages";
+import { SUPPLIER_ADDED, SUPPLIER_ADDED_IN_MINTY } from "@/lib/formMessages";
 
 /** The API's cap (Bill.contact_name holds 100), checked as the name is typed. */
 const NEW_SUPPLIER_NAME_MAX = 100;
@@ -115,7 +115,7 @@ export function BillContactPicker({
     setCreateError(null);
   };
 
-  const handleAddToXero = async () => {
+  const handleAddSupplier = async () => {
     const name = trimmedName;
     if (!name || nameTooLong || creating || disabled) return;
     setCreating(true);
@@ -128,12 +128,13 @@ export function BillContactPicker({
         contact: created.name,
       });
       setOpen(false);
-      showToast(SUPPLIER_ADDED, "success");
+      // a company without Xero keeps the supplier in Minty: the API answers it with no organisation
+      showToast(created.xero_org_id ? SUPPLIER_ADDED : SUPPLIER_ADDED_IN_MINTY, "success");
     } catch (e) {
       setCreateError(
         e instanceof ApiError
           ? e.message
-          : "That supplier didn't quite make it over to Xero. Mind trying again?",
+          : "That supplier didn't save just now. Mind trying again?",
       );
       setOpen(false);
     } finally {
@@ -196,7 +197,7 @@ export function BillContactPicker({
             aria-disabled={nameTooLong || undefined}
             aria-label={
               creating
-                ? "Creating supplier in Xero"
+                ? "Creating supplier"
                 : nameTooLong
                   ? `Add ${trimmedName} as a new supplier. ${NAME_TOO_LONG}`
                   : `Add ${trimmedName} as a new supplier`
@@ -214,7 +215,7 @@ export function BillContactPicker({
               e.preventDefault();
             }}
             onClick={() => {
-              if (!disabled && !creating && !nameTooLong) void handleAddToXero();
+              if (!disabled && !creating && !nameTooLong) void handleAddSupplier();
             }}
           >
             {nameTooLong ? (

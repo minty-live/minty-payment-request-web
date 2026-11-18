@@ -893,6 +893,7 @@ export function PaymentRequestView({ easyView }: PaymentRequestViewProps) {
         selectionContainsPaid={selectionContainsPaid}
         canVoidPaid={isElevated}
         canPublish={isElevated && !mintyOnly}
+        mintyOnly={mintyOnly}
       />
       {showReadOnlyBanner ? (
         <div
@@ -1066,6 +1067,7 @@ export function PaymentRequestView({ easyView }: PaymentRequestViewProps) {
                 }}
                 onBankSlipUploaded={loadBills}
                 onRetryBankSlips={retryBankSlips}
+                mintyOnly={mintyOnly}
               />
               <div className="px-4 pb-6 sm:px-6">{pagination}</div>
             </div>

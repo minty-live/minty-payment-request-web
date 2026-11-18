@@ -314,6 +314,8 @@ type PaymentRequestTableProps = {
   onBankSlipUploaded?: () => void;
   /** Reloads the bank slip counts after a lookup failed. */
   onRetryBankSlips?: () => void;
+  /** The company keeps its books in Minty (Xero optional, 2026-11-10): no Xero mark, no Publish. */
+  mintyOnly?: boolean;
 };
 
 /** Stable empty default so an uncontrolled table doesn't get a new Set every render. */
@@ -516,6 +518,7 @@ export function PaymentRequestTable({
   headerSlot,
   onBankSlipUploaded,
   onRetryBankSlips,
+  mintyOnly = false,
 }: PaymentRequestTableProps) {
   const sortDescriptionIdPrefix = useId();
   const { isElevated, isViewOnly } = useUserRole();
@@ -555,7 +558,9 @@ export function PaymentRequestTable({
     (n, item) => n + (columnVisibility[item.key] ? 1 : 0),
     0,
   );
-  const tableColCount = 1 + visibleSelectorCount + 2 + 2;
+  // the actions cell: the Xero mark (none for a company on its own) and the row menu
+  const actionColCount = mintyOnly ? 1 : 2;
+  const tableColCount = 1 + visibleSelectorCount + 2 + actionColCount;
   const orderedTableTitles = useMemo(
     () => [...DEFAULT_COLUMN_ORDER.map((key) => SELECTOR_TITLE[key]), ...NON_SELECTOR_TITLES],
     [],
@@ -603,6 +608,7 @@ export function PaymentRequestTable({
   const rowMenuPublishedToXero = rowMenuRow?.xeroActive === true;
   const showRowMenuPublish =
     isElevated &&
+    !mintyOnly &&
     !isViewOnly &&
     rowMenuRow != null &&
     rowMenuRow.status !== "Draft" &&
@@ -610,6 +616,7 @@ export function PaymentRequestTable({
     !rowMenuPublishedToXero;
   const showRowMenuRepublish =
     isElevated &&
+    !mintyOnly &&
     !isViewOnly &&
     rowMenuRow != null &&
     rowMenuRow.status !== "Draft" &&
@@ -1106,7 +1113,7 @@ export function PaymentRequestTable({
                 })}
                 <th
                   scope="col"
-                  colSpan={2}
+                  colSpan={actionColCount}
                   aria-label="Actions"
                   className="border-b border-gray-200 bg-secondary px-2 py-2 text-right text-white sm:px-3 sm:py-2.5"
                 >
@@ -1511,23 +1518,26 @@ export function PaymentRequestTable({
                             return null;
                         }
                       })}
-                      <td
-                        className={`border-b border-gray-100 px-2 py-3 text-center align-middle sm:px-3 ${actionBodyCellBg} relative`}
-                      >
-                        <RowLinkOverlay
-                          rowId={row.id}
-                          reference={row.reference}
-                          status={row.status}
-                          label={`Open ${row.contactTitle}`}
-                        />
-                        <img
-                          src={xeroConnected ? "/xero-active.png" : "/xero-inactive.png"}
-                          alt={xeroConnected ? "Xero connected" : "Xero not connected"}
-                          width={40}
-                          height={40}
-                          className="mx-auto h-10 w-10 max-h-10 max-w-10 object-contain"
-                        />
-                      </td>
+                      {mintyOnly ? null : (
+                        <td
+                          className={`border-b border-gray-100 px-2 py-3 text-center align-middle sm:px-3 ${actionBodyCellBg} relative`}
+                        >
+                          <RowLinkOverlay
+                            rowId={row.id}
+                            reference={row.reference}
+                            status={row.status}
+                            label={`Open ${row.contactTitle}`}
+                          />
+                          {/* the bill's publish state, not the company's connection */}
+                          <img
+                            src={xeroConnected ? "/xero-active.png" : "/xero-inactive.png"}
+                            alt={xeroConnected ? "Published to Xero" : "Not published to Xero"}
+                            width={40}
+                            height={40}
+                            className="mx-auto h-10 w-10 max-h-10 max-w-10 object-contain"
+                          />
+                        </td>
+                      )}
                       <td
                         className={`border-b border-gray-100 px-2 py-3 text-center align-middle sm:px-3 ${actionBodyCellBg}`}
                       >

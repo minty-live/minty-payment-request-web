@@ -169,6 +169,15 @@ describe("the filter panel", () => {
     expect(within(panel).getByRole("button", { name: "Reset" })).toBeInTheDocument();
   });
 
+  it("a company keeping its books in Minty has no Xero Status filter", async () => {
+    show({ mintyOnly: true });
+
+    const panel = await openFilters();
+
+    expect(within(panel).getByText("Amount")).toBeInTheDocument();
+    expect(within(panel).queryByText("Xero Status")).toBeNull();
+  });
+
   it("opens showing the filters that are applied", async () => {
     show({
       appliedMinAmount: "100.00",

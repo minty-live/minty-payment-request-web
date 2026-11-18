@@ -3,7 +3,14 @@
 
 import { describe, expect, it } from "vitest";
 
-import { AMOUNT_TOO_LONG, filesNotOpenable, filesTooBig, SUPPLIER_ADDED } from "@/lib/formMessages";
+import {
+  ACCOUNT_EMPTY,
+  AMOUNT_TOO_LONG,
+  filesNotOpenable,
+  filesTooBig,
+  SUPPLIER_ADDED,
+  SUPPLIER_ADDED_IN_MINTY,
+} from "@/lib/formMessages";
 
 describe("the bill forms' messages", () => {
   it("name the file and the limit, one or several", () => {
@@ -18,12 +25,19 @@ describe("the bill forms' messages", () => {
       "The amount is too long. Use up to 11 digits before the decimal point.",
     );
     expect(SUPPLIER_ADDED).toBe("Supplier added to Xero.");
+    expect(SUPPLIER_ADDED_IN_MINTY).toBe("Supplier added.");
+    // asked of every company, with or without Xero
+    expect(ACCOUNT_EMPTY).toBe("The account is still empty. Choose an account to continue.");
   });
 
   it("never use the words Part 11 rules out", () => {
-    const all = [filesTooBig(["x"]), filesNotOpenable(["x"]), AMOUNT_TOO_LONG, SUPPLIER_ADDED].join(
-      " ",
-    );
+    const all = [
+      filesTooBig(["x"]),
+      filesNotOpenable(["x"]),
+      AMOUNT_TOO_LONG,
+      SUPPLIER_ADDED,
+      SUPPLIER_ADDED_IN_MINTY,
+    ].join(" ");
     expect(all).not.toMatch(/error|invalid|mandatory|required field/i);
   });
 });

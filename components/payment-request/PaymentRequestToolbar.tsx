@@ -99,6 +99,8 @@ type PaymentRequestToolbarProps = {
   canVoidPaid?: boolean;
   /** Whether the current user may publish to Xero (elevated roles only). */
   canPublish?: boolean;
+  /** The company keeps its books in Minty (Xero optional, 2026-11-10): no Xero Status filter. */
+  mintyOnly?: boolean;
 };
 type FilterMenuState = { top: number; left: number; width: number };
 type BulkMenuState = { top: number; left: number; minWidth: number };
@@ -131,6 +133,7 @@ export function PaymentRequestToolbar({
   selectionContainsPaid = false,
   canVoidPaid = false,
   canPublish = false,
+  mintyOnly = false,
 }: PaymentRequestToolbarProps) {
   const { hasAnyRole, isViewOnly } = useUserRole();
   const filterFieldIds = useId();
@@ -633,23 +636,25 @@ export function PaymentRequestToolbar({
                               </p>
                             ) : null}
                           </div>
-                          <div>
-                            <label
-                              htmlFor={`${filterFieldIds}-xero-status`}
-                              className={fieldLabelClass}
-                            >
-                              Xero Status
-                            </label>
-                            <ThemedSelect
-                              id={`${filterFieldIds}-xero-status`}
-                              value={xeroStatus ?? ""}
-                              onChange={setXeroStatus}
-                              options={[...FILTER_XERO_STATUS_OPTIONS]}
-                              ariaLabel="Xero status"
-                              triggerClassName="!rounded-2xl"
-                              plainChevron
-                            />
-                          </div>
+                          {mintyOnly ? null : (
+                            <div>
+                              <label
+                                htmlFor={`${filterFieldIds}-xero-status`}
+                                className={fieldLabelClass}
+                              >
+                                Xero Status
+                              </label>
+                              <ThemedSelect
+                                id={`${filterFieldIds}-xero-status`}
+                                value={xeroStatus ?? ""}
+                                onChange={setXeroStatus}
+                                options={[...FILTER_XERO_STATUS_OPTIONS]}
+                                ariaLabel="Xero status"
+                                triggerClassName="!rounded-2xl"
+                                plainChevron
+                              />
+                            </div>
+                          )}
                           {/* Sits directly above the date range it governs. */}
                           <div>
                             <label

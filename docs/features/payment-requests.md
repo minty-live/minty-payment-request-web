@@ -237,8 +237,13 @@ Return / un-return / void go through the same action bar with the backend's tran
 
 `lib/useMintyOnly.ts` asks `GET /api/auth/xero-status` once per company (`minty_only`). For such a
 company `BillActionBar` draws no Publish to Xero (neither the button nor the overflow menu's Publish /
-Republish) and the list toolbar offers none (`canPublish`); the API refuses one anyway (422 with its
-sentence). Its suppliers may be Minty's own, named by their row id - the picker, the bill and its edit
+Republish), the list toolbar offers none (`canPublish`), and (2026-11-18) the table's row menu has
+no Publish / Republish, its rows no Xero mark (the actions header spans one column), and the filter
+panel no Xero Status (`mintyOnly` on `PaymentRequestTable` and `PaymentRequestToolbar`); the API
+refuses one anyway (422 with its sentence). For a Xero company the row mark's text is the bill's
+state, "Published to Xero" / "Not published to Xero". A new supplier toasts "Supplier added." when
+the API answers it with no `xero_org_id` (kept in Minty), "Supplier added to Xero." otherwise; an
+empty account says "Choose an account to continue." for every company. Its suppliers may be Minty's own, named by their row id - the picker, the bill and its edit
 take that id as they take a Xero one. Tested in
 `components/payment-request/__tests__/BillActionBarMintyOnly.test.tsx`; checked in a browser at
 360/768/1440 against the local stack (a bill with a Minty supplier and code, no Publish anywhere).
