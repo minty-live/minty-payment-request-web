@@ -51,7 +51,7 @@ const OPEN = {
 };
 
 /** Opens Add Payment with the reader switched on or off; counts the reads. */
-async function openAddDialog(page: Page, enabled: boolean) {
+async function openAddDialog(page: Page, enabled: boolean, answer: unknown = READ) {
   const reads: string[] = [];
   await stubFlaskHub(page);
   await stubApi(page, {
@@ -68,7 +68,7 @@ async function openAddDialog(page: Page, enabled: boolean) {
       status: 200,
       contentType: "application/json",
       headers: { "Access-Control-Allow-Origin": "*" },
-      body: JSON.stringify(READ),
+      body: JSON.stringify(answer),
     });
   });
   await handoff(page, creds(), pagesOf(creds()).list);
@@ -107,6 +107,18 @@ for (const size of [
     expect(reads).toHaveLength(1);
     expect(reads[0]).toContain('name="invoice"; filename="invoice.pdf"');
     await expect(button).toHaveCount(0);
+    // owner, 2026-11-19: the caution under the filled fields, read with Confirm
+    const caution = dialog.getByText(
+      "AI suggestions may be inaccurate. Please check every field against the invoice before saving.",
+    );
+    await expect(caution).toBeVisible();
+    await expect(dialog.getByRole("button", { name: "Confirm" })).toHaveAccessibleDescription(
+      /^AI suggestions may be inaccurate/,
+    );
+    await expectNoSideScroll(page, size.width);
+    await caution.scrollIntoViewIfNeeded();
+    if (process.env.E2E_SHOTS)
+      await page.screenshot({ path: `${process.env.E2E_SHOTS}/prw-caution-${size.width}.png` });
   });
 }
 
@@ -143,3 +155,50 @@ test("with two files the person chooses which one is read (360px)", async ({ pag
   expect(reads).toHaveLength(1);
   expect(reads[0]).toContain('filename="invoice.pdf"');
 });
+
+// Owner, 2026-11-19: an invoice in another currency comes back converted at Frankfurter's rate.
+const CONVERTED = {
+  suggestions: {
+    ...READ.suggestions,
+    amount: field("96.82"),
+    currency: "USD",
+    exchange: {
+      original_currency: "USD",
+      original_amount: "12.34",
+      rate: "7.846",
+      rate_date: "2026-11-13",
+      date_basis: "receipt",
+      source: "Frankfurter",
+    },
+  },
+  reason: null,
+};
+
+for (const size of [
+  { width: 360, height: 740 },
+  { width: 768, height: 1024 },
+  { width: 1440, height: 900 },
+]) {
+  test(`a USD invoice fills the converted amount and says how (${size.width}px)`, async ({
+    page,
+  }) => {
+    await page.setViewportSize(size);
+    const { dialog } = await openAddDialog(page, true, CONVERTED);
+    await dialog.locator('input[type="file"]').first().setInputFiles(PDF);
+    await dialog.getByRole("button", { name: "Read invoice" }).click();
+
+    const amount = dialog.locator("#pr-amount");
+    await expect(amount).toHaveValue("96.82");
+    await expect(amount).toHaveAccessibleDescription(
+      "Suggested from the invoice. Converted from USD\u00a012.34 at 1 USD = 7.846 HKD (13 Nov 2026 rate).",
+    );
+    const caution = dialog.locator("#pr-ai-caution");
+    await expect(caution).toContainText(
+      "The exchange rate is a central bank reference rate and may differ from the amount actually charged.",
+    );
+    await expectNoSideScroll(page, size.width);
+    await amount.scrollIntoViewIfNeeded();
+    if (process.env.E2E_SHOTS)
+      await page.screenshot({ path: `${process.env.E2E_SHOTS}/prw-fx-${size.width}.png` });
+  });
+}

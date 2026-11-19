@@ -50,6 +50,13 @@ import { useAmountInput } from "@minty/shared/amountInput";
 import { ErrorSummary } from "@minty/shared/ui";
 import {
   cleared,
+  AiCaution,
+  convertedText,
+  exchangeFailedOf,
+  exchangeFields,
+  exchangeKept,
+  exchangeOf,
+  type Exchange,
   AllowanceNote,
   ReadButton,
   ReaderNote,
@@ -73,6 +80,7 @@ import {
   READING_DETAIL,
   READING_TITLE,
   showedAnything,
+  rateMissingText,
   suggestedText,
   USE_LABEL,
   withInvoiceSuggestions,
@@ -110,6 +118,7 @@ type UploadedEntry = { id: string; file: File };
 /** The lines beside "Read invoice": which file it reads, and the company's AI allowance left. */
 const READ_TARGET_ID = "pr-ai-read-target";
 const ALLOWANCE_ID = "pr-ai-allowance";
+const AI_CAUTION_ID = "pr-ai-caution";
 
 /** What the invoice reader can read: the model takes PDF, JPEG and PNG (the form takes HTML too). */
 const READABLE = /\.(pdf|jpe?g|png)$/i;
@@ -411,6 +420,14 @@ export function PaymentRequestModal({
   };
   const readerNow = (): InvoiceState => ({ ...latest.current.aux, values: latest.current.values });
 
+  // a read filled the form: the owner's caution stays under the fields until the bill is saved
+  // (2026-11-19); dropping the read's suggestions (another or a removed file) takes it away
+  const [aiFilled, setAiFilled] = useState(false);
+  // an invoice in another currency (owner, 2026-11-19): the read's conversion and the figure it
+  // gave - kept with the bill only while the amount still holds it - or the currency no rate was
+  // found for
+  const [exchange, setExchange] = useState<{ how: Exchange; converted: string } | null>(null);
+  const [rateMissing, setRateMissing] = useState<string | null>(null);
   const reader = useDocumentReader<InvoiceSuggestions>({
     field: "invoice",
     latch: INVOICE_LATCH,
@@ -424,7 +441,15 @@ export function PaymentRequestModal({
         defaults: l.defaults,
       });
       applyReader(next);
-      return showedAnything(next);
+      const how = exchangeOf(suggestions);
+      setExchange(
+        how && suggestions.amount?.value ? { how, converted: suggestions.amount.value } : null,
+      );
+      const missing = exchangeFailedOf(suggestions);
+      setRateMissing(missing);
+      const showed = showedAnything(next) || missing !== null;
+      if (showed) setAiFilled(true);
+      return showed;
     },
     onStatus: setReaderStatus,
   });
@@ -448,11 +473,19 @@ export function PaymentRequestModal({
     setReaderAux(next);
     latest.current = { ...latest.current, aux: next, values: next.values };
   };
-  const dropSuggestions = () =>
+  const dropSuggestions = () => {
+    setAiFilled(false);
+    setExchange(null);
+    setRateMissing(null);
     applyReader(withoutSuggestions(readerNow(), invoiceSpec(latest.current.defaults)));
+  };
   const clearSuggestion = (field: InvoiceField) =>
     applyReader(cleared(readerNow(), field, invoiceSpec(latest.current.defaults)));
   const takeSuggestion = (field: InvoiceField) => applyReader(usedNote(readerNow(), field));
+
+  // the conversion holds while the amount is still the converted figure
+  const converted =
+    exchange && exchangeKept(amount ?? "", exchange.converted) ? exchange.how : null;
 
   /** Under a reader field: the suggested line with Clear, or the note offering the invoice's reading. */
   const readerExtras = (field: InvoiceField) => {
@@ -461,7 +494,11 @@ export function PaymentRequestModal({
       return (
         <SuggestedLine
           id={`pr-${field}-suggested`}
-          text={suggestedText(band)}
+          text={
+            field === "amount" && converted
+              ? `${suggestedText(band)} ${convertedText(converted, entityCurrency).replace(/^c/, "C")}.`
+              : suggestedText(band)
+          }
           clearLabel={CLEAR_LABEL}
           onClear={() => clearSuggestion(field)}
         />
@@ -554,6 +591,9 @@ export function PaymentRequestModal({
     setReaderAux(invoiceState());
     setReadFileId(null);
     setReadAsked(false);
+    setAiFilled(false);
+    setExchange(null);
+    setRateMissing(null);
     setBillNo("");
     setDescription("");
     setUploadedFiles([]);
@@ -670,6 +710,7 @@ export function PaymentRequestModal({
         description: description || undefined,
         amount: amountStr,
         currency_code: entityCurrency,
+        exchange: converted ? exchangeFields(converted) : undefined,
         invoice_date: invoiceDate || undefined,
         due_date: dueDate || undefined,
         reference: billNo || undefined,
@@ -772,6 +813,7 @@ export function PaymentRequestModal({
         description,
         amount: amountStr,
         currency_code: entityCurrency,
+        exchange: converted ? exchangeFields(converted) : undefined,
         invoice_date: invoiceDate || null,
         due_date: dueDate || null,
         reference: billNo,
@@ -1188,6 +1230,11 @@ export function PaymentRequestModal({
                   />
                 </div>
                 {readerExtras("amount")}
+                {rateMissing && !(amount ?? "").trim() ? (
+                  <p role="status" className="mt-1 break-words text-sm text-text-secondary">
+                    {rateMissingText(rateMissing, entityCurrency)}
+                  </p>
+                ) : null}
                 {fieldErrors.amount ? (
                   <p className="mt-1 text-xs text-status-danger-ink" role="alert">
                     {fieldErrors.amount}
@@ -1293,6 +1340,9 @@ export function PaymentRequestModal({
                 {readerExtras("account")}
               </div>
             </div>
+            {aiFilled ? (
+              <AiCaution id={AI_CAUTION_ID} exchange={converted !== null} document="invoice" />
+            ) : null}
           </div>
         </div>
 
@@ -1309,6 +1359,7 @@ export function PaymentRequestModal({
               type="button"
               onClick={() => void handleConfirm()}
               disabled={confirmSubmitting || currencyBlocked}
+              aria-describedby={aiFilled ? AI_CAUTION_ID : undefined}
               className="box-border h-12 min-h-[48px] min-w-0 flex-1 rounded-lg border border-transparent bg-action-primary px-4 text-sm font-bold text-action-on-primary shadow-sm transition-colors hover:bg-action-primary-hover active:bg-action-primary-pressed focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus enabled:cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
             >
               {confirmSubmitting ? "Confirming…" : "Confirm"}
@@ -1318,6 +1369,7 @@ export function PaymentRequestModal({
             type="button"
             onClick={() => void handleSaveDraft()}
             disabled={draftSubmitting || currencyBlocked}
+            aria-describedby={aiFilled ? AI_CAUTION_ID : undefined}
             className="order-2 box-border h-12 min-h-[48px] w-full rounded-lg border border-border-default bg-surface-card px-4 text-sm font-semibold text-text-secondary transition-colors hover:bg-state-hover enabled:cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
           >
             {draftSubmitting ? "Saving…" : "Save as Draft"}

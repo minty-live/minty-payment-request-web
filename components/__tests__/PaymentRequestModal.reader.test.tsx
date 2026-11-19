@@ -367,3 +367,137 @@ describe("Read invoice: the file and the company's AI allowance", () => {
     expect((seen.extracts[0].get("invoice") as File).name).toBe("invoice.pdf");
   });
 });
+
+// Owner, 2026-11-19: once a read has filled a field, the caution sits under the fields until the
+// bill is saved.
+const CAUTION =
+  "AI suggestions may be inaccurate. Please check every field against the invoice before saving.";
+
+describe("the caution under AI-filled fields", () => {
+  it("shows under the fields once a read fills them, read with Confirm and Save as Draft", async () => {
+    serve();
+    show();
+    await attach(pdf());
+    expect(within(dialog()).queryByText(CAUTION)).toBeNull(); // attached, not read
+    await userEvent.click(await within(dialog()).findByRole("button", { name: "Read invoice" }));
+    await waitFor(() => expect(byId("pr-amount")).toHaveValue("1,200.50"));
+    const caution = within(dialog()).getByText(CAUTION);
+    // under the last field, above the buttons
+    expect(
+      byId("pr-account").compareDocumentPosition(caution) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    for (const name of ["Confirm", "Save as Draft"]) {
+      const button = within(dialog()).getByRole("button", { name });
+      expect(
+        caution.compareDocumentPosition(button) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+      expect(button).toHaveAccessibleDescription(CAUTION);
+    }
+    await userEvent.clear(byId("pr-description"));
+    await userEvent.type(byId("pr-description"), "Chairs");
+    expect(within(dialog()).getByText(CAUTION)).toBeInTheDocument();
+  });
+
+  it("a read that filled nothing shows no caution", async () => {
+    serve({ extract: () => json(200, { suggestions: null, reason: "timeout" }) });
+    show();
+    await attachAndRead(pdf());
+    expect(await screen.findByText(FAILED)).toBeInTheDocument();
+    expect(within(dialog()).queryByText(CAUTION)).toBeNull();
+  });
+
+  it("removing the file that was read takes it away with its suggestions", async () => {
+    serve();
+    show();
+    await attachAndRead(pdf());
+    expect(await within(dialog()).findByText(CAUTION)).toBeInTheDocument();
+    await userEvent.click(within(dialog()).getByRole("button", { name: /Remove invoice\.pdf/ }));
+    expect(within(dialog()).queryByText(CAUTION)).toBeNull();
+  });
+});
+
+// Owner, 2026-11-19: an invoice in another currency comes back converted at Frankfurter's rate.
+const FX_CAUTION =
+  "The exchange rate is a central bank reference rate and may differ from the amount actually charged.";
+const CONVERTED = {
+  suggestions: {
+    ...READ.suggestions,
+    amount: field("96.82"),
+    currency: "USD",
+    exchange: {
+      original_currency: "USD",
+      original_amount: "12.34",
+      rate: "7.846",
+      rate_date: "2026-11-13",
+      date_basis: "receipt",
+      source: "Frankfurter",
+    },
+  },
+  reason: null,
+};
+
+describe("an invoice in another currency", () => {
+  it("fills the converted amount, says how, and Confirm keeps the six details", async () => {
+    const seen = serve({ extract: () => json(200, CONVERTED) });
+    show();
+    await attachAndRead(pdf());
+    await waitFor(() => expect(byId("pr-amount")).toHaveValue("96.82"));
+    expect(byId("pr-amount")).toHaveAccessibleDescription(
+      "Suggested from the invoice. Converted from USD\u00a012.34 at 1 USD = 7.846 HKD (13 Nov 2026 rate).",
+    );
+    expect(document.getElementById("pr-ai-caution")).toHaveTextContent(`${CAUTION} ${FX_CAUTION}`);
+
+    await userEvent.click(screen.getByRole("button", { name: /^Confirm/ }));
+    await waitFor(() => expect(seen.submits).toHaveLength(1));
+    expect(seen.submits[0]).toMatchObject({
+      amount: "96.82",
+      exchange: {
+        original_currency: "USD",
+        original_amount: "12.34",
+        exchange_rate: "7.846",
+        exchange_rate_date: "2026-11-13",
+        exchange_rate_basis: "receipt",
+        exchange_rate_source: "Frankfurter",
+      },
+    });
+  });
+
+  it("a person's own amount drops the conversion", async () => {
+    const seen = serve({ extract: () => json(200, CONVERTED) });
+    show();
+    await attachAndRead(pdf());
+    await waitFor(() => expect(byId("pr-amount")).toHaveValue("96.82"));
+    await userEvent.clear(byId("pr-amount"));
+    await userEvent.type(byId("pr-amount"), "100");
+    expect(document.getElementById("pr-ai-caution")).toHaveTextContent(CAUTION);
+    expect(document.getElementById("pr-ai-caution")).not.toHaveTextContent(/Frankfurter/);
+
+    await userEvent.click(screen.getByRole("button", { name: /^Confirm/ }));
+    await waitFor(() => expect(seen.submits).toHaveLength(1));
+    expect((seen.submits[0] as { exchange?: unknown }).exchange ?? null).toBeNull();
+  });
+
+  it("no rate: the amount stays empty and one line says to type it in the company's currency", async () => {
+    serve({
+      extract: () =>
+        json(200, {
+          suggestions: {
+            ...READ.suggestions,
+            amount: { ...field(""), applied: false },
+            currency: "TWD",
+            exchange_failed: { currency: "TWD" },
+          },
+          reason: null,
+        }),
+    });
+    show();
+    await attachAndRead(pdf());
+    await waitFor(() => expect(byId("pr-description")).toHaveValue("Office chairs"));
+    expect(byId("pr-amount")).toHaveValue("");
+    expect(
+      within(dialog()).getByText(
+        "I couldn't get an exchange rate for TWD. Enter the amount in HKD.",
+      ),
+    ).toBeInTheDocument();
+  });
+});

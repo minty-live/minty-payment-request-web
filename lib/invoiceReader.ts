@@ -22,6 +22,7 @@ import {
   type Band,
   type ReaderSpec,
   type ReaderState,
+  type Exchange,
   type ReadField,
 } from "@minty/shared/reader";
 
@@ -36,7 +37,18 @@ export type InvoiceSuggestions = {
   due_date?: ReadField;
   currency?: string;
   entity_currency?: string | null;
+  /** The amount was converted from the invoice's currency (owner, 2026-11-19): how. */
+  exchange?: Exchange;
+  /** No rate for the invoice's currency: the amount came back empty. */
+  exchange_failed?: { currency?: string };
 };
+
+/** No rate for the invoice's currency (owner, 2026-11-19): the amount is the person's to type. */
+export function rateMissingText(currency: string, code: string | null | undefined): string {
+  return code
+    ? `I couldn't get an exchange rate for ${currency}. Enter the amount in ${code}.`
+    : `I couldn't get an exchange rate for ${currency}. Enter the amount yourself.`;
+}
 
 /** The form's values the reader may fill (the modal keeps each in its own state). */
 export type InvoiceValues = {
@@ -163,7 +175,9 @@ export function withInvoiceSuggestions(
   const filled: InvoiceField[] = [];
   const noted: InvoiceField[] = [];
   const currency = (s.entity_currency ?? "").trim();
-  const foreign = !!s.currency && !!currency && s.currency !== currency;
+  // another currency: the API converts it (owner, 2026-11-19; `exchange`). An answer in another
+  // currency WITHOUT a conversion (an older API) is only offered, as before.
+  const foreign = !!s.currency && !!currency && s.currency !== currency && !s.exchange;
 
   const offer = (
     field: InvoiceField,
@@ -216,7 +230,7 @@ export function withInvoiceSuggestions(
     );
   }
 
-  // The amount, in the company currency's places. One read in another currency is only offered.
+  // The amount, in the company currency's places (converted when the invoice's was another).
   const amount = s.amount;
   const read = amount?.value ? amount.value.replace(/[^\d.-]/g, "") : "";
   const readValue = parseAmount(read) ?? 0;
@@ -294,6 +308,12 @@ export function withInvoiceSuggestions(
     parts.push(
       `The invoice names a supplier that is not in your list: ${detectedName}. You can add it as a new supplier.`,
     );
+  if (s.exchange && filled.includes("amount"))
+    parts.push(
+      `The amount was converted from ${s.exchange.original_currency} ${s.exchange.original_amount}.`,
+    );
+  if (s.exchange_failed?.currency)
+    parts.push(rateMissingText(s.exchange_failed.currency, currency));
 
   return { ...state, values, marks, notes, detectedName, announcement: parts.join(" ") };
 }

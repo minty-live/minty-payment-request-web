@@ -541,6 +541,12 @@ export type BillCreatePayload = {
     account_code?: string;
     account_name?: string;
   }[];
+  /**
+   * How an AI-read amount in another currency was converted (owner, 2026-11-19): the six details
+   * by the bill's column names (`exchangeFields`), sent only while the amount is still the
+   * converted one. Absent: the bill keeps none.
+   */
+  exchange?: Record<string, string>;
 };
 
 export type EntityBillAccount = {
