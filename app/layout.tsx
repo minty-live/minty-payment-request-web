@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
+import { SessionExpiredHost } from "@minty/shared/ui";
 import "./globals.css";
 import { ToastProvider } from "@/components/Toast";
 import { ContactLauncher } from "@/components/ui/ContactLauncher";
@@ -50,6 +51,7 @@ export default function RootLayout({
             <ContactLauncher />
           </SidebarProvider>
         </ToastProvider>
+        <SessionExpiredHost />
       </body>
     </html>
   );
