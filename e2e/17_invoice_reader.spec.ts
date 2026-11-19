@@ -1,5 +1,6 @@
 // The invoice reader is read only on a press (owner, 2026-11-18): staging an invoice reads
-// nothing; "Read the invoice" appears under the drop zone when the API says the reader is on
+// nothing; "Read invoice" appears under the drop zone when the API says the reader is on, with the
+// company's AI allowance left beside it, and reads the file the person selected
 // (`GET /bills/extract/status/`), and pressing it sends the file to `POST /bills/extract/`.
 //
 // STUBBED - every `/api/v1/**` call is answered from the fixtures, so this needs `npm run dev`
@@ -38,6 +39,17 @@ const READ = {
   reason: null,
 };
 
+/** The company's AI allowance, shared with Petty Cash (owner, 2026-11-18). */
+const OPEN = {
+  enabled: true,
+  reads_used: null,
+  reads_limit: null,
+  reads_left: null,
+  percent_left: 80,
+  blocked: false,
+  resumes_at: null,
+};
+
 /** Opens Add Payment with the reader switched on or off; counts the reads. */
 async function openAddDialog(page: Page, enabled: boolean) {
   const reads: string[] = [];
@@ -45,7 +57,7 @@ async function openAddDialog(page: Page, enabled: boolean) {
   await stubApi(page, {
     extra: {
       "/bills/suggested-reference/": { body: { reference: "PR-E2E-17" } },
-      "/bills/extract/status/": { body: { enabled } },
+      "/bills/extract/status/": { body: enabled ? OPEN : { enabled: false } },
     },
   });
   // registered last, so it answers the read before the stub's catch-all
@@ -75,14 +87,15 @@ for (const size of [
   { width: 768, height: 1024 },
   { width: 1440, height: 900 },
 ]) {
-  test(`staging reads nothing; "Read the invoice" reads it (${size.width}px)`, async ({ page }) => {
+  test(`staging reads nothing; "Read invoice" reads it (${size.width}px)`, async ({ page }) => {
     await page.setViewportSize(size);
     const { dialog, reads } = await openAddDialog(page, true);
 
     await dialog.locator('input[type="file"]').first().setInputFiles(PDF);
-    const button = dialog.getByRole("button", { name: "Read the invoice" });
+    const button = dialog.getByRole("button", { name: "Read invoice" });
     await expect(button).toBeVisible();
     expect((await button.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
+    await expect(button).toHaveAccessibleDescription("80% of your AI allowance left");
     expect(reads).toHaveLength(0);
     await expectNoSideScroll(page, size.width);
     await button.scrollIntoViewIfNeeded();
@@ -103,6 +116,30 @@ test("the reader switched off on the API offers no button", async ({ page }) => 
 
   await dialog.locator('input[type="file"]').first().setInputFiles(PDF);
   await expect(dialog.getByRole("button", { name: "Preview invoice.pdf" })).toBeVisible();
-  await expect(dialog.getByRole("button", { name: "Read the invoice" })).toHaveCount(0);
+  await expect(dialog.getByRole("button", { name: "Read invoice" })).toHaveCount(0);
   expect(reads).toHaveLength(0);
+});
+
+test("with two files the person chooses which one is read (360px)", async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 740 });
+  const { dialog, reads } = await openAddDialog(page, true);
+  const input = dialog.locator('input[type="file"]').first();
+  await input.setInputFiles(PDF);
+  await input.setInputFiles({ ...PDF, name: "statement.pdf" });
+
+  await expect(
+    dialog.getByText("Reads statement.pdf. To read another file, select it above."),
+  ).toBeVisible();
+  await dialog.getByRole("button", { name: "Preview invoice.pdf" }).click();
+  await expect(
+    dialog.getByText("Reads invoice.pdf. To read another file, select it above."),
+  ).toBeVisible();
+  await expectNoSideScroll(page, 360);
+  if (process.env.E2E_SHOTS)
+    await page.screenshot({ path: `${process.env.E2E_SHOTS}/prw-choose-file-360.png` });
+  await dialog.getByRole("button", { name: "Read invoice" }).click();
+
+  await expect(dialog.locator("#pr-amount")).toHaveValue("1,200.50");
+  expect(reads).toHaveLength(1);
+  expect(reads[0]).toContain('filename="invoice.pdf"');
 });

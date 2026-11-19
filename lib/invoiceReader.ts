@@ -66,7 +66,7 @@ export const READING_TITLE = "Minty is reading the invoice details.";
 export const READING_DETAIL = "This can take a few seconds. You can keep filling in the form.";
 export const READ_FAILED = "I couldn't read this invoice. Enter the details yourself.";
 /** The press that reads the invoice: never read on attaching it (owner, 2026-11-18). */
-export const READ_LABEL = "Read the invoice";
+export const READ_LABEL = "Read invoice";
 export const CLEAR_LABEL = "Clear the suggested value for this field";
 export const USE_LABEL = "Use the value from the invoice";
 

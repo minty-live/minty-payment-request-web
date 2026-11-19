@@ -50,6 +50,7 @@ import { useAmountInput } from "@minty/shared/amountInput";
 import { ErrorSummary } from "@minty/shared/ui";
 import {
   cleared,
+  AllowanceNote,
   ReadButton,
   ReaderNote,
   ReadFailedLine,
@@ -57,6 +58,7 @@ import {
   SuggestedLine,
   SUGGESTED_RING,
   useDocumentReader,
+  type ReaderStatus,
   usedNote,
   withoutSuggestions,
 } from "@minty/shared/reader";
@@ -104,6 +106,10 @@ export type PaymentRequestModalProps = {
 };
 
 type UploadedEntry = { id: string; file: File };
+
+/** The lines beside "Read invoice": which file it reads, and the company's AI allowance left. */
+const READ_TARGET_ID = "pr-ai-read-target";
+const ALLOWANCE_ID = "pr-ai-allowance";
 
 /** What the invoice reader can read: the model takes PDF, JPEG and PNG (the form takes HTML too). */
 const READABLE = /\.(pdf|jpe?g|png)$/i;
@@ -276,10 +282,12 @@ export function PaymentRequestModal({
   // in their own states above; the reader's rules run on a snapshot of them.
   const [readerAux, setReaderAux] = useState<InvoiceState>(() => invoiceState());
   const [openedOn, setOpenedOn] = useState("");
+  // The file whose read the form holds (its suggestions, or the read in flight).
   const [readFileId, setReadFileId] = useState<string | null>(null);
-  // "Read the invoice" (owner, 2026-11-18): offered only when the API says the reader is on, and
-  // pressed for the current invoice - the button goes, and comes back after a failed read
-  const [readerEnabled, setReaderEnabled] = useState(false);
+  // "Read invoice" (owner, 2026-11-18): offered only when the API says the reader is on, with the
+  // company's AI allowance left (shared with Petty Cash); pressed for a file, the button goes, and comes
+  // back after a failed read or when another file is selected
+  const [readerStatus, setReaderStatus] = useState<ReaderStatus | null>(null);
   const [readAsked, setReadAsked] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<ValidatedField, string>>>({});
   /** Bumped on each refused Confirm, so the summary takes focus again (@minty/shared/ui ErrorSummary). */
@@ -331,11 +339,11 @@ export function PaymentRequestModal({
 
     fetchInvoiceReaderStatus()
       .then((status) => {
-        if (!cancelled) setReaderEnabled(status.enabled === true);
+        if (!cancelled) setReaderStatus(status);
       })
       // the status unknown: no button (the form works without the reader; the API logs its failure)
       .catch(() => {
-        if (!cancelled) setReaderEnabled(false);
+        if (!cancelled) setReaderStatus(null);
       });
 
     return () => {
@@ -418,15 +426,20 @@ export function PaymentRequestModal({
       applyReader(next);
       return showedAnything(next);
     },
+    onStatus: setReaderStatus,
   });
   const { cancel: cancelRead } = reader;
-  const fileToRead = uploadedFiles.find((x) => x.id === readFileId) ?? null;
+  // One file per read (owner, 2026-11-18): the person chooses it by selecting it in the list (the
+  // preview); with none selected that can be read, the newest file that can.
+  const readable = uploadedFiles.filter((x) => isReadable(x.file));
+  const fileToRead =
+    readable.find((x) => x.id === previewFileId) ?? readable[readable.length - 1] ?? null;
   // (and never once a `disabled` answer has switched the reader off for the session)
   const offerRead =
-    readerEnabled &&
+    readerStatus?.enabled === true &&
     fileToRead !== null &&
     !reader.reading &&
-    (!readAsked || reader.failed) &&
+    (!readAsked || reader.failed || fileToRead.id !== readFileId) &&
     !INVOICE_LATCH.readerOff();
 
   /** The person changed a reader field: it is theirs now (the field's own setter still runs). */
@@ -600,13 +613,12 @@ export function PaymentRequestModal({
     setPreviewFileId(added[added.length - 1]?.id ?? null);
     clearFieldError("attachments");
     e.target.value = "";
-    // The newest readable file is the one "Read the invoice" reads - only on that press (owner,
-    // 2026-11-18); the previous one's suggestions go (what was typed stays).
-    const toRead = [...added].reverse().find((x) => isReadable(x.file));
-    if (toRead) {
+    // A new readable file (selected for preview above) is what "Read invoice" offers - read only on
+    // that press (owner, 2026-11-18); the previous read's suggestions go (what was typed stays).
+    if (added.some((x) => isReadable(x.file))) {
       cancelRead();
       dropSuggestions();
-      setReadFileId(toRead.id);
+      setReadFileId(null);
       setReadAsked(false);
     }
   };
@@ -991,14 +1003,32 @@ export function PaymentRequestModal({
             ) : reader.failed ? (
               <ReadFailedLine text={READ_FAILED} />
             ) : null}
-            {offerRead && fileToRead ? (
-              <ReadButton
-                label={READ_LABEL}
-                onClick={() => {
-                  setReadAsked(true);
-                  void reader.read(fileToRead.file);
-                }}
-              />
+            {readerStatus?.enabled && fileToRead && !INVOICE_LATCH.readerOff() ? (
+              <div>
+                {offerRead ? (
+                  <ReadButton
+                    label={READ_LABEL}
+                    disabled={!!readerStatus?.blocked}
+                    describedBy={`${READ_TARGET_ID} ${ALLOWANCE_ID}`}
+                    onClick={() => {
+                      if (fileToRead.id !== readFileId) {
+                        // another file: the last one's suggestions go before this one is read
+                        cancelRead();
+                        dropSuggestions();
+                        setReadFileId(fileToRead.id);
+                      }
+                      setReadAsked(true);
+                      void reader.read(fileToRead.file);
+                    }}
+                  />
+                ) : null}
+                {offerRead && readable.length > 1 ? (
+                  <p id={READ_TARGET_ID} className="mt-1 break-words text-sm text-text-muted">
+                    Reads {fileToRead.file.name}. To read another file, select it above.
+                  </p>
+                ) : null}
+                <AllowanceNote id={ALLOWANCE_ID} status={readerStatus} />
+              </div>
             ) : null}
             <div role="status" aria-live="polite" className="sr-only">
               {readerAux.announcement}

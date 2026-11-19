@@ -1,3 +1,4 @@
+import type { ReaderStatus } from "@minty/shared/reader";
 import {
   type AuthInfo,
   getAuth,
@@ -715,18 +716,20 @@ export async function uploadBillAttachments(
 
 /**
  * The invoice reader (`POST /bills/extract/`): the model's suggestions for the new-bill form, as
- * `{suggestions, reason}` (lib/invoiceReader.ts). Multipart field `invoice`; nothing is written.
+ * `{suggestions, reason, reader}` (lib/invoiceReader.ts; `reader` = the company's AI reads after
+ * it). Multipart field `invoice`; nothing is written but the read's record.
  */
 export function extractInvoice(form: FormData, signal: AbortSignal): Promise<unknown> {
   return apiFetch<unknown>("/bills/extract/", { method: "POST", body: form, signal });
 }
 
 /**
- * Whether the invoice reader is switched on (`GET /bills/extract/status/`, `BILL_AI_ENABLED`): the
- * form offers "Read the invoice" only then - an invoice is read only on that press (owner, 2026-11-18).
+ * Whether the invoice reader is switched on (`GET /bills/extract/status/`, `BILL_AI_ENABLED`) and
+ * the company's AI reads left, shared with Petty Cash: the form offers "Read invoice" only then - an
+ * invoice is read only on that press (owner, 2026-11-18). An older API sends `{enabled}` alone.
  */
-export function fetchInvoiceReaderStatus(): Promise<{ enabled: boolean }> {
-  return apiFetch<{ enabled: boolean }>("/bills/extract/status/");
+export function fetchInvoiceReaderStatus(): Promise<ReaderStatus> {
+  return apiFetch<ReaderStatus>("/bills/extract/status/");
 }
 
 export function deleteBillAttachment(billId: string, attachmentId: string): Promise<void> {
