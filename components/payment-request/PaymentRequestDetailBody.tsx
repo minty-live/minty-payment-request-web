@@ -8,6 +8,7 @@ import { guardLeave, useLeaveGuard } from "@minty/shared/leaveGuard";
 import { LeaveDialog } from "@/features/subscription/components/InterruptedDialogs";
 import {
   ApiError,
+  archivedContactsOf,
   deleteBill,
   deleteBillAttachment,
   fetchBill,
@@ -21,6 +22,7 @@ import {
   returnBill as returnBillApi,
   updateBill,
   XERO_RECONNECT_MESSAGE,
+  type ArchivedContact,
   type BillAttachment,
   type BillDetail,
   type EntityBillContact,
@@ -50,6 +52,7 @@ import {
   uniquifyFileName,
 } from "@/lib/paymentRequestAttachmentStore";
 import { ActivityHistoryAccordion } from "./ActivityHistoryAccordion";
+import { ArchivedContactsDialog } from "./ArchivedContactsDialog";
 import { BillActionBar } from "./BillActionBar";
 import { BillDraftSubmitButton } from "./BillDraftSubmitButton";
 import {
@@ -57,6 +60,7 @@ import {
   type InvoiceAttachmentPreviewItem,
 } from "./InvoiceAttachmentPreview";
 import { InvoiceAttachmentToolbar } from "./InvoiceAttachmentToolbar";
+import { DuplicateBillQuestion, useDuplicateBillQuestion } from "./DuplicateBillDialog";
 import { OverpaymentWarningModal } from "./OverpaymentWarningModal";
 import { PaymentHistoryListPanel, type PaymentHistoryRow } from "./PaymentHistoryCard";
 import { RecordPaymentModal } from "./RecordPaymentModal";
@@ -253,6 +257,12 @@ function computePaymentHistoryPanelStyle(anchorRoot: HTMLDivElement | null): CSS
 export function PaymentRequestDetailBody({ onBillUpdated }: PaymentRequestDetailBodyProps) {
   const entityCurrency = useEntityCurrency();
   const decimals = useEntityCurrencyDecimals();
+  // DUP1: a save that looks like another bill asks first (Save anyway resends with the flag)
+  const {
+    ask: askDuplicate,
+    confirmed: duplicateConfirmed,
+    question: duplicateQuestion,
+  } = useDuplicateBillQuestion<"save" | "submit">();
   const params = useParams<{ ref?: string }>();
   const router = useRouter();
   const { requestId, pending: lookupPending, error: lookupError } = useRequestId();
@@ -277,6 +287,8 @@ export function PaymentRequestDetailBody({ onBillUpdated }: PaymentRequestDetail
     useState<DetailSubmitFieldErrors | null>(null);
 
   const [isPublishing, setIsPublishing] = useState(false);
+  /** A publish refused over contacts Xero archived (C4): map them, then publish again. */
+  const [archivedContacts, setArchivedContacts] = useState<ArchivedContact[] | null>(null);
   const [isReturning, setIsReturning] = useState(false);
   const [recordPaymentOpen, setRecordPaymentOpen] = useState(false);
   const [recordPaymentReadOnly, setRecordPaymentReadOnly] = useState(false);
@@ -383,7 +395,8 @@ export function PaymentRequestDetailBody({ onBillUpdated }: PaymentRequestDetail
       const b = await fetchBill(requestId);
       if (!billStatusShouldRollbackWhenNoPayments(b.status ?? "")) return false;
 
-      await updateBill(requestId, { status: "submitted" });
+      // a status the app moves back, not a save of the bill's details: DUP1 never asks here
+      await updateBill(requestId, { status: "submitted", confirm_duplicate: true });
       return true;
     },
     [requestId],
@@ -781,6 +794,7 @@ export function PaymentRequestDetailBody({ onBillUpdated }: PaymentRequestDetail
 
   const executeSave = useCallback(
     async (overrideStatus?: string) => {
+      const confirmDuplicate = duplicateConfirmed();
       if (!requestId || !bill || !draft) return;
       setIsSaving(true);
       try {
@@ -794,6 +808,7 @@ export function PaymentRequestDetailBody({ onBillUpdated }: PaymentRequestDetail
         if (!overrideStatus && bill.status === "returned") {
           (payload as typeof payload & { status?: string }).status = "submitted";
         }
+        if (confirmDuplicate) payload.confirm_duplicate = true;
         const updated = await updateBill(requestId, payload);
         await commitPendingAttachmentDeletes(requestId);
 
@@ -864,6 +879,7 @@ export function PaymentRequestDetailBody({ onBillUpdated }: PaymentRequestDetail
           );
         }
       } catch (e) {
+        if (askDuplicate(e, "save")) return;
         if (isDuplicateBillReferenceError(e)) {
           setBillNoError(e.message);
         } else {
@@ -889,6 +905,8 @@ export function PaymentRequestDetailBody({ onBillUpdated }: PaymentRequestDetail
       mapServerAttachmentsToPreviewItems,
       showToast,
       decimals,
+      askDuplicate,
+      duplicateConfirmed,
     ],
   );
 
@@ -969,6 +987,7 @@ export function PaymentRequestDetailBody({ onBillUpdated }: PaymentRequestDetail
   }, [requestId, bill, reloadBill, bumpAudit, loadPayments, showToast, params, router, pages]);
 
   const handleSubmitDraft = useCallback(async () => {
+    const confirmDuplicate = duplicateConfirmed();
     if (!requestId || !bill) return;
     const info = isEditing && draft ? draft : viewData;
     if (!info) return;
@@ -1009,7 +1028,11 @@ export function PaymentRequestDetailBody({ onBillUpdated }: PaymentRequestDetail
     setIsSubmittingDraft(true);
     try {
       const payload = buildBillUpdatePayload(bill, info, decimals);
-      const updated = await updateBill(requestId, { ...payload, status: "submitted" });
+      const updated = await updateBill(requestId, {
+        ...payload,
+        status: "submitted",
+        ...(confirmDuplicate ? { confirm_duplicate: true } : {}),
+      });
       await commitPendingAttachmentDeletes(requestId);
 
       const stagedForApi = attachments.filter(
@@ -1078,6 +1101,7 @@ export function PaymentRequestDetailBody({ onBillUpdated }: PaymentRequestDetail
         );
       }
     } catch (e) {
+      if (askDuplicate(e, "submit")) return;
       if (isDuplicateBillReferenceError(e)) {
         // Surfaced inline under Bill No. — a toast would just repeat it.
         setBillNoError(e.message);
@@ -1112,6 +1136,8 @@ export function PaymentRequestDetailBody({ onBillUpdated }: PaymentRequestDetail
     mapServerAttachmentsToPreviewItems,
     showToast,
     decimals,
+    askDuplicate,
+    duplicateConfirmed,
   ]);
 
   const handlePublishToXero = useCallback(async () => {
@@ -1123,6 +1149,11 @@ export function PaymentRequestDetailBody({ onBillUpdated }: PaymentRequestDetail
       onBillUpdated?.();
       bumpAudit();
     } catch (e) {
+      const archived = archivedContactsOf(e);
+      if (archived) {
+        setArchivedContacts(archived);
+        return;
+      }
       showToast(
         isXeroAuthError(e)
           ? XERO_RECONNECT_MESSAGE
@@ -1674,6 +1705,11 @@ export function PaymentRequestDetailBody({ onBillUpdated }: PaymentRequestDetail
           bumpAudit();
         }}
       />
+      <DuplicateBillQuestion
+        question={duplicateQuestion}
+        currencyCode={entityCurrency}
+        saves={{ save: () => void executeSave(), submit: () => void handleSubmitDraft() }}
+      />
       <OverpaymentWarningModal
         open={overpaymentWarningOpen}
         billId={requestId}
@@ -1698,6 +1734,16 @@ export function PaymentRequestDetailBody({ onBillUpdated }: PaymentRequestDetail
           setRecordPaymentOpen(true);
         }}
       />
+      {archivedContacts ? (
+        <ArchivedContactsDialog
+          contacts={archivedContacts}
+          onCancel={() => setArchivedContacts(null)}
+          onMapped={() => {
+            setArchivedContacts(null);
+            void handlePublishToXero();
+          }}
+        />
+      ) : null}
     </>
   );
 }

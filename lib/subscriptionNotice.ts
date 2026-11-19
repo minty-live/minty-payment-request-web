@@ -12,7 +12,7 @@
  * fails, times out, or the user's token has aged out, the landing page shows
  * nothing rather than an error. Never throws.
  */
-import { getAuth, getLoginSidFromToken, isTokenExpiringSoon, refreshToken } from "./auth";
+import { getAuth, getLoginSidFromToken } from "./auth";
 import { env } from "./env";
 
 export type NoticeSeverity = "critical" | "warning" | "info";
@@ -86,27 +86,11 @@ export async function fetchSubscriptionNotice(): Promise<SubscriptionNotice | nu
 
   const url = `${env.SUBSCRIPTION_API_URL}/api/entities/${encodeURIComponent(auth.entityId)}/subscription-notice`;
 
-  // The billing JWT lives 30 minutes but its cookie lives 8 hours, so a tab left
-  // open holds a token the API will reject long before the cookie disappears. Refresh
-  // up front rather than burning the first attempt on a guaranteed 401.
-  let token = auth.token;
-  if (isTokenExpiringSoon()) {
-    if (await refreshToken()) {
-      token = getAuth()?.token ?? token;
-    } else {
-      debugNotice("token expiring and refresh failed — skipping");
-    }
-  }
-
-  let res = await requestNotice(url, token);
+  // No refresh and no retry (Phase 9): the cookie lives as long as the token, and a 401 (the
+  // token ran out, or the Minty sign-in behind it ended) is the page's own reads' business -
+  // they hand the person over again. A notice is decoration.
+  const res = await requestNotice(url, auth.token);
   if (!res) return null;
-
-  // One retry behind a refresh: the token may have aged out between the check above
-  // and the request, and the API is the only judge of that.
-  if (res.status === 401 && (await refreshToken())) {
-    const fresh = getAuth()?.token;
-    if (fresh) res = (await requestNotice(url, fresh)) ?? res;
-  }
 
   if (!res.ok) {
     debugNotice(`server said ${res.status}`, await res.text().catch(() => ""));

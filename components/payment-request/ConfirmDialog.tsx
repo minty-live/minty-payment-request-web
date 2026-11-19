@@ -35,6 +35,8 @@ export type ConfirmDialogProps = {
   acknowledgeOnly?: boolean;
   /** Label of the single button in acknowledge-only mode. */
   acknowledgeLabel?: ReactNode;
+  /** The secondary button's label ("Cancel"; "Go back" where nothing is cancelled). */
+  backLabel?: ReactNode;
 };
 
 export function ConfirmDialog({
@@ -49,6 +51,7 @@ export function ConfirmDialog({
   confirmVariant = "danger",
   acknowledgeOnly = false,
   acknowledgeLabel = "OK",
+  backLabel = "Cancel",
 }: ConfirmDialogProps) {
   useEffect(() => {
     if (!open) return;
@@ -67,7 +70,7 @@ export function ConfirmDialog({
         image="dont"
         busy={pending}
         hideBack={acknowledgeOnly}
-        backLabel="Cancel"
+        backLabel={backLabel}
         confirmLabel={acknowledgeOnly ? acknowledgeLabel : confirmLabel}
         confirmTone={acknowledgeOnly || confirmVariant === "primary" ? "teal" : "red"}
         onConfirm={acknowledgeOnly ? onClose : () => onConfirm?.()}

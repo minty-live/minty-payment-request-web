@@ -4,7 +4,7 @@
 // Two exports, one file, and the difference between them is the point - the read-only body must
 // offer no field to type in at all.
 
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -48,7 +48,13 @@ function serve({
     attachments: [billAttachment()],
   }),
   billAnswer,
-}: { detail?: ReturnType<typeof bill>; billAnswer?: () => Response } = {}) {
+  publish,
+}: {
+  detail?: ReturnType<typeof bill>;
+  billAnswer?: () => Response;
+  /** `POST /bills/{id}/publish/`. */
+  publish?: () => Response;
+} = {}) {
   const calls: Call[] = [];
   fetchMock.mockImplementation(async (input, init) => {
     const path = new URL(String(input)).pathname;
@@ -64,6 +70,15 @@ function serve({
     if (path.endsWith("/auth/entitlements")) return answer(200, { billing_enabled: true });
     if (path.endsWith("/profile/me")) return answer(200, { member_entity_ids: [ENTITY_ID] });
     if (path.endsWith("/entity-bill-contacts/")) return answer(200, SUPPLIERS);
+    if (path.endsWith("/entity-bill-contacts/xero/")) {
+      return answer(200, [{ xero_contact_id: "XA", name: "Alpha Ltd" }]);
+    }
+    if (method === "POST" && path.endsWith("/xero-link/")) {
+      return answer(200, { message: "Kee Wah now uses Alpha Ltd in Xero.", contact_id: "mc-1" });
+    }
+    if (method === "POST" && path.endsWith(`/bills/${BILL_ID}/publish/`)) {
+      return (publish ?? (() => answer(200, detail)))();
+    }
     if (path.includes("/entity-bill-accounts/")) return answer(200, entityBillAccounts());
     if (path.endsWith("/payments")) return answer(200, { paid_total: "0.00", payments: [] });
     if (path.includes("/attachments")) return answer(200, []);
@@ -225,6 +240,47 @@ describe("a settled request opened in the list", () => {
     expect(screen.queryByRole("button", { name: /Void/i })).not.toBeInTheDocument();
   });
 
+  // Owner's decisions C4 (2026-11-19): a contact Xero archived without a merge is mapped here.
+  it("asks to map a contact archived in Xero, then publishes again", async () => {
+    let published = 0;
+    const paid = bill({
+      id: BILL_ID,
+      status: "paid",
+      contact: "Kee Wah",
+      reference: "PR-0001",
+      attachments: [billAttachment()],
+    });
+    const { calls } = serve({
+      detail: paid,
+      publish: () =>
+        published++ === 0
+          ? answer(409, {
+              detail:
+                "Kee Wah is archived in Xero. Restore it in Xero, or map it to another contact now.",
+              archived_contacts: [{ id: "mc-1", name: "Kee Wah" }],
+            })
+          : answer(200, paid),
+    });
+    showReadonly();
+    await loaded();
+
+    await userEvent.click(screen.getByRole("button", { name: /Publish to Xero/ }));
+    const dialog = await screen.findByRole("dialog", { name: "A contact is archived in Xero" });
+    const picker = within(dialog).getByRole("combobox", { name: "Map Kee Wah to" });
+    await waitFor(() => expect(picker).toBeEnabled());
+    await userEvent.click(picker);
+    await userEvent.click(await screen.findByRole("option", { name: "Alpha Ltd" }));
+    await userEvent.click(within(dialog).getByRole("button", { name: "Map and publish" }));
+
+    expect(await screen.findByText("Kee Wah now uses Alpha Ltd in Xero.")).toBeInTheDocument();
+    await waitFor(() =>
+      expect(calls.filter((c) => c.path.endsWith(`/bills/${BILL_ID}/publish/`))).toHaveLength(2),
+    );
+    expect(calls.find((c) => c.path.endsWith("/xero-link/"))?.body).toEqual({
+      xero_contact_id: "XA",
+    });
+  });
+
   it("says so in the API's own words when it will not load", async () => {
     serve({ billAnswer: () => answer(500, { detail: "boom" }) });
 
@@ -341,5 +397,72 @@ describe("editing a draft for a company whose currency has no decimal places (JP
     await waitFor(() => expect(calls.some((c) => c.method === "PUT")).toBe(true));
     const put = calls.find((c) => c.method === "PUT")!;
     expect(put.body).toMatchObject({ amount: "1234" });
+  });
+});
+
+describe("the duplicate reminder before a save (owner's decisions doc DUP1, 2026-11-19)", () => {
+  const SENTENCE =
+    "This looks like a bill you already have: the same date, supplier and amount. Save it anyway?";
+  const DUPLICATE = {
+    detail: SENTENCE,
+    duplicates: [
+      {
+        id: "b-2",
+        reference: "PR-0002",
+        contact: "Young Bros Transport",
+        amount: "6000.00",
+        invoice_date: "2026-03-03",
+      },
+    ],
+  };
+
+  /** The first PUT answers the duplicate 409; everything else as `serve` does. */
+  function serveAsking() {
+    const { calls } = serve();
+    const base = fetchMock.getMockImplementation()!;
+    let asked = false;
+    fetchMock.mockImplementation(async (input, init) => {
+      const served = await base(input, init);
+      if (init?.method === "PUT" && !asked) {
+        asked = true;
+        return answer(409, DUPLICATE);
+      }
+      return served;
+    });
+    return () => calls.filter((c) => c.method === "PUT");
+  }
+  const question = () => screen.findByRole("alertdialog", { name: "Save it anyway?" });
+
+  async function editAndSave() {
+    showDraft();
+    await loaded();
+    await userEvent.click(screen.getByRole("button", { name: "Edit" }));
+    await screen.findByDisplayValue("Young Bros Transport");
+    await userEvent.click(screen.getByRole("button", { name: "Save Changes" }));
+  }
+
+  it("asks with the API's sentence and the matching bill; Save anyway resends with the flag", async () => {
+    const puts = serveAsking();
+    await editAndSave();
+
+    const dialog = await question();
+    expect(dialog).toHaveTextContent(SENTENCE);
+    expect(dialog).toHaveTextContent("PR-0002 · Young Bros Transport · HKD 6,000.00 · 03 Mar 2026");
+    await userEvent.click(within(dialog).getByRole("button", { name: "Save anyway" }));
+
+    await waitFor(() => expect(puts()).toHaveLength(2));
+    expect(puts()[1].body).toEqual({ ...puts()[0].body, confirm_duplicate: true });
+    await waitFor(() => expect(screen.getByRole("button", { name: "Edit" })).toBeInTheDocument());
+  });
+
+  it("Go back sends nothing more and stays in edit mode", async () => {
+    const puts = serveAsking();
+    await editAndSave();
+
+    await userEvent.click(within(await question()).getByRole("button", { name: "Go back" }));
+
+    expect(screen.queryByRole("alertdialog", { name: "Save it anyway?" })).toBeNull();
+    expect(puts()).toHaveLength(1);
+    expect(screen.getByRole("button", { name: "Save Changes" })).toBeInTheDocument();
   });
 });

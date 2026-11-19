@@ -16,7 +16,7 @@ Minty links **Payments** to `/landing?code=<one-time code>&entity_id=&entity_nam
 a Continue back into Minty's `/entity`. A `?token=` in the address is never stored. The way back (`lib/mintyUrls.ts::buildMintyEnterUrl`, `/entity/<id>/enter?next=`)
 carries no token. The page stores the token, the entity id and name in cookies
 (`lib/auth.ts`: `billing_token`, `billing_entity_id`, `billing_entity_name`, `SameSite=Lax`,
-`Secure` on https, **8 hours**) and forwards to `next` (Flask sends the company's list or its
+`Secure` on https, **exactly the token's 30 minutes** - Phase 9) and forwards to `next` (Flask sends the company's list or its
 Payment Request Settings - see Addresses below; `/`, the company's list, when there is none; a path on this
 origin only - `lib/safeNext.ts`, a COPY of minty-web's: no `//host`, backslash or control
 character, which until 2026-10-05 let `next=/%5Cevil.com` leave the site); `from` is
@@ -71,11 +71,23 @@ the sidebar and module selection take it from the cookie (`cookieCompanyPages`).
 ## Using the token
 
 `lib/api.ts::apiFetch` sends `Authorization: Bearer <token>` and `X-Entity-Id` on every
-call to minty-payment-request-api (`PAYMENT_REQUEST_API_URL`). The JWT itself lives **30
-minutes**; the cookie 8 hours; `lib/auth.ts::refreshToken` calls
-`POST /api/auth/token/refresh` when the token is expiring soon (`isTokenExpiringSoon`) so
-an open tab keeps working — a 401 that survives a refresh sends the person back to Minty
-(`/entity/<id>/enter`).
+call to minty-payment-request-api (`PAYMENT_REQUEST_API_URL`). The JWT and its cookie live
+**30 minutes**, and nothing refreshes it (Phase 9, owner's S2, 2026-11-19: the 8-hour
+`refreshToken` and `POST /api/auth/token/refresh` are gone, so Payment Request signs out
+when Minty does). A 401 on an expired token, or on one handed over more than a minute ago
+(`isTokenFresh` - the Minty sign-in behind it may have ended: signed out, or 60 minutes
+without activity), runs `lib/auth.ts::redirectToLogin`: the cookies are cleared and the SAME
+address is loaded again, which `middleware.ts` sends through accounts-api's company hand-off
+(`flaskHandoff`) - silently back with a fresh token while the sign-in lives, through the
+sign-in page when it does not. A 401 on a token under a minute old is the server declining
+this caller (no role), reported in place - one hand-off at most, never a loop. Input on the
+open form is lost (no warning first, S3).
+
+**"Your session has expired" (owner, 2026-11-19).** A 401 whose body carries `"reason": "session_expired"` - every API adds it when the Minty sign-in behind the token has ENDED (signed out, or 60 minutes without activity; minty-accounts-api `docs/features/authentication.md` 3.3) - is not renewed quietly: `lib/sessionExpired.ts` reads it (`isSessionExpired(body)`) and calls ONE local `showSessionExpired(loginUrl)`, once however many calls fail together, and the quiet hand-off then stays put. Today that call only goes to the sign-in page; the pop-up ("Your session has expired", one OK) is to come from `@minty/shared` as one component for every app and will sit behind the same call. Read in `lib/api.ts` (both 401 paths) and `components/ui/sidebarHost.ts` (`bearerJson`, decoration
+too). `loginUrl` = accounts-api's front door `/?next=` the company hand-off for the page the person
+was on (`lib/mintyUrls.ts::sessionExpiredLoginUrl` + `companyHandoffUrl`, which `middleware.ts`
+uses too; off a company page, `/entity`); the cookies are cleared first. Tests:
+`lib/__tests__/sessionExpired.test.ts`.
 
 The role and the module claims in the token (`lib/moduleClaims.ts`, `useUserRole`) are
 read for the **first paint only**; `components/ModuleGate.tsx` then confirms the

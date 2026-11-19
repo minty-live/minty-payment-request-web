@@ -219,7 +219,8 @@ export function RecordPaymentModal({
       if (billHasRemainingCountablePayments(billId, paymentsList)) return false;
       const b = await fetchBill(billId);
       if (!billStatusShouldRollbackWhenNoPayments(b.status ?? "")) return false;
-      await updateBill(billId, { status: "submitted" });
+      // a status the app moves back, not a save of the bill's details: DUP1 never asks here
+      await updateBill(billId, { status: "submitted", confirm_duplicate: true });
       return true;
     },
     [billId],

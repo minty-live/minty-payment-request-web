@@ -185,20 +185,12 @@ describe("fetchSubscriptionNotice", () => {
     expect(warnedAbout("nothing to report")).toBe(true);
   });
 
-  it("retries once behind a refresh when the API says the token has aged out", async () => {
+  it("is null for a 401 - no refresh, no retry (Phase 9): the page's own reads hand over again", async () => {
     fetchMock.mockResolvedValueOnce(answer(401, { detail: "expired" }));
-    fetchMock.mockResolvedValueOnce(answer(200, { token: unsignedToken({ note: "fresh" }) }));
-    fetchMock.mockResolvedValueOnce(answer(200, NOTICE));
-
-    await expect(fetchSubscriptionNotice()).resolves.toEqual(NOTICE);
-
-    expect(fetchMock).toHaveBeenCalledTimes(3);
-  });
-
-  it("gives up when that refresh fails too", async () => {
-    fetchMock.mockResolvedValueOnce(answer(401, { detail: "expired" }));
-    fetchMock.mockResolvedValueOnce(answer(401, { detail: "no" })); // the refresh
 
     await expect(fetchSubscriptionNotice()).resolves.toBeNull();
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(warnedAbout("server said 401")).toBe(true);
   });
 });

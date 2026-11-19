@@ -2,15 +2,10 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 import { AUTH_COOKIE_NAME, ENTITY_ID_COOKIE_NAME, ENTITY_NAME_COOKIE_NAME } from "@/lib/auth";
-import {
-  COMPANY_PAGE,
-  companyBase,
-  companyPages,
-  decodeSegment,
-  isCanonicalRef,
-} from "@/lib/companyPages";
+import { COMPANY_PAGE, companyBase, companyPages, isCanonicalRef } from "@/lib/companyPages";
 import { shortIdOf } from "@minty/shared/companyRef";
 import { resolveMintyModuleUrl } from "@/lib/mintyEnv";
+import { companyHandoffUrl as flaskHandoff } from "@/lib/mintyUrls";
 
 const AUTH_COOKIE = AUTH_COOKIE_NAME;
 
@@ -47,23 +42,6 @@ function profileForward(pathname: string, search: string): string | null {
   }
   const next = query ? `${target}?${query}` : target;
   return `${minty}/handoff/minty-web?${new URLSearchParams({ next }).toString()}`;
-}
-
-/**
- * Flask's way into this app for the company in an address: a page of a company the cookie does
- * not hold (another tab switched it, a bookmark, an expired cookie) goes there, and Flask -
- * after its sign-in and membership checks - mints a token for that company and lands on the
- * same page. Flask resolves `<shortid>/<name>` itself.
- */
-function flaskHandoff(ref: string, slug: string, page: string): string {
-  const company = `${resolveMintyModuleUrl().replace(/\/+$/, "")}/entity/${ref}/${slug}`;
-  if (page.startsWith("settings/")) return `${company}/settings/payment-request`;
-  // The pathname is still percent-encoded and URLSearchParams encodes again, so decode first
-  // (`PR%2F0001` reaches Flask as `PR%2F0001`, not `PR%252F0001`). `new` names no request.
-  const requestId = decodeSegment(page.split("/")[1] ?? "").trim();
-  return requestId && requestId !== "new"
-    ? `${company}/payment-request?${new URLSearchParams({ request: requestId }).toString()}`
-    : `${company}/payment-request`;
 }
 
 /**

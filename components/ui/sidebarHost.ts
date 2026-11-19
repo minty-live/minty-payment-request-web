@@ -29,14 +29,16 @@ import { guardLeave } from "@minty/shared/leaveGuard";
 import { ApiError, logoutSession } from "@/lib/api";
 import { pushAppScrollLock } from "@/lib/appScrollRoot";
 import { env } from "@/lib/env";
-import { clearAuth, getAuth, isTokenExpiringSoon, redirectToLogin, refreshToken } from "@/lib/auth";
+import { clearAuth, getAuth, redirectToLogin } from "@/lib/auth";
 import { getModuleClaims } from "@/lib/moduleClaims";
 import {
   buildMintyEnterUrl,
   hubSettingsUrl,
   MINTY_MODULE_URL,
   postNavigate,
+  sessionExpired,
 } from "@/lib/mintyUrls";
+import { isSessionExpired } from "@/lib/sessionExpired";
 import { cookieCompanyPages } from "@/lib/useCompanyPages";
 
 /** minty-subscription-api - the Subscriptions Overview's read (`SUBSCRIPTION_API_URL`, lib/env.ts). */
@@ -194,14 +196,10 @@ function sentence(body: unknown): string | null {
   return null;
 }
 
-async function bearerJson<T>(
-  base: string,
-  path: string,
-  init: HubRequest,
-  retried = false,
-): Promise<T> {
+/** No refresh and no retry (Phase 9): a 401 - the token ran out, or the Minty sign-in behind it
+ * ended - hands the person over again on the same page, unless the caller only decorates. */
+async function bearerJson<T>(base: string, path: string, init: HubRequest): Promise<T> {
   const { method = "GET", json, query, signal, onUnauthorized = "reauth" } = init;
-  if (!retried && isTokenExpiringSoon(120)) await refreshToken();
   const token = getAuth()?.token;
   if (!token) {
     if (onUnauthorized === "reauth") redirectToLogin();
@@ -220,12 +218,14 @@ async function bearerJson<T>(
     signal,
   });
 
+  const body = await readBody(res);
   if (res.status === 401) {
-    if (!retried && (await refreshToken())) return bearerJson<T>(base, path, init, true);
-    if (onUnauthorized === "reauth") redirectToLogin();
+    // The sign-in behind the token has ended (`reason: session_expired`, 2026-11-19): say so,
+    // whatever the caller asked a 401 to mean. Any other 401: handed over again, or only refused.
+    if (isSessionExpired(body)) sessionExpired();
+    else if (onUnauthorized === "reauth") redirectToLogin();
     throw new ApiError(401, SESSION_ENDED);
   }
-  const body = await readBody(res);
   if (!res.ok) throw new ApiError(res.status, sentence(body) ?? HOUSE_FALLBACK);
   return body as T;
 }

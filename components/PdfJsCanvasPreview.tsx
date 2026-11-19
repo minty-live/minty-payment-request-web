@@ -1,13 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import {
-  getAuth,
-  isTokenExpired,
-  isTokenExpiringSoon,
-  redirectToLogin,
-  refreshToken,
-} from "@/lib/auth";
+import { getAuth, redirectToLogin } from "@/lib/auth";
 import { API_BASE } from "@/lib/apiBase";
 
 // pdf.js runtime assets (worker, cMaps, standard fonts) are self-hosted under
@@ -92,13 +86,6 @@ function isLocalSrc(src: string): boolean {
  */
 async function fetchProxyBlob(apiPath: string): Promise<string | null> {
   try {
-    if (isTokenExpiringSoon(5 * 60)) {
-      const refreshed = await refreshToken();
-      if (!refreshed && isTokenExpired()) {
-        redirectToLogin();
-        return null;
-      }
-    }
     const auth = getAuth();
     if (!auth?.token) {
       redirectToLogin();

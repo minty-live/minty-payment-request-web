@@ -22,9 +22,10 @@ live account-code state and Publish writes a real Xero invoice when `E2E_XERO=1`
 - [ ] The role/module claims in the token only decide the very first paint; reload or wait for
       `ModuleGate`'s `GET /api/auth/entitlements` call and confirm the database's answer wins
       over a stale claim.
-- [ ] A token that is about to expire is silently refreshed (`POST /api/auth/token/refresh`)
-      while the tab sits open; a 401 that survives a refresh sends the person back to Minty via
-      `/entity/<id>/enter`.
+- [ ] Nothing refreshes the token (Phase 9): after 30 minutes the next page or call goes
+      through Minty and comes back to the SAME page with a fresh token while the Minty
+      sign-in lives. Sign out of Minty in another tab: the next call here (within a minute)
+      lands on the sign-in page, and signing in returns to the page.
 - [ ] Logout (sidebar menu and My Profile) ends the session everywhere: cookies cleared,
       `POST /api/auth/logout` called, then a form POST to Minty's own `/logout` — not back on this
       app's or Minty's entity list still signed in.

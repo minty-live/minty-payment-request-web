@@ -1,11 +1,21 @@
-import { resolveMintyModuleUrl } from "./mintyEnv";
-import { API_BASE } from "./apiBase";
+/**
+ * The module token, kept in a cookie.
+ *
+ * minty-accounts-api hands this app a 30-minute token for ONE company; the cookies live exactly
+ * as long as it (its `exp`), as petty-cash-web's do. There is no refresh (Phase 9, owner's S2,
+ * 2026-11-19): when the token runs out, or the Minty sign-in behind it ends (signed out, or 60
+ * minutes without activity - every API then answers 401), the person is handed over again on
+ * the same page (`redirectToLogin`), so Payment Request signs out when Minty does.
+ */
+
+import { sessionExpiredShown } from "./sessionExpired";
 
 const TOKEN_KEY = "billing_token";
 const ENTITY_ID_KEY = "billing_entity_id";
 const ENTITY_NAME_KEY = "billing_entity_name";
 
-const BILLING_TOKEN_MAX_AGE = 60 * 60 * 8; // 8 hours — matches JWT lifetime
+/** What a token is allowed to live when its `exp` cannot be read - the hand-off token's lifetime. */
+const FALLBACK_MAX_AGE_SECONDS = 60 * 30;
 
 export type AuthInfo = {
   token: string;
@@ -13,9 +23,16 @@ export type AuthInfo = {
   entityName: string;
 };
 
+/** Seconds until the token's `exp`, floored at 1 - or the fallback when there is no `exp`. */
+export function secondsUntilExpiry(token: string): number {
+  const exp = decodeJwtPayload(token)?.exp;
+  if (typeof exp !== "number") return FALLBACK_MAX_AGE_SECONDS;
+  return Math.max(1, Math.floor(exp - Date.now() / 1000));
+}
+
 export function setAuth(token: string, entityId: string, entityName: string) {
   const isSecure = typeof window !== "undefined" && window.location.protocol === "https:";
-  const opts = `path=/;max-age=${BILLING_TOKEN_MAX_AGE};SameSite=Lax${isSecure ? ";Secure" : ""}`;
+  const opts = `path=/;max-age=${secondsUntilExpiry(token)};SameSite=Lax${isSecure ? ";Secure" : ""}`;
   document.cookie = `${TOKEN_KEY}=${encodeURIComponent(token)};${opts}`;
   document.cookie = `${ENTITY_ID_KEY}=${encodeURIComponent(entityId)};${opts}`;
   document.cookie = `${ENTITY_NAME_KEY}=${encodeURIComponent(entityName)};${opts}`;
@@ -142,18 +159,18 @@ export function getLoginSidFromToken(): string | null {
 }
 
 /**
- * Returns true if the JWT stored in the cookie will expire within
- * `thresholdSeconds` seconds (default 120). Returns false if the token is
- * missing, malformed, or has no `exp` claim. Never throws.
+ * True while the token was handed over within `seconds` (default 60), from its `iat`. A 401 on
+ * a token Minty has just handed over cannot be cured by handing over again - the person lacks
+ * access - so it is reported, never looped on; an older one may mean the sign-in behind it has
+ * ended (Phase 9). False with no token, a malformed one or no `iat`. Never throws.
  */
-export function isTokenExpiringSoon(thresholdSeconds = 120): boolean {
+export function isTokenFresh(seconds = 60): boolean {
   try {
     const auth = getAuth();
     if (!auth?.token) return false;
-    const payload = decodeJwtPayload(auth.token);
-    if (!payload) return false;
-    if (typeof payload.exp !== "number") return false;
-    return payload.exp - Date.now() / 1000 < thresholdSeconds;
+    const iat = decodeJwtPayload(auth.token)?.iat;
+    if (typeof iat !== "number") return false;
+    return Date.now() / 1000 - iat < seconds;
   } catch {
     return false;
   }
@@ -161,8 +178,8 @@ export function isTokenExpiringSoon(thresholdSeconds = 120): boolean {
 
 /**
  * Returns true only if the JWT is already past its `exp` claim (with a small
- * 5-second clock-skew tolerance). Used to decide when a failed refresh should
- * actually kick the user back to login vs. allow the request to proceed.
+ * 5-second clock-skew tolerance). A 401 on an expired token always hands the
+ * person over again.
  * Returns false if the token is missing, malformed, or has no `exp` claim.
  * Never throws.
  */
@@ -180,78 +197,41 @@ export function isTokenExpired(): boolean {
 }
 
 /**
- * Hands the user back to Flask Module 1 when this app's billing JWT has run out.
+ * Hands the person back to Minty for a fresh token, returning to the page they are on - when
+ * the token has run out, or the Minty sign-in behind it has ended (Phase 9). petty-cash-web's
+ * `redirectToHandoff`, through this app's middleware: the cookies are cleared and the SAME
+ * address is loaded again, which middleware.ts sends through accounts-api's company hand-off
+ * (`flaskHandoff`) - silently back here with a fresh 30-minute token while the Minty sign-in
+ * lives, through the sign-in page (and then back) when it does not. Input on the open form is
+ * lost (no warning first, owner's S3).
  *
- * Output: navigates the browser to `<ACCOUNTS_API_URL>/` — Minty's landing page, and
- * nothing more specific. It forwards to the entity list when the Flask session
- * is still alive (the usual case: it outlives the 30-minute JWT) and to the login
- * form when it isn't. Picking a company there mints a fresh token through the
- * normal handoff, so no manual cookie clearing is ever required.
- *
- * It used to go to `/entity/<id>/billing-relogin?next=<current path>` asking to
- * be returned to the page it was on, and Flask replayed that path on ITS origin —
- * so an expiry on /profile became a 404 on Minty, reached with the cookie already
- * cleared. Root is the one URL on that origin this app can be sure of; a relogin
- * route that only ever redirects there is a hop that can 404 on its own.
+ * It used to go to Minty's root, which lost the page; before that to a relogin route Flask
+ * replayed on ITS origin (a 404). The company address is one middleware already hands over.
  *
  * Fires once. Several requests in flight fail together, and each one calling
  * this would reassign `location.href` while the first navigation is already
  * under way.
  */
+type Navigate = (url: string) => void;
+
+const defaultNavigate: Navigate = (url) => {
+  window.location.href = url;
+};
+
+let navigate: Navigate = defaultNavigate;
 let redirecting = false;
 
 export function redirectToLogin() {
-  if (redirecting) return;
+  if (redirecting || sessionExpiredShown() || typeof window === "undefined") return;
   redirecting = true;
 
   clearAuth();
-  window.location.href = `${resolveMintyModuleUrl().replace(/\/$/, "")}/`;
+  navigate(window.location.pathname + window.location.search);
 }
 
-/**
- * Exchanges the current valid billing JWT for a fresh 8-hour token via
- * POST /api/v1/auth/token/refresh.
- *
- * Returns true and updates the stored cookies if the server issued a new token.
- * Returns false if the token is already expired, missing, or the request failed.
- *
- * Uses raw fetch (not apiFetch) to avoid a circular import with api.ts.
- *
- * Single-flight: concurrent callers share one request. A screen like My Profile
- * fires several calls at mount (the header's initials badge, the profile card,
- * the Xero indicator), and each refreshing separately meant later ones spending
- * the token a successful refresh had already rotated away — and, when the
- * refresh failed, several racing to clear the cookie, so whichever call checked
- * auth last reported "you're signed out" rather than the session timing out.
- */
-let refreshInFlight: Promise<boolean> | null = null;
-
-export function refreshToken(): Promise<boolean> {
-  if (!refreshInFlight) {
-    refreshInFlight = performTokenRefresh().finally(() => {
-      refreshInFlight = null;
-    });
-  }
-  return refreshInFlight;
-}
-
-async function performTokenRefresh(): Promise<boolean> {
-  const auth = getAuth();
-  if (!auth?.token) return false;
-  try {
-    const res = await fetch(`${API_BASE}/api/v1/auth/token/refresh`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${auth.token}`,
-        "X-Entity-Id": auth.entityId,
-      },
-    });
-    if (!res.ok) return false;
-    const data = (await res.json()) as { token?: string; expires_in?: number };
-    if (!data.token) return false;
-    setAuth(data.token, auth.entityId, auth.entityName);
-    return true;
-  } catch {
-    return false;
-  }
+/** Test seam: forget that a redirect is under way, and optionally capture the navigation
+ * instead of assigning `location.href` (jsdom does not allow `location` to be replaced). */
+export function _resetRedirectForTests(capture?: Navigate) {
+  redirecting = false;
+  navigate = capture ?? defaultNavigate;
 }

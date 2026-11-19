@@ -95,8 +95,8 @@ The same reads minty-web makes, with this app's token:
   shows the card's error with Try again; _Manage Subscription_ goes to minty-web's portal. Its
   types (`PortalEntity`, `PortalModule`) are minty-web's, in
   `features/subscription/api/payerSubscriptions.ts`.
-- A 401 is refreshed once (`refreshToken`), then the browser goes back to Minty
-  (`redirectToLogin`); the initials' read never moves the page.
+- A 401 hands the person over again on the same page (`redirectToLogin`; no refresh and no
+  retry since Phase 9); the initials' read never moves the page.
 
 This app has no profile PAGE since 2026-10-01: `/profile` and the old portal addresses forward
 to minty-web through Minty ([payer-portal.md](payer-portal.md)). Where the initials or the

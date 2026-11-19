@@ -816,3 +816,134 @@ describe("the error summary", () => {
     expect(within(dialog()).queryByText(/details need a look/)).toBeNull();
   });
 });
+
+describe("the duplicate reminder before a save (owner's decisions doc DUP1, 2026-11-19)", () => {
+  const SENTENCE =
+    "This looks like a bill you already have: the same date, supplier and amount. Save it anyway?";
+  const DUPLICATE = {
+    detail: SENTENCE,
+    duplicates: [
+      {
+        id: "b-2",
+        reference: "PR-0002",
+        contact: "ABC Furniture",
+        amount: "6000.00",
+        invoice_date: "2026-03-03",
+      },
+    ],
+  };
+  /** The first save is the duplicate 409; every later one saves. */
+  const firstAsks = () => {
+    let n = 0;
+    return () => (n++ === 0 ? answer(409, DUPLICATE) : answer(201, bill({ id: "bill-new" })));
+  };
+  const saves = (posted: Posted[], end: string) => posted.filter((p) => p.path.endsWith(end));
+  const question = () => screen.findByRole("alertdialog", { name: "Save it anyway?" });
+
+  async function fillForConfirm() {
+    await userEvent.type(within(dialog()).getByPlaceholderText("0.00"), "6000");
+    fireEvent.change(document.getElementById("pr-invoice-date")!, {
+      target: { value: "2026-03-03" },
+    });
+    fireEvent.change(document.getElementById("pr-due-date")!, { target: { value: "2026-03-31" } });
+    await userEvent.click(document.getElementById("pr-contact")!);
+    await userEvent.click(await screen.findByRole("option", { name: "ABC Furniture" }));
+    await userEvent.click(document.getElementById("pr-account")!);
+    await userEvent.click(await screen.findByRole("option", { name: /^429 - / }));
+    await userEvent.upload(filePicker(), file("invoice.pdf", "application/pdf"));
+  }
+
+  beforeEach(() => {
+    router.push.mockClear();
+    onConfirm.mockClear();
+    onSaveDraft.mockClear();
+    onClose.mockClear();
+  });
+
+  it("Confirm asks with the API's sentence and the matching bill, and sends nothing more", async () => {
+    const { posted } = serve({ submit: firstAsks() });
+    show();
+    await fillForConfirm();
+
+    await userEvent.click(confirm());
+
+    const asked = await question();
+    expect(asked).toHaveTextContent(SENTENCE);
+    expect(asked).toHaveTextContent("PR-0002 · ABC Furniture · HKD 6,000.00 · 03 Mar 2026");
+    expect(saves(posted, "/bills/submit/")).toHaveLength(1);
+    expect(saves(posted, "/attachments")).toHaveLength(0);
+    expect(onConfirm).not.toHaveBeenCalled();
+  });
+
+  it("Save anyway sends the same body with confirm_duplicate, then carries on as a normal save", async () => {
+    const { posted } = serve({ submit: firstAsks() });
+    show();
+    await fillForConfirm();
+    await userEvent.click(confirm());
+
+    await userEvent.click(within(await question()).getByRole("button", { name: "Save anyway" }));
+
+    await waitFor(() => expect(onConfirm).toHaveBeenCalled());
+    const [first, second] = saves(posted, "/bills/submit/");
+    expect(second.body).toEqual({ ...(first.body as object), confirm_duplicate: true });
+    expect(first.body).not.toHaveProperty("confirm_duplicate");
+    expect(saves(posted, "/attachments")).toHaveLength(1);
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it("Go back sends nothing, and the dialog keeps everything typed", async () => {
+    const { posted } = serve({ submit: firstAsks() });
+    show();
+    await fillForConfirm();
+    await userEvent.click(confirm());
+
+    await userEvent.click(within(await question()).getByRole("button", { name: "Go back" }));
+
+    expect(screen.queryByRole("alertdialog", { name: "Save it anyway?" })).toBeNull();
+    expect(saves(posted, "/bills/submit/")).toHaveLength(1);
+    expect(within(dialog()).getByPlaceholderText("0.00")).toHaveValue("6,000.00");
+    expect(onClose).not.toHaveBeenCalled();
+    expect(confirm()).toBeEnabled();
+  });
+
+  it("Escape on the question is its Go back: the form stays open", async () => {
+    serve({ submit: firstAsks() });
+    show();
+    await fillForConfirm();
+    await userEvent.click(confirm());
+    await question();
+
+    await userEvent.keyboard("{Escape}");
+
+    await waitFor(() =>
+      expect(screen.queryByRole("alertdialog", { name: "Save it anyway?" })).toBeNull(),
+    );
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it("Save as Draft asks too, and Save anyway saves the draft with confirm_duplicate", async () => {
+    const { posted } = serve({ draft: firstAsks() });
+    show();
+    await userEvent.type(within(dialog()).getByPlaceholderText("0.00"), "6000");
+    await userEvent.click(saveDraft());
+
+    await userEvent.click(within(await question()).getByRole("button", { name: "Save anyway" }));
+
+    await waitFor(() => expect(onSaveDraft).toHaveBeenCalled());
+    const drafts = saves(posted, "/bills/draft/");
+    expect(drafts).toHaveLength(2);
+    expect(drafts[1].body).toMatchObject({ confirm_duplicate: true });
+  });
+
+  it("another 409 (no duplicates) shows its sentence as before, with no question", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    serve({ draft: () => answer(409, { detail: "Someone else changed that first." }) });
+    show();
+    await userEvent.type(within(dialog()).getByPlaceholderText("0.00"), "6000");
+    await userEvent.click(saveDraft());
+
+    expect(await screen.findByText("Someone else changed that first.")).toBeInTheDocument();
+    expect(screen.queryByRole("alertdialog", { name: "Save it anyway?" })).toBeNull();
+    vi.restoreAllMocks();
+  });
+});

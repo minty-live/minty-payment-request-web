@@ -13,10 +13,12 @@ import { bill, billListItem } from "@/lib/__fixtures__/bills";
 import { tokenExpiringIn, unsignedToken } from "@/lib/__fixtures__/tokens";
 import {
   ApiError,
+  archivedContactsOf,
   createBill,
   deleteBillAttachment,
   fetchBills,
   fetchEntityCurrency,
+  publishBill,
   uploadBillAttachments,
   uploadPaymentAttachment,
 } from "@/lib/api";
@@ -251,12 +253,31 @@ describe("a 401", () => {
     expect(err.detail).toBe("entity_membership_revoked");
   });
 
+  it("on a token handed over more than a minute ago hands the person over again, on the same page", async () => {
+    // The Minty sign-in behind it may have ended - signed out, or 60 minutes without activity
+    // (Phase 9) - and every API then answers 401 to a token that has not expired. One more
+    // hand-off settles it: a fresh token while the sign-in lives, the sign-in page when not.
+    const { api, auth } = await freshApi();
+    const visited: string[] = [];
+    auth._resetRedirectForTests((url) => visited.push(url));
+    window.history.replaceState(null, "", "/entity/360812e1/olive-vine/payment-request");
+    const now = Math.floor(Date.now() / 1000);
+    auth.setAuth(tokenExpiringIn(1500, { iat: now - 300 }), ENTITY_ID, ENTITY_NAME);
+    fetchMock.mockResolvedValueOnce(answer(401, { detail: "Unauthorized" }));
+
+    const err = (await api.fetchBills().catch((e: unknown) => e)) as ApiError;
+
+    expect(err.status).toBe(401);
+    expect(auth.getAuth()).toBeNull();
+    expect(visited).toEqual(["/entity/360812e1/olive-vine/payment-request"]);
+    expect(fetchMock).toHaveBeenCalledTimes(1); // no refresh call
+    window.history.replaceState(null, "", "/");
+  });
+
   it("with an EXPIRED token signs the person out and says the session expired", async () => {
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
     try {
       const { api, auth } = await freshApi();
-      // Past the five-second skew, and past the refresh threshold, so the refresh is tried
-      // first and only then given up on.
       auth.setAuth(tokenExpiringIn(-60), ENTITY_ID, ENTITY_NAME);
       fetchMock.mockResolvedValueOnce(answer(401, { detail: "token expired" }));
 
@@ -272,43 +293,18 @@ describe("a 401", () => {
 });
 
 describe("the session before the request", () => {
-  it("refreshes a token inside the two-minute window, then sends the FRESH one", async () => {
-    const fresh = unsignedToken({ note: "fresh" });
-    setAuth(tokenExpiringIn(60), ENTITY_ID, ENTITY_NAME);
-    fetchMock.mockResolvedValueOnce(answer(200, { token: fresh }));
-    fetchMock.mockResolvedValueOnce(answer(200, []));
-
-    await fetchBills();
-
-    expect(fetchMock).toHaveBeenCalledTimes(2);
-    expect(String(fetchMock.mock.calls[0][0])).toBe(`${V1}/auth/token/refresh`);
-    expect(new Headers(fetchMock.mock.calls[1][1]?.headers).get("Authorization")).toBe(
-      `Bearer ${fresh}`,
-    );
-  });
-
-  it("does not refresh a token with plenty of life left", async () => {
-    setAuth(tokenExpiringIn(3600), ENTITY_ID, ENTITY_NAME);
+  it("never refreshes: a token about to run out is sent as it is (Phase 9)", async () => {
+    const soon = tokenExpiringIn(60);
+    setAuth(soon, ENTITY_ID, ENTITY_NAME);
     fetchMock.mockResolvedValueOnce(answer(200, []));
 
     await fetchBills();
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(String(fetchMock.mock.calls[0][0])).toBe(`${V1}/bills/`);
-  });
-
-  it("carries on with the old token when the refresh fails but the token has not expired yet", async () => {
-    const soon = tokenExpiringIn(60);
-    setAuth(soon, ENTITY_ID, ENTITY_NAME);
-    fetchMock.mockResolvedValueOnce(answer(401, { detail: "nope" })); // the refresh
-    fetchMock.mockResolvedValueOnce(answer(200, [])); // the call goes ahead
-
-    await expect(fetchBills()).resolves.toEqual([]);
-
-    expect(new Headers(fetchMock.mock.calls[1][1]?.headers).get("Authorization")).toBe(
+    expect(new Headers(fetchMock.mock.calls[0][1]?.headers).get("Authorization")).toBe(
       `Bearer ${soon}`,
     );
-    expect(getAuth()?.token).toBe(soon);
   });
 
   it("refuses to call at all with no session, and asks nothing of the network", async () => {
@@ -325,5 +321,29 @@ describe("the session before the request", () => {
     } finally {
       consoleError.mockRestore();
     }
+  });
+});
+
+describe("a publish refused over contacts archived in Xero (C4, 2026-11-19)", () => {
+  it("keeps the whole answer on the error, so the archived contacts can be read", async () => {
+    const body = {
+      detail: "Kee Wah is archived in Xero. Restore it in Xero, or map it to another contact now.",
+      archived_contacts: [{ id: "mc-1", name: "Kee Wah" }],
+    };
+    fetchMock.mockResolvedValueOnce(answer(409, body));
+
+    const err = await publishBill("b-1").catch((e: unknown) => e);
+
+    expect(err).toBeInstanceOf(ApiError);
+    expect((err as ApiError).message).toBe(body.detail);
+    expect(archivedContactsOf(err)).toEqual([{ id: "mc-1", name: "Kee Wah" }]);
+  });
+
+  it("finds none in any other refusal", async () => {
+    fetchMock.mockResolvedValueOnce(answer(409, { detail: "Someone else changed that first." }));
+    const err = await publishBill("b-1").catch((e: unknown) => e);
+    expect(archivedContactsOf(err)).toBeNull();
+    expect(archivedContactsOf(new ApiError(422, "x", "x", { archived_contacts: [] }))).toBeNull();
+    expect(archivedContactsOf(new Error("x"))).toBeNull();
   });
 });

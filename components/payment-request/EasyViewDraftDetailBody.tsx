@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ThemedSelectOption } from "@/components/ThemedSelect";
 import {
   ApiError,
+  archivedContactsOf,
   dedupeEntityBillContactsForPicker,
   fetchBill,
   fetchEntityBillAccounts,
@@ -13,17 +14,20 @@ import {
   publishBill,
   updateBill,
   XERO_RECONNECT_MESSAGE,
+  type ArchivedContact,
   type BillDetail,
   type EntityBillContact,
 } from "@/lib/api";
 import { enrichAccountCodeWithOptions } from "@/lib/billFormSelectOptions";
 import { useEntityCurrencyDecimals } from "@/lib/entityCurrency";
+import { DuplicateBillQuestion, useDuplicateBillQuestion } from "./DuplicateBillDialog";
 import {
   billToDetailedInfo,
   buildBillUpdatePayload,
   PICK_SUPPLIER_MESSAGE,
   supplierNeedsPick,
 } from "@/lib/paymentRequestBillMap";
+import { ArchivedContactsDialog } from "./ArchivedContactsDialog";
 import { BillActionBar } from "./BillActionBar";
 import { useToast } from "@/components/Toast";
 import {
@@ -97,6 +101,12 @@ export function EasyViewDraftDetailBody({
   );
   const { showToast } = useToast();
   const decimals = useEntityCurrencyDecimals();
+  // DUP1: a save that looks like another bill asks first (Save anyway resends with the flag)
+  const {
+    ask: askDuplicate,
+    confirmed: duplicateConfirmed,
+    question: duplicateQuestion,
+  } = useDuplicateBillQuestion<"save">();
 
   const applyEntityBillContacts = useCallback((contacts: EntityBillContact[]) => {
     setEntityBillContacts(dedupeEntityBillContactsForPicker(contacts));
@@ -227,6 +237,7 @@ export function EasyViewDraftDetailBody({
   }, [billId, accountOptions]);
 
   const handleSave = useCallback(async () => {
+    const confirmDuplicate = duplicateConfirmed();
     if (!bill || !draft) return;
     setBillNoError(null);
     setAccountCodeError(null);
@@ -239,7 +250,10 @@ export function EasyViewDraftDetailBody({
     setIsSaving(true);
     try {
       const payload = buildBillUpdatePayload(bill, draft, decimals);
-      const updated = await updateBill(billId, payload);
+      const updated = await updateBill(
+        billId,
+        confirmDuplicate ? { ...payload, confirm_duplicate: true } : payload,
+      );
       const d = billToDetailedInfo(updated, decimals);
       setBill(updated);
       setDetail({
@@ -250,6 +264,7 @@ export function EasyViewDraftDetailBody({
       setIsEditing(false);
       onBillSaved?.();
     } catch (e) {
+      if (askDuplicate(e, "save")) return;
       if (isDuplicateBillReferenceError(e)) {
         setBillNoError(e.message);
       } else {
@@ -261,7 +276,16 @@ export function EasyViewDraftDetailBody({
     } finally {
       setIsSaving(false);
     }
-  }, [bill, draft, billId, accountOptions, onBillSaved, decimals]);
+  }, [
+    bill,
+    draft,
+    billId,
+    accountOptions,
+    onBillSaved,
+    decimals,
+    askDuplicate,
+    duplicateConfirmed,
+  ]);
 
   if (loading) {
     return <EasyViewDetailedInformationSkeleton mode="draftCard" />;
@@ -305,6 +329,11 @@ export function EasyViewDraftDetailBody({
             void handleSave();
           }}
         />
+        <DuplicateBillQuestion
+          question={duplicateQuestion}
+          currencyCode={bill.currency_code}
+          saves={{ save: () => void handleSave() }}
+        />
       </div>
     );
   }
@@ -342,6 +371,8 @@ export function EasyViewReadonlyBillDetailBody({
   const [fullBill, setFullBill] = useState<BillDetail | null>(null);
   const [loadErr, setLoadErr] = useState<string | null>(null);
   const [isPublishing, setIsPublishing] = useState(false);
+  /** A publish refused over contacts Xero archived (C4): map them, then publish again. */
+  const [archivedContacts, setArchivedContacts] = useState<ArchivedContact[] | null>(null);
   const { showToast } = useToast();
 
   useEffect(() => {
@@ -414,6 +445,11 @@ export function EasyViewReadonlyBillDetailBody({
       setDetail({ ...d, accountCode: enrichAccountCodeWithOptions(d.accountCode, []) });
       onBillUpdated?.();
     } catch (e) {
+      const archived = archivedContactsOf(e);
+      if (archived) {
+        setArchivedContacts(archived);
+        return;
+      }
       showToast(
         isXeroAuthError(e)
           ? XERO_RECONNECT_MESSAGE
@@ -463,6 +499,16 @@ export function EasyViewReadonlyBillDetailBody({
               isDraftBill={false}
               voidButtonTrailing
             />
+            {archivedContacts ? (
+              <ArchivedContactsDialog
+                contacts={archivedContacts}
+                onCancel={() => setArchivedContacts(null)}
+                onMapped={() => {
+                  setArchivedContacts(null);
+                  void handlePublishToXero();
+                }}
+              />
+            ) : null}
           </>
         ) : null
       }

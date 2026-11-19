@@ -39,6 +39,10 @@ import {
 } from "@/lib/api";
 import type { EntityBillContact } from "@/lib/api";
 import { DateTextField } from "@/components/DateTextField";
+import {
+  DuplicateBillQuestion,
+  useDuplicateBillQuestion,
+} from "@/components/payment-request/DuplicateBillDialog";
 import { todayLocalISODate } from "@/lib/dateDisplayFormat";
 import {
   MAX_AMOUNT_INT_DIGITS,
@@ -264,6 +268,8 @@ export function PaymentRequestModal({
   // The bill's currency is the company's; with none set (or unreadable) the form can't be sent.
   const currency = useEntityCurrencyState();
   const entityCurrency = currency.code;
+  // DUP1: a save that looks like another bill asks first (Save anyway resends with the flag)
+  const duplicates = useDuplicateBillQuestion<"draft" | "confirm">();
   const currencyBlocked = currency.status !== "ready";
   const entityId = useClientValue(getEntityIdSnapshot, "");
   const titleId = useId();
@@ -566,6 +572,8 @@ export function PaymentRequestModal({
     if (!open) return;
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
+      // the duplicate question is open: Escape is its Go back, and the form stays as typed
+      if (duplicates.asking) return;
       if (previewFileId) {
         setPreviewFileId(null);
         return;
@@ -574,7 +582,7 @@ export function PaymentRequestModal({
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [open, onClose, previewFileId]);
+  }, [open, onClose, previewFileId, duplicates.asking]);
 
   useEffect(() => {
     if (!open) return;
@@ -693,6 +701,7 @@ export function PaymentRequestModal({
   };
 
   const handleSaveDraft = async () => {
+    const confirmDuplicate = duplicates.confirmed();
     if (draftSubmitting || currencyBlocked) return;
     cancelRead();
     setFieldErrors({});
@@ -714,6 +723,7 @@ export function PaymentRequestModal({
         invoice_date: invoiceDate || undefined,
         due_date: dueDate || undefined,
         reference: billNo || undefined,
+        confirm_duplicate: confirmDuplicate || undefined,
         xero_account_code: acctCode || undefined,
         line_items:
           acctCode || description || isPositiveAmount(amount)
@@ -755,6 +765,7 @@ export function PaymentRequestModal({
         router.push(pages.request(bill.id, bill.reference));
       }
     } catch (err) {
+      if (duplicates.ask(err, "draft")) return;
       console.error("Failed to save draft:", err);
       if (isDuplicateBillReferenceError(err)) {
         setFieldErrors({ billNo: err.message });
@@ -778,6 +789,7 @@ export function PaymentRequestModal({
   };
 
   const handleConfirm = async () => {
+    const confirmDuplicate = duplicates.confirmed();
     if (currencyBlocked) return;
     cancelRead();
     const next = validatePaymentRequestForm({
@@ -817,6 +829,7 @@ export function PaymentRequestModal({
         invoice_date: invoiceDate || null,
         due_date: dueDate || null,
         reference: billNo,
+        confirm_duplicate: confirmDuplicate || undefined,
         xero_account_code: acctCode || undefined,
         line_items: [
           {
@@ -854,6 +867,7 @@ export function PaymentRequestModal({
       }
       router.push(pages.request(bill.id, bill.reference));
     } catch (err) {
+      if (duplicates.ask(err, "confirm")) return;
       console.error("Failed to create bill:", err);
       if (isDuplicateBillReferenceError(err)) {
         setFieldErrors({ billNo: err.message });
@@ -1384,6 +1398,11 @@ export function PaymentRequestModal({
           onClose={() => setViewerOpen(false)}
         />
       ) : null}
+      <DuplicateBillQuestion
+        question={duplicates.question}
+        currencyCode={entityCurrency}
+        saves={{ draft: () => void handleSaveDraft(), confirm: () => void handleConfirm() }}
+      />
     </div>,
     document.body,
   );

@@ -262,6 +262,44 @@ is fresh.
 Return / un-return / void go through the same action bar with the backend's transitions;
 `lib/billStatusRollback.ts` keeps the optimistic status honest when a call fails.
 
+**A contact archived in Xero** (owner's decisions C4, 2026-11-19). A contact Xero merged is
+followed by the API to the contact Xero kept, with no question. One Xero archived without a merge
+refuses the publish (409 with `archived_contacts`; nothing was sent; `ApiError.body` carries the
+answer, `archivedContactsOf` in `lib/api.ts` reads it). On a single request (the detail page and
+Easy View's settled request) a form dialog opens instead of the toast
+(`components/payment-request/ArchivedContactsDialog.tsx`, Upload Attachment's frame: a full-width
+sheet on a phone, a 520px card from 640px; Escape and the backdrop close it): "A contact is
+archived in Xero" ("Some contacts..." for several), per contact the doc's sentence "<Name> is
+archived in Xero. Restore it in Xero, or map it to another contact now." and a searchable "Map
+<Name> to" picker (`ThemedSelect`) of the company's active Xero contacts
+(`GET /entity-bill-contacts/xero/`, read once on open), then "Or restore it in Xero, then publish
+again.". **Go back** changes nothing; **Map and publish** stays greyed, its reason beside it,
+until every contact has a pick, then sends `POST /entity-bill-contacts/<id>/xero-link/` for each,
+toasts each answer's sentence and publishes again. A refused mapping shows its sentence in the
+dialog, which stays open; a contact already mapped is not sent twice. Bulk publish and the list
+row's Publish / Republish keep the error toast with the API's sentence (the person maps from that
+request's page). Minty never restores anything in the customer's Xero.
+
+## The duplicate reminder before a save (owner's decisions doc DUP1, 2026-11-19)
+
+Just before a bill is saved, the API warns when another bill (not voided, not this one) has the
+same date, supplier and amount - only once all three are filled in. Add Payment's Save as Draft
+and Confirm (`POST /bills/draft/`, `POST /bills/submit/`) and the detail page's and Easy View's
+Save Changes / Submit (`PUT /bills/{id}`) may answer 409 `{detail, duplicates: [{id, reference,
+contact, amount, invoice_date}]}` with nothing saved (`duplicateBillsOf` in `lib/api.ts` reads
+it from `ApiError.body`). The form asks with
+`components/payment-request/DuplicateBillDialog.tsx` (minty-web's `ConfirmDialog`, z 440, above
+Add Payment): "Save it anyway?", the API's sentence and each matching bill as reference ·
+supplier · amount · date (`PR-0002 · ABC Furniture · HKD 6,000.00 · 03 Mar 2026`). **Go back**
+(also Escape and the backdrop; Add Payment leaves that Escape to the question) closes it with the
+form exactly as typed; **Save anyway** sends the same body again with `confirm_duplicate: true`
+and carries on as a normal save (attachments, toasts, navigation). It never blocks. Any other 409
+keeps its old handling. The two status roll-backs the app makes after a payment is deleted
+(`PUT /bills/{id}` with only `status: "submitted"`, in the detail page and Record payment) send
+`confirm_duplicate: true`: they save none of the bill's details, so DUP1 never asks there. Tests:
+`lib/__tests__/duplicateBills.test.ts`, and a DUP1 block in `PaymentRequestModal.test.tsx`,
+`PaymentRequestDetailBody.test.tsx` and `EasyViewDraftDetailBody.test.tsx`.
+
 ## No Publish for a company keeping its books in Minty (Xero optional, 2026-11-10)
 
 `lib/useMintyOnly.ts` asks `GET /api/auth/xero-status` once per company (`minty_only`). For such a

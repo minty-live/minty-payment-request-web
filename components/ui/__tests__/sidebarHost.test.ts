@@ -188,36 +188,40 @@ describe("mintyFetch", () => {
     expect(init?.body).toBe('{"first_name":"Olivia"}');
   });
 
-  it("refreshes first when the token is nearly out, then sends the fresh one", async () => {
-    const fresh = unsignedToken({ note: "fresh" });
-    setAuth(tokenExpiringIn(60), ENTITY_ID, ENTITY_NAME);
-    fetchMock.mockResolvedValueOnce(answer(200, { token: fresh }));
+  it("never refreshes: a nearly-expired token is sent as it is (Phase 9)", async () => {
+    const soon = tokenExpiringIn(60);
+    setAuth(soon, ENTITY_ID, ENTITY_NAME);
     fetchMock.mockResolvedValueOnce(answer(200, {}));
 
     await mintyFetch("/api/me/profile");
 
-    expect(fetchMock).toHaveBeenCalledTimes(2);
-    expect(new Headers(fetchMock.mock.calls[1][1]?.headers).get("Authorization")).toBe(
-      `Bearer ${fresh}`,
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(new Headers(fetchMock.mock.calls[0][1]?.headers).get("Authorization")).toBe(
+      `Bearer ${soon}`,
     );
   });
 
-  it("retries a 401 ONCE after a successful refresh", async () => {
-    const fresh = unsignedToken({ note: "fresh" });
+  it("hands the person over again on a 401, on the same page, with no retry", async () => {
+    vi.resetModules();
+    const auth = await import("@/lib/auth");
+    const host = await import("@/components/ui/sidebarHost");
+    const visited: string[] = [];
+    auth._resetRedirectForTests((url) => visited.push(url));
+    auth.setAuth(TOKEN, ENTITY_ID, ENTITY_NAME);
+    window.history.replaceState(null, "", "/entity/360812e1/olive-vine/payment-request");
     fetchMock.mockResolvedValueOnce(answer(401, {}));
-    fetchMock.mockResolvedValueOnce(answer(200, { token: fresh }));
-    fetchMock.mockResolvedValueOnce(answer(200, { user: { name: "Olive Vine" } }));
 
-    await expect(mintyFetch("/api/me/profile")).resolves.toEqual({ user: { name: "Olive Vine" } });
+    await expect(host.mintyFetch("/api/me/profile")).rejects.toMatchObject({ status: 401 });
 
-    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(visited).toEqual(["/entity/360812e1/olive-vine/payment-request"]);
+    window.history.replaceState(null, "", "/");
   });
 
   it("rejects a 401 it cannot cure WITHOUT clearing the session, for a decoration read", async () => {
     // The header's initials must never move the page: a lapsed token is the page's own reads'
     // business.
     fetchMock.mockResolvedValueOnce(answer(401, {}));
-    fetchMock.mockResolvedValueOnce(answer(401, {})); // the refresh fails too
 
     const err = (await mintyFetch("/api/me/profile", { onUnauthorized: "reject" }).catch(
       (e: unknown) => e,

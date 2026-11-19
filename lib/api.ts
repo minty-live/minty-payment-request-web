@@ -1,13 +1,8 @@
 import type { ReaderStatus } from "@minty/shared/reader";
-import {
-  type AuthInfo,
-  getAuth,
-  isTokenExpired,
-  isTokenExpiringSoon,
-  redirectToLogin,
-  refreshToken,
-} from "./auth";
+import { type AuthInfo, getAuth, isTokenExpired, isTokenFresh, redirectToLogin } from "./auth";
 import { API_BASE } from "./apiBase";
+import { sessionExpired } from "./mintyUrls";
+import { isSessionExpired } from "./sessionExpired";
 
 //  ── Error ────────────────────────────────────────────────────────────
 
@@ -24,6 +19,8 @@ export class ApiError extends Error {
     public status: number,
     message: string,
     detail?: string,
+    /** The whole parsed answer, for a refusal that carries more than its sentence (C4's `archived_contacts`). */
+    public body?: unknown,
   ) {
     super(message);
     this.name = "ApiError";
@@ -163,20 +160,12 @@ export function resolveApiErrorMessage(
 }
 
 /**
- * Refresh the token if it's close to expiring, then require an authenticated
- * session. Redirects to login and throws `ApiError(401)` when the token is
- * expired-and-unrefreshable or absent. Returns the validated `AuthInfo` so
+ * Require an authenticated session: hands the person over again and throws `ApiError(401)`
+ * when there is no token. Never refreshes (Phase 9): the 30-minute hand-off token is sent as it
+ * is, and the API's 401 hands the person over again. Returns the validated `AuthInfo` so
  * callers don't re-read it.
  */
 async function requireAuthenticatedSession(): Promise<AuthInfo> {
-  if (isTokenExpiringSoon(120)) {
-    const refreshed = await refreshToken();
-    if (!refreshed && isTokenExpired()) {
-      redirectToLogin();
-      throw new ApiError(401, "Your session expired. Taking you back to sign in.");
-    }
-  }
-
   const auth = getAuth();
   if (!auth?.token) {
     redirectToLogin();
@@ -209,21 +198,27 @@ async function apiResponse(path: string, options: RequestInit = {}): Promise<Res
 
   if (!res.ok) {
     if (res.status === 401) {
+      const denied = await res.json().catch(() => null);
+      // The Minty sign-in behind the token has ended (`reason: session_expired`, 2026-11-19):
+      // "Your session has expired", then the sign-in page with the way back to this page.
+      if (isSessionExpired(denied)) {
+        sessionExpired();
+        throw new ApiError(401, "Your session expired. Taking you back to sign in.");
+      }
       // A 401 is not automatically an expired session, and treating it as one was worse
       // than a wrong message: `redirectToLogin` sends the user back through the handoff,
       // which re-mints the SAME token and lands them on the same screen, failing the same
       // way. An endless loop, reported as "our session timed out".
       //
-      // The token is the thing that can time out, so ask it — and note that
-      // `requireAuthenticatedSession` above has already tried to refresh it. Only a
-      // genuinely expired one is fixed by signing in again. Anything else is the server
-      // declining this caller for this request, which a fresh login cannot change, so it
-      // is reported and the page stays where it is.
-      if (isTokenExpired()) {
+      // So: an expired token, or one handed over more than a minute ago - the Minty
+      // sign-in behind it may have ended (signed out, or 60 minutes without activity;
+      // Phase 9) - hands the person over again, ONCE: the fresh token that comes back is
+      // under a minute old, so if the server still declines it, the refusal is reported
+      // and the page stays where it is. No loop.
+      if (isTokenExpired() || !isTokenFresh()) {
         redirectToLogin();
         throw new ApiError(401, "Your session expired. Taking you back to sign in.");
       }
-      const denied = await res.json().catch(() => null);
       const deniedRaw = denied?.detail ?? denied?.message;
       const deniedMsg = normalizeApiErrorDetail(deniedRaw, "").trim();
       throw new ApiError(
@@ -243,6 +238,7 @@ async function apiResponse(path: string, options: RequestInit = {}): Promise<Res
       res.status,
       msg,
       typeof rawDetail === "string" ? rawDetail : JSON.stringify(rawDetail ?? ""),
+      body,
     );
   }
 
@@ -321,7 +317,8 @@ async function fetchAttachmentDownloadJson(path: string): Promise<{
 
   if (!res.ok) {
     if (res.status === 401) {
-      redirectToLogin();
+      if (isSessionExpired(await res.json().catch(() => null))) sessionExpired();
+      else redirectToLogin();
       throw new ApiError(401, "Your session expired. Taking you back to sign in.");
     }
     return null;
@@ -541,6 +538,8 @@ export type BillCreatePayload = {
     account_code?: string;
     account_name?: string;
   }[];
+  /** DUP1: save even though another bill has the same date, supplier and amount (`duplicateBillsOf`). */
+  confirm_duplicate?: boolean;
   /**
    * How an AI-read amount in another currency was converted (owner, 2026-11-19): the six details
    * by the bill's column names (`exchangeFields`), sent only while the amount is still the
@@ -958,6 +957,77 @@ export function createEntityBillContact(payload: { name: string }): Promise<Enti
   return apiFetch<EntityBillContact>("/entity-bill-contacts/", {
     method: "POST",
     body: JSON.stringify(payload),
+  });
+}
+
+/**
+ * A contact the bill uses that Xero archived without merging it (owner's decisions, C4,
+ * 2026-11-19): the publish answers 409 with these and sends nothing. A merged one is followed to
+ * the contact Xero kept with no question; Minty never restores anything in the customer's Xero.
+ */
+export type ArchivedContact = { id: string; name: string };
+
+/** One of the company's active Xero contacts (`GET /entity-bill-contacts/xero/`). */
+export type XeroBillContact = { xero_contact_id: string; name: string };
+
+/** A publish refusal's `archived_contacts` (a 409), or null for any other error. */
+export function archivedContactsOf(err: unknown): ArchivedContact[] | null {
+  if (!(err instanceof ApiError) || err.status !== 409) return null;
+  const list = (err.body as { archived_contacts?: unknown } | null | undefined)?.archived_contacts;
+  if (!Array.isArray(list)) return null;
+  const contacts = list.filter(
+    (c): c is ArchivedContact =>
+      !!c && typeof c === "object" && typeof c.id === "string" && typeof c.name === "string",
+  );
+  return contacts.length ? contacts : null;
+}
+
+/** The doc's sentence for one archived contact (the API joins one per contact with "\n"). */
+export function archivedContactSentence(name: string): string {
+  return `${name} is archived in Xero. Restore it in Xero, or map it to another contact now.`;
+}
+
+/** A bill with the same date, supplier and amount as the one being saved (DUP1). */
+export type DuplicateBill = {
+  id: string;
+  reference: string;
+  contact: string;
+  amount: string;
+  invoice_date: string | null;
+};
+
+/**
+ * The duplicate reminder (owner's decisions doc DUP1, 2026-11-19): a bill save answers 409
+ * `{detail, duplicates}` when another bill (not voided, not this one) has the same date, supplier
+ * and amount, and saves nothing; the same body again with `confirm_duplicate: true` saves it. The
+ * API's sentence and the matching bills, or null for any other error.
+ */
+export function duplicateBillsOf(
+  err: unknown,
+): { sentence: string; duplicates: DuplicateBill[] } | null {
+  if (!(err instanceof ApiError) || err.status !== 409) return null;
+  const body = err.body as { detail?: unknown; duplicates?: unknown } | null | undefined;
+  const list = body?.duplicates;
+  if (!Array.isArray(list) || list.length === 0) return null;
+  return {
+    sentence: typeof body?.detail === "string" ? body.detail : err.message,
+    duplicates: list as DuplicateBill[],
+  };
+}
+
+/** The company's active Xero contacts, to map an archived one to. */
+export function fetchXeroBillContacts(): Promise<XeroBillContact[]> {
+  return apiFetch<XeroBillContact[]>("/entity-bill-contacts/xero/");
+}
+
+/** Map a Minty contact to a Xero contact; the answer's sentence says what happened. */
+export function linkBillContactToXero(
+  contactId: string,
+  xeroContactId: string,
+): Promise<{ message: string; contact_id: string }> {
+  return apiFetch(`/entity-bill-contacts/${encodeURIComponent(contactId)}/xero-link/`, {
+    method: "POST",
+    body: JSON.stringify({ xero_contact_id: xeroContactId }),
   });
 }
 

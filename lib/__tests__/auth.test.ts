@@ -1,8 +1,9 @@
 // The cookie jar and the claims read out of the token (lib/auth.ts).
 //
 // Nothing here verifies a signature, because the app does not: the API re-checks every call.
-// What the app DOES do client-side is decide, from the token alone, whether to refresh, whether
-// to give up, and what the person may see - so those four readers are what this pins.
+// What the app DOES do client-side is decide, from the token alone, how long to keep it, whether
+// a 401 means handing the person over again, and what they may see - so those readers are what
+// this pins. There is no refresh (Phase 9): the cookie lives exactly as long as the token.
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -17,7 +18,7 @@ import {
   getLoginSidFromToken,
   getRoleFromToken,
   isTokenExpired,
-  isTokenExpiringSoon,
+  isTokenFresh,
   setAuth,
 } from "@/lib/auth";
 
@@ -92,13 +93,15 @@ describe("setAuth and getAuth", () => {
     expect(getAuth()).toEqual({ token: TOKEN, entityId: "", entityName: "" });
   });
 
-  it("write the session for eight hours, same-site, and NOT Secure over http", () => {
+  it("write the session for exactly as long as the token lives, same-site, and NOT Secure over http", () => {
+    // The 30-minute hand-off token (Phase 9: no 8-hour refresh) - middleware.ts then sees no
+    // cookie once it has run out and hands the person over again on the same page.
     const cookies = recordCookieWrites();
     try {
-      setAuth(TOKEN, ENTITY_ID, ENTITY_NAME);
+      setAuth(tokenExpiringIn(1800), ENTITY_ID, ENTITY_NAME);
       expect(cookies.writes).toHaveLength(3);
       for (const write of cookies.writes) {
-        expect(write).toContain(";path=/;max-age=28800;SameSite=Lax");
+        expect(write).toMatch(/;path=\/;max-age=(1799|1800);SameSite=Lax/);
         // jsdom serves the test from http, as the local dev server does.
         expect(write).not.toContain(";Secure");
       }
@@ -110,11 +113,11 @@ describe("setAuth and getAuth", () => {
     }
   });
 
-  it("writes 28800 seconds, which is the eight hours the JWT lasts", () => {
+  it("writes the hand-off token's 30 minutes when the token's exp cannot be read", () => {
     const cookies = recordCookieWrites();
     try {
-      setAuth(TOKEN, ENTITY_ID, ENTITY_NAME);
-      expect(cookies.writes[0]).toContain(`max-age=${60 * 60 * 8}`);
+      setAuth(tokenWithout("exp"), ENTITY_ID, ENTITY_NAME);
+      expect(cookies.writes[0]).toContain(`max-age=${60 * 30}`);
     } finally {
       cookies.restore();
     }
@@ -222,44 +225,35 @@ describe("getLoginSidFromToken", () => {
   });
 });
 
-describe("isTokenExpiringSoon", () => {
+describe("isTokenFresh", () => {
+  // A 401 on a token Minty has just handed over cannot be cured by handing over again (the
+  // person lacks access), so it is reported rather than looped on; an older one may mean the
+  // Minty sign-in behind it has ended (Phase 9), so the person is handed over once more.
   beforeEach(() => {
     vi.useFakeTimers();
-    vi.setSystemTime(new Date("2026-10-07T12:00:00Z"));
+    vi.setSystemTime(new Date("2026-11-19T12:00:00Z"));
   });
   afterEach(() => {
     vi.useRealTimers();
   });
 
-  it("waits until the token is inside the default two minutes", () => {
-    setAuth(tokenExpiringIn(121), ENTITY_ID, ENTITY_NAME);
-    expect(isTokenExpiringSoon()).toBe(false);
-    setAuth(tokenExpiringIn(119), ENTITY_ID, ENTITY_NAME);
-    expect(isTokenExpiringSoon()).toBe(true);
+  const mintedAgo = (seconds: number) =>
+    unsignedToken(moduleTokenClaims({ iat: Math.floor(Date.now() / 1000) - seconds }));
+
+  it("is true for the first minute after the hand-off, then false", () => {
+    setAuth(mintedAgo(59), ENTITY_ID, ENTITY_NAME);
+    expect(isTokenFresh()).toBe(true);
+    setAuth(mintedAgo(61), ENTITY_ID, ENTITY_NAME);
+    expect(isTokenFresh()).toBe(false);
   });
 
-  it("takes a threshold of its own", () => {
-    setAuth(tokenExpiringIn(300), ENTITY_ID, ENTITY_NAME);
-    expect(isTokenExpiringSoon(120)).toBe(false);
-    expect(isTokenExpiringSoon(600)).toBe(true);
-  });
-
-  it("is true for a token that has already run out", () => {
-    setAuth(tokenExpiringIn(-60), ENTITY_ID, ENTITY_NAME);
-    expect(isTokenExpiringSoon()).toBe(true);
-  });
-
-  it("is false with no token, a malformed one, or no exp claim", () => {
-    expect(isTokenExpiringSoon()).toBe(false);
+  it("is false with no token, a malformed one, or no iat claim", () => {
+    clearAuth();
+    expect(isTokenFresh()).toBe(false);
     setAuth("nonsense", ENTITY_ID, ENTITY_NAME);
-    expect(isTokenExpiringSoon()).toBe(false);
-    setAuth(tokenWithout("exp"), ENTITY_ID, ENTITY_NAME);
-    expect(isTokenExpiringSoon()).toBe(false);
-  });
-
-  it("is false for an exp that is not a number", () => {
-    setAuth(unsignedToken(moduleTokenClaims({ exp: "soon" })), ENTITY_ID, ENTITY_NAME);
-    expect(isTokenExpiringSoon()).toBe(false);
+    expect(isTokenFresh()).toBe(false);
+    setAuth(tokenWithout("iat"), ENTITY_ID, ENTITY_NAME);
+    expect(isTokenFresh()).toBe(false);
   });
 });
 
@@ -281,7 +275,6 @@ describe("isTokenExpired", () => {
 
   it("is false for a token that is merely expiring soon", () => {
     setAuth(tokenExpiringIn(30), ENTITY_ID, ENTITY_NAME);
-    expect(isTokenExpiringSoon()).toBe(true);
     expect(isTokenExpired()).toBe(false);
   });
 
