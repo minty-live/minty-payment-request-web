@@ -108,6 +108,26 @@ WHERE id = '<id>';` plus `SELECT * FROM pettycashv3.bill_line WHERE bill_id = '<
       columns exist on `attachment` but this path never sets them, so don't expect a
       soft-deleted row to show up instead.
 
+## Auto-saved drafts ([payment-requests.md](payment-requests.md#auto-saved-drafts-owners-decisions-doc-l1-2026-11-20))
+
+- [ ] Add Payment: type a description and an amount, attach a file, wait 3 seconds, reload,
+      open Add Payment: "You have unsaved changes from <time>." shows at the top and the fields
+      are still empty. Restore puts the fields and the file back; the suggested Payment No.
+      stays unless one was typed. Nothing was sent to the API before Save.
+- [ ] Add Payment: the X, Escape and the backdrop keep the draft; Cancel throws it away; Save
+      as Draft and Confirm clear it (the next Add Payment shows no notice). Discard removes it.
+- [ ] A request's Edit: change a field, take a file off and stage one, reload: the notice shows
+      above the details card; Restore goes into edit mode with all three. Save Changes, or
+      Cancel → Discard changes, clears it.
+- [ ] Save the request in another tab, then reload the first one: the notice says it was saved
+      again and offers only Show what I typed and Discard.
+- [ ] Easy View: a draft's inline edit is kept and offered the same way when the card opens.
+- [ ] Sign out from the sidebar and sign back in: no notice anywhere. Let the session expire
+      instead (or answer a 401 with `reason: "session_expired"`): the notice is still there.
+- [ ] Another person signing in on the same browser never sees the first person's notice.
+- [ ] 360, 768 and 1440 px: the notice wraps, its two buttons are 44px and nothing scrolls
+      sideways.
+
 ## The detail page ([payment-requests.md](payment-requests.md))
 
 - [ ] The Payment No. in the URL resolves to the right request (case-insensitive); an unknown

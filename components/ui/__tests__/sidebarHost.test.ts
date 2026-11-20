@@ -8,9 +8,13 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { tokenExpiringIn, unsignedToken } from "@/lib/__fixtures__/tokens";
+import { draftKey } from "@minty/shared/drafts";
+
+import { draftFiles } from "@/test/draftFiles";
+import { moduleTokenClaims, tokenExpiringIn, unsignedToken } from "@/lib/__fixtures__/tokens";
 import { ApiError } from "@/lib/api";
 import { getAuth, setAuth } from "@/lib/auth";
+import { _resetSessionExpiredForTests } from "@/lib/sessionExpired";
 import { MINTY_MODULE_URL } from "@/lib/mintyUrls";
 import { env } from "@/lib/env";
 import {
@@ -28,6 +32,7 @@ import {
 const TOKEN = unsignedToken();
 const ENTITY_ID = "360812e1-9f3a-4c21-8e5b-1a2b3c4d5e6f";
 const ENTITY_NAME = "Olive & Vine";
+const USER_ID = moduleTokenClaims().user_id;
 
 const fetchMock = vi.fn<typeof fetch>();
 
@@ -316,5 +321,57 @@ describe("logOut", () => {
     expect(submit).toHaveBeenCalledTimes(1);
     expect(getAuth()).toBeNull();
     expect(localStorage.getItem("payment-request-easy-view")).toBeNull();
+  });
+
+  // Auto-saved drafts (owner's decisions doc L1, 2026-11-20): an explicit sign-out takes this
+  // person's drafts with it - files too - while the cookies still name them; nobody else's.
+  it("takes this person's auto-saved drafts with it, before the cookies go", async () => {
+    fetchMock.mockResolvedValue(answer(200, {}));
+    vi.spyOn(HTMLFormElement.prototype, "submit").mockImplementation(() => {});
+    const mine = draftKey(
+      { userId: USER_ID, entityId: ENTITY_ID },
+      "pr.bill-edit",
+      "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+    );
+    const theirs = draftKey(
+      { userId: "someone-else", entityId: ENTITY_ID },
+      "pr.add-payment",
+      "new",
+    );
+    localStorage.setItem(mine, "{}");
+    localStorage.setItem(theirs, "{}");
+    draftFiles.data.set(mine, [new File(["x"], "invoice.pdf")]);
+    const signedInWhenCleared: boolean[] = [];
+    const remove = Storage.prototype.removeItem;
+    vi.spyOn(Storage.prototype, "removeItem").mockImplementation(function (
+      this: Storage,
+      key: string,
+    ) {
+      if (key === mine) signedInWhenCleared.push(getAuth() !== null);
+      remove.call(this, key);
+    });
+
+    await logOut();
+
+    expect(signedInWhenCleared).toEqual([true]);
+    expect(localStorage.getItem(mine)).toBeNull();
+    expect(draftFiles.data.has(mine)).toBe(false);
+    expect(localStorage.getItem(theirs)).toBe("{}");
+    expect(getAuth()).toBeNull();
+  });
+
+  it("keeps the drafts when the session ends by itself - they exist to survive that", async () => {
+    _resetSessionExpiredForTests(() => {});
+    const mine = draftKey({ userId: USER_ID, entityId: ENTITY_ID }, "pr.add-payment", "new");
+    localStorage.setItem(mine, "{}");
+    fetchMock.mockResolvedValueOnce(
+      answer(401, { error: "Unauthorized", reason: "session_expired" }),
+    );
+
+    await mintyFetch("/api/me/profile", { onUnauthorized: "reject" }).catch(() => undefined);
+
+    expect(getAuth()).toBeNull();
+    expect(localStorage.getItem(mine)).toBe("{}");
+    _resetSessionExpiredForTests();
   });
 });

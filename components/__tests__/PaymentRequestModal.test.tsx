@@ -4,8 +4,9 @@
 // the refusals - every required field, one at a time - and the two ways out, Save as Draft and
 // Confirm, which post to different endpoints and must not be confused.
 
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { PaymentRequestModal } from "@/components/PaymentRequestModal";
@@ -13,8 +14,9 @@ import { ToastProvider } from "@/components/Toast";
 import { bill, billAttachment } from "@/lib/__fixtures__/bills";
 import { SUPPLIERS } from "@/lib/__fixtures__/contacts";
 import { entityBillAccounts } from "@/lib/__fixtures__/accounts";
-import { unsignedToken } from "@/lib/__fixtures__/tokens";
+import { moduleTokenClaims, unsignedToken } from "@/lib/__fixtures__/tokens";
 import { setAuth } from "@/lib/auth";
+import { draftFiles, keptDrafts } from "@/test/draftFiles";
 
 const ENTITY_ID = "360812e1-9f3a-4c21-8e5b-1a2b3c4d5e6f";
 const ENTITY_NAME = "Olive & Vine";
@@ -945,5 +947,223 @@ describe("the duplicate reminder before a save (owner's decisions doc DUP1, 2026
     expect(await screen.findByText("Someone else changed that first.")).toBeInTheDocument();
     expect(screen.queryByRole("alertdialog", { name: "Save it anyway?" })).toBeNull();
     vi.restoreAllMocks();
+  });
+});
+
+// Auto-saved drafts (owner's decisions doc L1, 2026-11-20): what is typed is kept in this browser
+// 2 seconds after the last change (`@minty/shared/drafts`), and offered back - ask first - when
+// the dialog opens again. Never the real bill: only Save as Draft or Confirm writes that.
+describe("the auto-saved draft", () => {
+  const notice = () => screen.queryByText(/You have unsaved changes from/);
+
+  /** The page's own button, with the dialog it opens: open/closed the way the list drives it. */
+  function Harness() {
+    const [open, setOpen] = useState(true);
+    return (
+      <ToastProvider>
+        <button type="button" onClick={() => setOpen(true)}>
+          Add Payment
+        </button>
+        <PaymentRequestModal
+          open={open}
+          onClose={() => setOpen(false)}
+          onConfirm={onConfirm}
+          onSaveDraft={onSaveDraft}
+        />
+      </ToastProvider>
+    );
+  }
+
+  const suggested = () =>
+    waitFor(() => expect(within(dialog()).getByLabelText(/Payment No\./)).toHaveValue("MBIOVI-1"));
+  const description = () => within(dialog()).getByPlaceholderText("Description (optional)");
+  const reopen = async () => {
+    await userEvent.click(screen.getByRole("button", { name: "Add Payment" }));
+    await suggested();
+  };
+
+  /** Type a description and an amount and attach a file, then close with the X. */
+  async function typeAndClose() {
+    render(<Harness />);
+    await suggested();
+    await userEvent.type(description(), "Printer paper");
+    await userEvent.type(within(dialog()).getByPlaceholderText("0.00"), "1234.5");
+    await userEvent.upload(filePicker(), file("invoice.pdf", "application/pdf"));
+    await userEvent.click(screen.getByRole("button", { name: "Close" }));
+    expect(screen.queryByRole("dialog")).toBeNull();
+  }
+
+  beforeEach(() => {
+    // a token naming the person and the company, as Minty mints it: drafts are kept per both
+    setAuth(unsignedToken(moduleTokenClaims()), ENTITY_ID, ENTITY_NAME);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("keeps what is typed 2 seconds after the last change, and writes nothing to the API", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const { posted } = serve();
+    render(<Harness />);
+    await suggested();
+
+    fireEvent.change(description(), { target: { value: "Printer paper" } });
+    await act(async () => {
+      vi.advanceTimersByTime(1900);
+    });
+    expect(keptDrafts()).toEqual([]);
+    await act(async () => {
+      vi.advanceTimersByTime(200);
+    });
+
+    const kept = keptDrafts();
+    expect(kept).toHaveLength(1);
+    expect(kept[0].key).toBe(
+      `minty:draft:1:${moduleTokenClaims().user_id}:${ENTITY_ID}:pr.add-payment:new`,
+    );
+    expect(kept[0].value).toMatchObject({
+      form: "pr.add-payment",
+      record: "new",
+      basedOn: null,
+      // the suggested Payment No. and today's invoice date are not the person's: not kept
+      value: { billNo: null, invoiceDate: null, description: "Printer paper" },
+    });
+    expect(posted).toEqual([]);
+  });
+
+  it("keeps nothing for a form nobody touched", async () => {
+    render(<Harness />);
+    await suggested();
+
+    await userEvent.click(screen.getByRole("button", { name: "Close" }));
+
+    expect(keptDrafts()).toEqual([]);
+  });
+
+  it("the X keeps it; opening again asks first, and Restore puts the fields and the file back", async () => {
+    await typeAndClose();
+    expect(keptDrafts()).toHaveLength(1);
+    expect([...draftFiles.data.values()].flat().map((f) => f.name)).toEqual(["invoice.pdf"]);
+
+    await reopen();
+
+    expect(
+      await screen.findByText(/You have unsaved changes from \d\d:\d\d\./),
+    ).toBeInTheDocument();
+    // nothing changes until the person picks
+    expect(description()).toHaveValue("");
+    expect(within(dialog()).getByText(/Uploaded files \(0\)/)).toBeInTheDocument();
+
+    await userEvent.click(within(dialog()).getByRole("button", { name: "Restore" }));
+
+    expect(notice()).toBeNull();
+    expect(description()).toHaveValue("Printer paper");
+    expect(within(dialog()).getByPlaceholderText("0.00")).toHaveValue("1,234.50");
+    expect(within(dialog()).getByText(/Uploaded files \(1\)/)).toBeInTheDocument();
+    expect(
+      within(dialog()).getByRole("button", { name: "Preview invoice.pdf" }),
+    ).toBeInTheDocument();
+    // the freshly suggested Payment No. stays, since the person never typed one
+    expect(within(dialog()).getByLabelText(/Payment No\./)).toHaveValue("MBIOVI-1");
+  });
+
+  it("puts back a Payment No. the person typed", async () => {
+    render(<Harness />);
+    await suggested();
+    fireEvent.change(within(dialog()).getByLabelText(/Payment No\./), {
+      target: { value: "INV-77" },
+    });
+    await userEvent.click(screen.getByRole("button", { name: "Close" }));
+
+    await reopen();
+    await userEvent.click(await within(dialog()).findByRole("button", { name: "Restore" }));
+
+    expect(within(dialog()).getByLabelText(/Payment No\./)).toHaveValue("INV-77");
+  });
+
+  it("Discard removes it, files and all", async () => {
+    await typeAndClose();
+    await reopen();
+
+    await userEvent.click(await within(dialog()).findByRole("button", { name: "Discard" }));
+
+    expect(notice()).toBeNull();
+    expect(keptDrafts()).toEqual([]);
+    expect(draftFiles.data.size).toBe(0);
+    expect(description()).toHaveValue("");
+  });
+
+  it("Save as Draft clears it, so the next Add Payment starts clean", async () => {
+    await typeAndClose();
+    await reopen();
+    await userEvent.click(await within(dialog()).findByRole("button", { name: "Restore" }));
+
+    await userEvent.click(saveDraft());
+
+    await waitFor(() => expect(onSaveDraft).toHaveBeenCalled());
+    expect(keptDrafts()).toEqual([]);
+    await reopen();
+    expect(notice()).toBeNull();
+  });
+
+  it("Confirm clears it too", async () => {
+    serve({ submit: () => answer(201, bill({ id: "bill-sent", reference: "PR-0100" })) });
+    render(<Harness />);
+    await suggested();
+    await userEvent.type(within(dialog()).getByPlaceholderText("0.00"), "6000");
+    fireEvent.change(document.getElementById("pr-due-date")!, { target: { value: "2026-03-31" } });
+    await userEvent.click(document.getElementById("pr-contact")!);
+    await userEvent.click(await screen.findByRole("option", { name: "ABC Furniture" }));
+    await userEvent.click(document.getElementById("pr-account")!);
+    await userEvent.click(await screen.findByRole("option", { name: /^429 - / }));
+    await userEvent.upload(filePicker(), file("invoice.pdf", "application/pdf"));
+
+    await userEvent.click(confirm());
+
+    await waitFor(() => expect(onConfirm).toHaveBeenCalled());
+    expect(keptDrafts()).toEqual([]);
+    expect(draftFiles.data.size).toBe(0);
+  });
+
+  it("Cancel throws it away - the person said so", async () => {
+    render(<Harness />);
+    await suggested();
+    await userEvent.type(description(), "Printer paper");
+
+    await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
+
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(keptDrafts()).toEqual([]);
+    await reopen();
+    expect(notice()).toBeNull();
+  });
+
+  it("Escape and the backdrop keep it, like the X", async () => {
+    render(<Harness />);
+    await suggested();
+    await userEvent.type(description(), "Printer paper");
+    await userEvent.keyboard("{Escape}");
+    expect(keptDrafts()).toHaveLength(1);
+
+    await reopen();
+    await userEvent.click(await within(dialog()).findByRole("button", { name: "Restore" }));
+    await userEvent.type(description(), " and toner");
+    await userEvent.click(screen.getByRole("button", { name: "Close dialog" }));
+
+    expect(keptDrafts()[0].value).toMatchObject({
+      value: { description: "Printer paper and toner" },
+    });
+  });
+
+  it("is never offered to another person signed in on the same browser", async () => {
+    await typeAndClose();
+    cleanup();
+    setAuth(unsignedToken(moduleTokenClaims({ user_id: "someone-else" })), ENTITY_ID, ENTITY_NAME);
+
+    render(<Harness />);
+    await suggested();
+
+    expect(notice()).toBeNull();
   });
 });

@@ -4,7 +4,10 @@ import { useParams, useRouter } from "next/navigation";
 import type { CSSProperties } from "react";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useUserRole } from "@/lib/useUserRole";
+import { useAutoSaveDraft, type DraftOffer } from "@minty/shared/drafts";
 import { guardLeave, useLeaveGuard } from "@minty/shared/leaveGuard";
+import { DraftNotice } from "@minty/shared/ui";
+import { billDraftBasis, currentDraftScope, describeBillFields } from "@/lib/draftScope";
 import { LeaveDialog } from "@/features/subscription/components/InterruptedDialogs";
 import {
   ApiError,
@@ -254,6 +257,37 @@ function computePaymentHistoryPanelStyle(anchorRoot: HTMLDivElement | null): CSS
   };
 }
 
+/** Files picked for the request, staged in the preview until Save sends them. */
+function stagePendingFiles(
+  prev: InvoiceAttachmentPreviewItem[],
+  files: readonly File[],
+): InvoiceAttachmentPreviewItem[] {
+  const usedNames = new Set(prev.map((x) => x.name));
+  const added: InvoiceAttachmentPreviewItem[] = [];
+  for (const file of files) {
+    const key = `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
+    const objectUrl = URL.createObjectURL(file);
+    const base = file.name.trim() || "attachment";
+    const name = uniquifyFileName(base, usedNames);
+    usedNames.add(name);
+    added.push({
+      url: objectUrl,
+      name,
+      mime: file.type || "application/octet-stream",
+      pendingUploadKey: key,
+      pendingFile: file,
+    });
+  }
+  return [...prev, ...added];
+}
+
+/**
+ * What an edit keeps as an auto-saved draft (owner's decisions doc L1, 2026-11-20): the fields
+ * and the request's files taken off; the staged files go to the draft's file store.
+ */
+type BillEditDraft = { fields: PaymentRequestDetailedInfoData; deletes: string[] };
+const BILL_EDIT_DRAFT_SHAPE = 1;
+
 export function PaymentRequestDetailBody({ onBillUpdated }: PaymentRequestDetailBodyProps) {
   const entityCurrency = useEntityCurrency();
   const decimals = useEntityCurrencyDecimals();
@@ -439,6 +473,8 @@ export function PaymentRequestDetailBody({ onBillUpdated }: PaymentRequestDetail
   const attachmentUrlsRef = useRef<string[]>([]);
   const attachmentHydrationEpochRef = useRef(0);
   const pendingBillAttachmentDeletesRef = useRef<Set<string>>(new Set());
+  /** The same staged deletes as state, for the auto-saved draft (the ref is what Save sends). */
+  const [stagedDeleteIds, setStagedDeleteIds] = useState<string[]>([]);
   const attachmentsRef = useRef<InvoiceAttachmentPreviewItem[]>([]);
   const [selectedAttachmentIndices, setSelectedAttachmentIndices] = useState<number[]>([]);
   const [uploadAttachmentOpen, setUploadAttachmentOpen] = useState(false);
@@ -693,13 +729,48 @@ export function PaymentRequestDetailBody({ onBillUpdated }: PaymentRequestDetail
     };
     setDraft(started);
     setEditBaseline(JSON.stringify(started));
+    setStagedDeleteIds([]);
     setIsEditing(true);
     setBillNoError(null);
     setAccountCodeError(null);
     setSubmitAttemptFieldErrors(null);
   }, [bill, accountOptions, decimals]);
 
+  // Unsaved changes in edit mode (owner, 2026-11-17): a field changed since editing began, a file
+  // staged, or one of the request's files taken off. Then a link out (the sidebar, the list, Back),
+  // the browser's Back and Cancel ask "Leave without saving?" in the page; Discard puts it back.
+  const fieldsChanged = isEditing && draft !== null && JSON.stringify(draft) !== editBaseline;
+  const filesChanged =
+    isEditing &&
+    attachmentsReady &&
+    (attachments.some((a) => a.pendingUploadKey) ||
+      attachments.filter((a) => !a.pendingUploadKey).length !== (bill?.attachments?.length ?? 0));
+
+  // The same changes are kept as an auto-saved draft in this browser (owner's decisions doc L1,
+  // 2026-11-20), against the request's version: a request saved again since, or one this person
+  // can no longer edit, only shows the draft.
+  const [draftScope] = useState(currentDraftScope);
+  const billEditable =
+    !!bill && !isViewOnly && bill.status !== "void" && !billLockedForRole(bill.status, isElevated);
+  const stagedFiles = attachments.flatMap((a) =>
+    a.pendingUploadKey && a.pendingFile ? [a.pendingFile] : [],
+  );
+  const editDraft = useAutoSaveDraft<BillEditDraft | null>({
+    scope: draftScope,
+    form: "pr.bill-edit",
+    record: requestId ?? "",
+    shape: BILL_EDIT_DRAFT_SHAPE,
+    ready: !!requestId && bill?.id === requestId,
+    basedOn: billDraftBasis(bill?.updated_at, billEditable),
+    value: isEditing && draft ? { fields: draft, deletes: stagedDeleteIds } : null,
+    dirty: fieldsChanged || filesChanged,
+    files: stagedFiles,
+  });
+  const { clear: clearEditDraft } = editDraft;
+
   const handleCancel = useCallback(() => {
+    // Discard changes (Cancel, or the leave dialog): the browser's copy goes too
+    clearEditDraft();
     setBillNoError(null);
     setAccountCodeError(null);
     setSubmitAttemptFieldErrors(null);
@@ -752,18 +823,42 @@ export function PaymentRequestDetailBody({ onBillUpdated }: PaymentRequestDetail
         }
       }
     })();
-  }, [requestId, bill, mapServerAttachmentsToPreviewItems, onBillUpdated]);
+  }, [requestId, bill, mapServerAttachmentsToPreviewItems, onBillUpdated, clearEditDraft]);
 
-  // Unsaved changes in edit mode (owner, 2026-11-17): a field changed since editing began, a file
-  // staged, or one of the request's files taken off. Then a link out (the sidebar, the list, Back),
-  // the browser's Back and Cancel ask "Leave without saving?" in the page; Discard puts it back.
-  const fieldsChanged = isEditing && draft !== null && JSON.stringify(draft) !== editBaseline;
-  const filesChanged =
-    isEditing &&
-    attachmentsReady &&
-    (attachments.some((a) => a.pendingUploadKey) ||
-      attachments.filter((a) => !a.pendingUploadKey).length !== (bill?.attachments?.length ?? 0));
   const leave = useLeaveGuard(fieldsChanged || filesChanged, handleCancel);
+
+  /**
+   * Restore: into edit mode from the request as it is now, with the draft's fields over it, its
+   * staged files back in the preview and its taken-off files taken off again (those still there).
+   */
+  const restoreEditDraft = useCallback(
+    (offer: DraftOffer<BillEditDraft | null>) => {
+      if (!bill || !offer.value) return;
+      const base = billToDetailedInfo(bill, decimals);
+      const started = {
+        ...base,
+        accountCode: enrichAccountCodeWithOptions(base.accountCode, accountOptions),
+      };
+      const deletes = offer.value.deletes.filter((id) =>
+        (bill.attachments ?? []).some((ba) => ba.id === id),
+      );
+      pendingBillAttachmentDeletesRef.current = new Set(deletes);
+      setStagedDeleteIds(deletes);
+      attachmentHydrationEpochRef.current += 1;
+      const kept = mapServerAttachmentsToPreviewItems(
+        (bill.attachments ?? []).filter((ba) => !deletes.includes(ba.id)),
+      );
+      setAttachments(stagePendingFiles(kept, offer.files));
+      setAttachmentsReady(true);
+      setEditBaseline(JSON.stringify(started));
+      setDraft({ ...started, ...offer.value.fields });
+      setIsEditing(true);
+      setBillNoError(null);
+      setAccountCodeError(null);
+      setSubmitAttemptFieldErrors(null);
+    },
+    [bill, decimals, accountOptions, mapServerAttachmentsToPreviewItems],
+  );
   const cancelEdit = useCallback(() => guardLeave(handleCancel), [handleCancel]);
 
   const handlePatch = useCallback((patch: Partial<PaymentRequestDetailedInfoData>) => {
@@ -866,6 +961,7 @@ export function PaymentRequestDetailBody({ onBillUpdated }: PaymentRequestDetail
         setAttachmentsReady(true);
 
         await loadPayments();
+        clearEditDraft();
         setIsEditing(false);
         setDraft(null);
         setBillNoError(null);
@@ -907,6 +1003,7 @@ export function PaymentRequestDetailBody({ onBillUpdated }: PaymentRequestDetail
       decimals,
       askDuplicate,
       duplicateConfirmed,
+      clearEditDraft,
     ],
   );
 
@@ -960,6 +1057,7 @@ export function PaymentRequestDetailBody({ onBillUpdated }: PaymentRequestDetail
       } else {
         const { message } = await deleteBill(requestId);
         if (message === "Bill deleted") {
+          clearEditDraft();
           // A draft is removed outright: there is no request left to show, so go to the list.
           if (bill?.reference) forgetRequest((params?.ref ?? "").toLowerCase(), bill.reference);
           setDeleteBillConfirmOpen(false);
@@ -984,7 +1082,18 @@ export function PaymentRequestDetailBody({ onBillUpdated }: PaymentRequestDetail
     } finally {
       setIsDeleting(false);
     }
-  }, [requestId, bill, reloadBill, bumpAudit, loadPayments, showToast, params, router, pages]);
+  }, [
+    requestId,
+    bill,
+    reloadBill,
+    bumpAudit,
+    loadPayments,
+    showToast,
+    params,
+    router,
+    pages,
+    clearEditDraft,
+  ]);
 
   const handleSubmitDraft = useCallback(async () => {
     const confirmDuplicate = duplicateConfirmed();
@@ -1088,6 +1197,7 @@ export function PaymentRequestDetailBody({ onBillUpdated }: PaymentRequestDetail
       }
       setAttachmentsReady(true);
 
+      clearEditDraft();
       setIsEditing(false);
       setDraft(null);
       setAccountCodeError(null);
@@ -1138,6 +1248,7 @@ export function PaymentRequestDetailBody({ onBillUpdated }: PaymentRequestDetail
     decimals,
     askDuplicate,
     duplicateConfirmed,
+    clearEditDraft,
   ]);
 
   const handlePublishToXero = useCallback(async () => {
@@ -1326,7 +1437,11 @@ export function PaymentRequestDetailBody({ onBillUpdated }: PaymentRequestDetail
       if (match) idsToStage.add(match.id);
     }
     idsToStage.forEach((id) => pendingBillAttachmentDeletesRef.current.add(id));
+    setStagedDeleteIds([...pendingBillAttachmentDeletesRef.current]);
   }, [attachments, selectedAttachmentIndices, bill]);
+
+  const editOffer = editDraft.offer;
+  const offeredFields = editOffer?.value?.fields ?? null;
 
   return (
     <>
@@ -1370,25 +1485,7 @@ export function PaymentRequestDetailBody({ onBillUpdated }: PaymentRequestDetail
             onClose={() => setUploadAttachmentOpen(false)}
             onUpload={async (files) => {
               if (!requestId) return;
-              setAttachments((prev) => {
-                const usedNames = new Set(prev.map((x) => x.name));
-                const added: InvoiceAttachmentPreviewItem[] = [];
-                for (const file of files) {
-                  const key = `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
-                  const objectUrl = URL.createObjectURL(file);
-                  const base = file.name.trim() || "attachment";
-                  const name = uniquifyFileName(base, usedNames);
-                  usedNames.add(name);
-                  added.push({
-                    url: objectUrl,
-                    name,
-                    mime: file.type || "application/octet-stream",
-                    pendingUploadKey: key,
-                    pendingFile: file,
-                  });
-                }
-                return [...prev, ...added];
-              });
+              setAttachments((prev) => stagePendingFiles(prev, files));
               setAttachmentsReady(true);
             }}
           />
@@ -1463,6 +1560,24 @@ export function PaymentRequestDetailBody({ onBillUpdated }: PaymentRequestDetail
           />
         </div>
         <div className="flex min-w-0 max-lg:order-4 flex-col gap-4 sm:gap-5 lg:order-none lg:col-start-2 lg:row-start-2">
+          {editOffer && offeredFields ? (
+            <DraftNotice
+              savedAt={editOffer.savedAt}
+              stale={editOffer.stale && !billEditable ? "locked" : editOffer.stale}
+              missing={editOffer.missing}
+              onRestore={() => {
+                const taken = editDraft.restore();
+                if (taken) restoreEditDraft(taken);
+              }}
+              onDiscard={editDraft.discard}
+              describe={() =>
+                describeBillFields(
+                  offeredFields,
+                  editOffer.files.map((f) => f.name),
+                )
+              }
+            />
+          ) : null}
           {loadingBill ? (
             <PaymentRequestDetailCardSkeleton />
           ) : loadError ? (

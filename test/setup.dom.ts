@@ -80,6 +80,17 @@ beforeEach(() => {
   setViewportMatches(DEFAULT_TEST_WIDTH);
 });
 
+// Auto-saved drafts keep their files in IndexedDB, which jsdom lacks: every test gets the
+// package's swappable file store set to an empty in-memory one (./draftFiles.ts), and the
+// once-a-page sweep and once-a-draft error log forgotten. Imported inside the hook, as above.
+beforeEach(async () => {
+  const { setDraftFileStoreForTests, resetDraftsForTests } = await import("@minty/shared/drafts");
+  const { draftFiles } = await import("./draftFiles");
+  draftFiles.data.clear();
+  setDraftFileStoreForTests(draftFiles);
+  resetDraftsForTests();
+});
+
 // `indexedDB` is deliberately NOT stubbed. lib/paymentRequestAttachmentStore.ts is the only
 // user, its round-trip is proved in e2e/10_detail_attachments.spec.ts, and leaving the global
 // undefined means an accidental use fails loudly instead of passing against a fake.

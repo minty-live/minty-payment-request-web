@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useAutoSaveDraft, type DraftOffer } from "@minty/shared/drafts";
+import { DraftNotice } from "@minty/shared/ui";
 import type { ThemedSelectOption } from "@/components/ThemedSelect";
 import {
   ApiError,
@@ -19,6 +21,7 @@ import {
   type EntityBillContact,
 } from "@/lib/api";
 import { enrichAccountCodeWithOptions } from "@/lib/billFormSelectOptions";
+import { billDraftBasis, currentDraftScope, describeBillFields } from "@/lib/draftScope";
 import { useEntityCurrencyDecimals } from "@/lib/entityCurrency";
 import { DuplicateBillQuestion, useDuplicateBillQuestion } from "./DuplicateBillDialog";
 import {
@@ -51,6 +54,9 @@ import {
 type FieldErrors = Partial<
   Record<"invoiceDate" | "dueDate" | "amount" | "contact" | "accountCode", string>
 >;
+
+/** The inline edit's auto-saved draft (owner's decisions doc L1, 2026-11-20): its fields. */
+const EASY_VIEW_DRAFT_SHAPE = 1;
 
 function validateDraftDetail(
   d: PaymentRequestDetailedInfoData,
@@ -93,6 +99,8 @@ export function EasyViewDraftDetailBody({
 
   const [isEditing, setIsEditing] = useState(false);
   const [draft, setDraft] = useState<PaymentRequestDetailedInfoData | null>(null);
+  /** The draft as editing began: anything else is a change not saved yet. */
+  const [editBaseline, setEditBaseline] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [billNoError, setBillNoError] = useState<string | null>(null);
   const [accountCodeError, setAccountCodeError] = useState<string | null>(null);
@@ -181,6 +189,46 @@ export function EasyViewDraftDetailBody({
     };
   }, [billId, applyEntityBillContacts]);
 
+  // What is typed is kept in this browser as an auto-saved draft (owner's decisions doc L1,
+  // 2026-11-20), against the request's version: saved again since, or no longer editable by this
+  // person, it is only shown.
+  const [draftScope] = useState(currentDraftScope);
+  const editable =
+    !!bill &&
+    !isViewOnly &&
+    isElevated &&
+    (bill.status ?? "").trim().toLowerCase().replace(/-/g, "_") !== "void";
+  const inlineDraft = useAutoSaveDraft<PaymentRequestDetailedInfoData | null>({
+    scope: draftScope,
+    form: "pr.easy-view",
+    record: billId,
+    shape: EASY_VIEW_DRAFT_SHAPE,
+    ready: !loading && bill?.id === billId,
+    basedOn: billDraftBasis(bill?.updated_at, editable),
+    value: isEditing ? draft : null,
+    dirty: isEditing && draft !== null && JSON.stringify(draft) !== editBaseline,
+  });
+  const { clear: clearInlineDraft } = inlineDraft;
+
+  /** Restore: into edit mode from the request as it is now, with what was typed over it. */
+  const restoreInlineDraft = useCallback(
+    (offer: DraftOffer<PaymentRequestDetailedInfoData | null>) => {
+      if (!bill || !offer.value) return;
+      const base = billToDetailedInfo(bill, decimals);
+      const started = {
+        ...base,
+        accountCode: enrichAccountCodeWithOptions(base.accountCode, accountOptions),
+      };
+      setEditBaseline(JSON.stringify(started));
+      setDraft({ ...started, ...offer.value });
+      setIsEditing(true);
+      setBillNoError(null);
+      setAccountCodeError(null);
+      setSubmitAttemptFieldErrors(null);
+    },
+    [bill, decimals, accountOptions],
+  );
+
   const handlePatch = useCallback((patch: Partial<PaymentRequestDetailedInfoData>) => {
     if (Object.prototype.hasOwnProperty.call(patch, "billNo")) setBillNoError(null);
     if (Object.prototype.hasOwnProperty.call(patch, "accountCode")) setAccountCodeError(null);
@@ -206,10 +254,12 @@ export function EasyViewDraftDetailBody({
   const handleEdit = useCallback(() => {
     if (!bill) return;
     const base = billToDetailedInfo(bill, decimals);
-    setDraft({
+    const started = {
       ...base,
       accountCode: enrichAccountCodeWithOptions(base.accountCode, accountOptions),
-    });
+    };
+    setDraft(started);
+    setEditBaseline(JSON.stringify(started));
     setIsEditing(true);
     setBillNoError(null);
     setAccountCodeError(null);
@@ -217,6 +267,8 @@ export function EasyViewDraftDetailBody({
   }, [bill, accountOptions, decimals]);
 
   const handleCancel = useCallback(async () => {
+    // Cancel throws what was typed away, the browser's copy too
+    clearInlineDraft();
     setBillNoError(null);
     setAccountCodeError(null);
     setSubmitAttemptFieldErrors(null);
@@ -234,7 +286,7 @@ export function EasyViewDraftDetailBody({
       setDraft(null);
       setIsEditing(false);
     }
-  }, [billId, accountOptions]);
+  }, [billId, accountOptions, clearInlineDraft]);
 
   const handleSave = useCallback(async () => {
     const confirmDuplicate = duplicateConfirmed();
@@ -260,6 +312,7 @@ export function EasyViewDraftDetailBody({
         ...d,
         accountCode: enrichAccountCodeWithOptions(d.accountCode, accountOptions),
       });
+      clearInlineDraft();
       setDraft(null);
       setIsEditing(false);
       onBillSaved?.();
@@ -285,7 +338,25 @@ export function EasyViewDraftDetailBody({
     decimals,
     askDuplicate,
     duplicateConfirmed,
+    clearInlineDraft,
   ]);
+
+  const inlineOffer = inlineDraft.offer;
+  const offeredFields = inlineOffer?.value ?? null;
+  const draftNotice =
+    inlineOffer && offeredFields ? (
+      <DraftNotice
+        savedAt={inlineOffer.savedAt}
+        stale={inlineOffer.stale && !editable ? "locked" : inlineOffer.stale}
+        missing={inlineOffer.missing}
+        onRestore={() => {
+          const taken = inlineDraft.restore();
+          if (taken) restoreInlineDraft(taken);
+        }}
+        onDiscard={inlineDraft.discard}
+        describe={() => describeBillFields(offeredFields)}
+      />
+    ) : null;
 
   if (loading) {
     return <EasyViewDetailedInformationSkeleton mode="draftCard" />;
@@ -307,6 +378,7 @@ export function EasyViewDraftDetailBody({
   if (isEditing && draft) {
     return (
       <div className="w-full min-w-0 max-w-full space-y-4">
+        {draftNotice}
         <EasyViewDraftDetailedInformationEdit
           actions={actions}
           data={draft}
@@ -338,13 +410,21 @@ export function EasyViewDraftDetailBody({
     );
   }
 
-  return (
+  const readView = (
     <EasyViewDraftDetailedInformation
       data={detail}
       actions={actions}
       onEdit={handleEdit}
       editDisabled={detailDisabled}
     />
+  );
+  return draftNotice ? (
+    <div className="w-full min-w-0 max-w-full space-y-4">
+      {draftNotice}
+      {readView}
+    </div>
+  ) : (
+    readView
   );
 }
 

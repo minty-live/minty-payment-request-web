@@ -16,8 +16,9 @@ import {
 import { entityBillAccounts } from "@/lib/__fixtures__/accounts";
 import { bill, billAttachment } from "@/lib/__fixtures__/bills";
 import { SUPPLIERS } from "@/lib/__fixtures__/contacts";
-import { unsignedToken } from "@/lib/__fixtures__/tokens";
+import { moduleTokenClaims, unsignedToken } from "@/lib/__fixtures__/tokens";
 import { setAuth } from "@/lib/auth";
+import { keptDrafts } from "@/test/draftFiles";
 
 const ENTITY_ID = "360812e1-9f3a-4c21-8e5b-1a2b3c4d5e6f";
 const ENTITY_NAME = "Olive & Vine";
@@ -464,5 +465,127 @@ describe("the duplicate reminder before a save (owner's decisions doc DUP1, 2026
     expect(screen.queryByRole("alertdialog", { name: "Save it anyway?" })).toBeNull();
     expect(puts()).toHaveLength(1);
     expect(screen.getByRole("button", { name: "Save Changes" })).toBeInTheDocument();
+  });
+});
+
+// Auto-saved drafts (owner's decisions doc L1, 2026-11-20): the inline edit of a draft is kept in
+// this browser 2 s after the last change, against the request's `updated_at`, and offered back
+// when the card opens again - ask first. Only Save Changes writes the request.
+describe("the auto-saved draft of an inline edit", () => {
+  const DESCRIPTION = "Corporate stationery and printer supplies";
+  const notice = () => screen.queryByText(/You have unsaved changes from/);
+
+  beforeEach(() => {
+    setAuth(unsignedToken(moduleTokenClaims()), ENTITY_ID, ENTITY_NAME);
+  });
+
+  async function editAndClose() {
+    const view = showDraft();
+    await loaded();
+    await userEvent.click(screen.getByRole("button", { name: "Edit" }));
+    const description = await screen.findByDisplayValue(DESCRIPTION);
+    await userEvent.clear(description);
+    await userEvent.type(description, "Half-typed");
+    view.unmount();
+  }
+
+  it("keeps the edit 2 seconds after the last change, against the request's version", async () => {
+    const { calls } = serve();
+    showDraft();
+    await loaded();
+    await userEvent.click(screen.getByRole("button", { name: "Edit" }));
+    await userEvent.type(await screen.findByDisplayValue(DESCRIPTION), " and toner");
+
+    await waitFor(() => expect(keptDrafts()).toHaveLength(1), { timeout: 4000 });
+
+    const [kept] = keptDrafts();
+    expect(kept.key).toBe(
+      `minty:draft:1:${moduleTokenClaims().user_id}:${ENTITY_ID}:pr.easy-view:${BILL_ID}`,
+    );
+    expect(kept.value).toMatchObject({
+      basedOn: "2026-03-03T02:00:00Z",
+      value: { description: `${DESCRIPTION} and toner` },
+    });
+    expect(calls.filter((c) => c.method === "PUT")).toEqual([]);
+  });
+
+  it("asks first when the card opens again; Restore goes into edit with what was typed", async () => {
+    await editAndClose();
+    showDraft();
+    await loaded();
+
+    expect(
+      await screen.findByText(/You have unsaved changes from \d\d:\d\d\./),
+    ).toBeInTheDocument();
+    expect(screen.getByText(DESCRIPTION)).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Restore" }));
+
+    expect(notice()).toBeNull();
+    expect(await screen.findByDisplayValue("Half-typed")).toBeInTheDocument();
+  });
+
+  it("Discard removes it", async () => {
+    await editAndClose();
+    showDraft();
+    await loaded();
+
+    await userEvent.click(await screen.findByRole("button", { name: "Discard" }));
+
+    expect(notice()).toBeNull();
+    expect(keptDrafts()).toEqual([]);
+  });
+
+  it("Save Changes clears it", async () => {
+    await editAndClose();
+    const { calls } = serve();
+    showDraft();
+    await loaded();
+    await userEvent.click(await screen.findByRole("button", { name: "Restore" }));
+    await screen.findByDisplayValue("Half-typed");
+
+    await userEvent.click(screen.getByRole("button", { name: "Save Changes" }));
+
+    await waitFor(() => expect(calls.some((c) => c.method === "PUT")).toBe(true));
+    expect(calls.find((c) => c.method === "PUT")?.body).toMatchObject({
+      description: "Half-typed",
+    });
+    await waitFor(() => expect(screen.getByRole("button", { name: "Edit" })).toBeInTheDocument());
+    expect(keptDrafts()).toEqual([]);
+  });
+
+  it("Cancel throws it away", async () => {
+    showDraft();
+    await loaded();
+    await userEvent.click(screen.getByRole("button", { name: "Edit" }));
+    await userEvent.type(await screen.findByDisplayValue(DESCRIPTION), " more");
+
+    await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
+
+    await waitFor(() => expect(screen.getByRole("button", { name: "Edit" })).toBeInTheDocument());
+    expect(keptDrafts()).toEqual([]);
+  });
+
+  it("is only shown, never put back, when the request was saved again since", async () => {
+    await editAndClose();
+    serve({
+      detail: bill({
+        id: BILL_ID,
+        status: "draft",
+        contact: "Young Bros Transport",
+        reference: "PR-0001",
+        attachments: [billAttachment()],
+        updated_at: "2026-03-04T09:00:00Z",
+      }),
+    });
+    showDraft();
+    await loaded();
+
+    expect(
+      await screen.findByText(/This was saved again after your unsaved changes from/),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Restore" })).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "Show what I typed" }));
+    expect(screen.getByText("Half-typed")).toBeInTheDocument();
   });
 });

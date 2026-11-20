@@ -24,12 +24,14 @@ import {
   type SidebarHost,
   type Viewer,
 } from "@minty/shared/sidebar";
+import { clearDraftsForUser } from "@minty/shared/drafts";
 import { guardLeave } from "@minty/shared/leaveGuard";
 
 import { ApiError, logoutSession } from "@/lib/api";
 import { pushAppScrollLock } from "@/lib/appScrollRoot";
 import { env } from "@/lib/env";
 import { clearAuth, getAuth, redirectToLogin } from "@/lib/auth";
+import { currentDraftScope } from "@/lib/draftScope";
 import { getModuleClaims } from "@/lib/moduleClaims";
 import {
   buildMintyEnterUrl,
@@ -139,7 +141,11 @@ export function logOut(onLeaving?: () => void): Promise<void> {
 }
 
 async function endSession(): Promise<void> {
+  const drafts = currentDraftScope();
   await logoutSession();
+  // An explicit sign-out takes this person's auto-saved drafts with it (owner's decisions doc L1,
+  // 2026-11-20), within 500 ms; a session that merely expires (a 401) keeps them.
+  if (drafts) await clearDraftsForUser(drafts.userId);
   clearAuth();
   try {
     localStorage.removeItem(EASY_VIEW_STORAGE_KEY);

@@ -193,7 +193,7 @@ re-read, edit mode closes) and a warning names the files to add again.
 
 ## The detail page (`/entity/<shortid>/<name>/payment-request/<Payment No.>`)
 
-- **Unsaved changes in edit mode (owner, 2026-11-17):** while a field differs from where editing began, a file is staged, or one of the request's files was taken off, a link out (the sidebar, the list, "‹ Back"), the browser's Back and **Cancel** ask "Leave without saving?" in the page - minty-web's `LeaveDialog` (`features/subscription/components/InterruptedDialogs.tsx`, portalled above the sidebar drawer) over `@minty/shared/leaveGuard`. Go Back stays with the changes; Discard changes puts the saved request back (`handleCancel`) and goes on. Nothing changed: Cancel and every link leave at once. A reload or a closed tab leaves without asking (no native browser dialog). The other forms (Add Payment, Record payment, Upload) don't ask yet (owner chose the detail page only).
+- **Unsaved changes in edit mode (owner, 2026-11-17):** while a field differs from where editing began, a file is staged, or one of the request's files was taken off, a link out (the sidebar, the list, "‹ Back"), the browser's Back and **Cancel** ask "Leave without saving?" in the page - minty-web's `LeaveDialog` (`features/subscription/components/InterruptedDialogs.tsx`, portalled above the sidebar drawer) over `@minty/shared/leaveGuard`. Go Back stays with the changes; Discard changes puts the saved request back (`handleCancel`) and goes on. Nothing changed: Cancel and every link leave at once. A reload or a closed tab leaves without asking (no native browser dialog) - what was typed is kept as an auto-saved draft (below). The other forms (Add Payment, Record payment, Upload) don't ask: Add Payment's X, Escape and backdrop close it at once and **keep** what was typed as its auto-saved draft (the safety net), while its **Cancel** throws it away; Record payment and Upload keep nothing (owner chose the detail page only for the question).
 
 Addressed by the Payment No. (the bill's `reference`) since 2026-10-05, the id when there is none
 (`lib/companyPages.ts` `pages.request(id, reference)`). `lib/useRequestId.ts` turns the address
@@ -289,6 +289,45 @@ width (2026-11-19, the owner's mobile-first rule): the card list below 1024px ha
 checkbox in a 44px tap target, and on a phone the toolbar puts search on its own line with Filter,
 Download CSV and Bulk Actions on the next (one line from 640px). Minty never restores anything in the customer's Xero.
 
+## Auto-saved drafts (owner's decisions doc L1, 2026-11-20)
+
+What the person types is kept **in this browser only**, 2 seconds after their last change, as a
+separate copy - never the real request, which only their own Save writes (`@minty/shared/drafts`
+`useAutoSaveDraft` and `ui`'s `DraftNotice`, v0.28; the package README's "Auto-saved drafts" has
+the storage, limits and expiry). Kept per person and company (`lib/draftScope.ts`
+`currentDraftScope()`, the token's `user_id` and `entity_id`); card details are never kept.
+When the form opens again it **asks first** - "You have unsaved changes from 10:42." with
+**Restore** and **Discard** (44px, stacked on a phone) - and nothing changes until the person
+picks; while that question waits, nothing new is kept.
+
+| Form                                                   | Key (`form`, `record`)      | What is kept                                                                                                                                                                                                                                                                         | Removed by                                                                                                                                             |
+| ------------------------------------------------------ | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Add Payment (`PaymentRequestModal.tsx`)                | `pr.add-payment`, `new`     | due date, amount, description, supplier (id, name and the typed text), account; the Payment No. and invoice date only when the person changed them (otherwise the fresh suggestion and today stand); the picked files (IndexedDB). Never the invoice reader's marks or exchange rate | Save as Draft and Confirm succeeding, **Cancel**, Discard. The **X, Escape and the backdrop keep it** (a pending save is written as the dialog closes) |
+| A request's Edit (`PaymentRequestDetailBody.tsx`)      | `pr.bill-edit`, the bill id | the edit's fields and the request's files taken off; the staged files                                                                                                                                                                                                                | Save Changes (and a draft's Submit) succeeding, Cancel or the leave dialog's Discard changes (`handleCancel`), deleting the draft request, Discard     |
+| Easy View's draft edit (`EasyViewDraftDetailBody.tsx`) | `pr.easy-view`, the bill id | the inline fields                                                                                                                                                                                                                                                                    | Save Changes succeeding, Cancel, Discard                                                                                                               |
+
+- Add Payment's notice sits at the top of the dialog's body, and is read only once the suggested
+  Payment No. has come back, so Restore is never overwritten by it. Restore puts the values back
+  as the person's own (a later read only offers the invoice's reading beside them) and adds the
+  files to the list.
+- A request's notice sits above its details card (Easy View's above the card). Restore enters edit
+  mode from the request **as it is now**, with the draft's fields over it, its staged files back
+  in the preview and its taken-off files taken off again - only those the request still has.
+- **Stale:** an edit is kept against the request's `updated_at`. If the request was saved again
+  since, or this person can no longer edit it (view-only, voided, or locked for their role -
+  `billDraftBasis`), the notice says "This was saved again after your unsaved changes from
+  10:42, so we haven't put them back." with **Show what I typed** (the fields, read-only) and
+  Discard - never Restore.
+- An explicit sign-out (the sidebar's Logout, My Profile's Log Out: `components/ui/sidebarHost.ts`
+  `endSession`) removes this person's drafts in this app within 500 ms, before the cookies go. A
+  session that expires on its own (a 401, "Your session has expired") keeps them - that is one
+  of the things they exist to survive.
+- Tests: the "auto-saved draft" cases in `PaymentRequestModal.test.tsx`,
+  `PaymentRequestDetailBody.test.tsx` and `EasyViewDraftDetailBody.test.tsx`, the sign-out cases
+  in `sidebarHost.test.ts` (files in `test/draftFiles.ts`'s in-memory store), and
+  `e2e/18_auto_save_drafts.spec.ts` (stubbed; 360 and 1440: type and attach, reload, Restore
+  puts the fields and the file back, Save as Draft clears it).
+
 ## The duplicate reminder before a save (owner's decisions doc DUP1, 2026-11-19)
 
 Just before a bill is saved, the API warns when another bill (not voided, not this one) has the
@@ -371,3 +410,4 @@ Confirm without attachment/due date shows both alerts; the draft's detail page) 
 `e2e/04_xero_publish.spec.ts` with `E2E_XERO=1` (a complete request confirmed → Payment
 Requested → Publish → Republish offered, also after a reload). `e2e/16_back.spec.ts` (stubbed):
 the detail page's Back from the list, from another request, and with nothing before it.
+`e2e/18_auto_save_drafts.spec.ts` (stubbed): Add Payment's auto-saved draft across a reload.

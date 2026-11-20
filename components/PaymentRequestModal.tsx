@@ -2,9 +2,12 @@
 
 import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
-import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode, type RefObject } from "react";
+import { useAutoSaveDraft, type DraftOffer } from "@minty/shared/drafts";
+import { DraftNotice } from "@minty/shared/ui";
 import { pushAppScrollLock } from "@/lib/appScrollRoot";
 import { getEntityIdSnapshot } from "@/lib/auth";
+import { currentDraftScope } from "@/lib/draftScope";
 import { useEntityCurrencyState } from "@/lib/entityCurrency";
 import { hubSettingsUrl } from "@/lib/mintyUrls";
 import { useClientValue } from "@/lib/useClientValue";
@@ -118,6 +121,14 @@ export type PaymentRequestModalProps = {
 };
 
 type UploadedEntry = { id: string; file: File };
+
+const stagedEntry = (file: File): UploadedEntry => ({
+  id:
+    typeof crypto !== "undefined" && crypto.randomUUID
+      ? crypto.randomUUID()
+      : `${file.name}-${file.size}-${file.lastModified}-${Math.random()}`,
+  file,
+});
 
 /** The lines beside "Read invoice": which file it reads, and the company's AI allowance left. */
 const READ_TARGET_ID = "pr-ai-read-target";
@@ -235,6 +246,78 @@ function validatePaymentRequestForm(values: {
   return e;
 }
 
+/**
+ * What Add Payment keeps as an auto-saved draft (owner's decisions doc L1, 2026-11-20; bump
+ * `ADD_PAYMENT_DRAFT_SHAPE` when it changes). The Payment No. and the invoice date only when the
+ * person changed them - otherwise the dialog's fresh suggestion and today's date stand. The
+ * invoice reader's state (its marks and exchange rate) is never kept.
+ */
+type AddPaymentDraft = {
+  billNo: string | null;
+  invoiceDate: string | null;
+  dueDate: string;
+  amount: string;
+  description: string;
+  contact: { id: string; name: string };
+  contactInput: string;
+  accountCode: string;
+};
+const ADD_PAYMENT_DRAFT_SHAPE = 1;
+
+/**
+ * The draft keeper, drawn only while the dialog is open: each opening reads the draft afresh
+ * and asks first ("You have unsaved changes from 10:42." - Restore / Discard). Closing with the
+ * X, Escape or the backdrop keeps what was typed (a pending save is written as it unmounts);
+ * the dialog calls `clearRef` after its own save and on Cancel.
+ */
+function AddPaymentDraftKeeper({
+  ready,
+  value,
+  dirty,
+  files,
+  onRestore,
+  clearRef,
+}: {
+  ready: boolean;
+  value: AddPaymentDraft;
+  dirty: boolean;
+  files: readonly File[];
+  onRestore: (offer: DraftOffer<AddPaymentDraft>) => void;
+  clearRef: RefObject<(() => void) | null>;
+}) {
+  const [scope] = useState(currentDraftScope);
+  const { offer, restore, discard, clear } = useAutoSaveDraft<AddPaymentDraft>({
+    scope,
+    form: "pr.add-payment",
+    record: "new",
+    shape: ADD_PAYMENT_DRAFT_SHAPE,
+    ready,
+    basedOn: null,
+    value,
+    dirty,
+    files,
+  });
+  useEffect(() => {
+    clearRef.current = clear;
+    return () => {
+      clearRef.current = null;
+    };
+  }, [clear, clearRef]);
+  if (!offer) return null;
+  return (
+    <DraftNotice
+      savedAt={offer.savedAt}
+      stale={offer.stale}
+      missing={offer.missing}
+      onRestore={() => {
+        const taken = restore();
+        if (taken) onRestore(taken);
+      }}
+      onDiscard={discard}
+    />
+  );
+}
+
 function FieldLabel({
   htmlFor,
   children,
@@ -285,6 +368,11 @@ export function PaymentRequestModal({
     ? (uploadedFiles.find((x) => x.id === previewFileId)?.file ?? null)
     : null;
   const [billNo, setBillNo] = useState("");
+  /** The person typed a Payment No. of their own (not the suggested one): the draft keeps it. */
+  const [billNoTouched, setBillNoTouched] = useState(false);
+  /** The suggested Payment No. has come back (or failed): only then is a draft offered. */
+  const [referenceSettled, setReferenceSettled] = useState(false);
+  const draftClearRef = useRef<(() => void) | null>(null);
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
   /** Xero ContactID (empty while user is typing a new name). */
@@ -603,6 +691,7 @@ export function PaymentRequestModal({
     setExchange(null);
     setRateMissing(null);
     setBillNo("");
+    setBillNoTouched(false);
     setDescription("");
     setUploadedFiles([]);
     setPreviewFileId(null);
@@ -613,6 +702,9 @@ export function PaymentRequestModal({
       })
       .catch(() => {
         if (!cancelled) setBillNo("");
+      })
+      .finally(() => {
+        if (!cancelled) setReferenceSettled(true);
       });
     return () => {
       cancelled = true;
@@ -623,6 +715,7 @@ export function PaymentRequestModal({
     if (!open) {
       setConfirmSubmitting(false);
       setDraftSubmitting(false);
+      setReferenceSettled(false);
     }
   }, [open]);
 
@@ -649,13 +742,7 @@ export function PaymentRequestModal({
       return;
     }
     // Staged and uploaded exactly as chosen: no shrinking, no conversion (owner, 2026-11-04).
-    const added: UploadedEntry[] = Array.from(list).map((file) => ({
-      id:
-        typeof crypto !== "undefined" && crypto.randomUUID
-          ? crypto.randomUUID()
-          : `${file.name}-${file.size}-${file.lastModified}-${Math.random()}`,
-      file,
-    }));
+    const added = Array.from(list).map(stagedEntry);
 
     setUploadedFiles((prev) => [...prev, ...added]);
     setPreviewFileId(added[added.length - 1]?.id ?? null);
@@ -698,6 +785,73 @@ export function PaymentRequestModal({
     }
     setContactsMap(map);
     setContactsList(merged);
+  };
+
+  // The auto-saved draft (owner's decisions doc L1, 2026-11-20): kept while anything differs from
+  // how the dialog opened (the suggested Payment No. and today's invoice date are not changes).
+  const draftValue: AddPaymentDraft = {
+    billNo: billNoTouched ? billNo : null,
+    invoiceDate: invoiceDate !== openedOn ? invoiceDate : null,
+    dueDate,
+    amount: amount ?? "",
+    description,
+    contact: { id: contact, name: contactsMap.get(contact)?.name ?? contactInput },
+    contactInput,
+    accountCode,
+  };
+  const draftDirty =
+    billNoTouched ||
+    invoiceDate !== openedOn ||
+    dueDate !== "" ||
+    (amount ?? "") !== "" ||
+    description.trim() !== "" ||
+    contact !== "" ||
+    contactInput.trim() !== "" ||
+    accountCode !== "" ||
+    uploadedFiles.length > 0;
+
+  /** Restore: the draft's values go back in, as the person's own; its files join the list. */
+  const restoreDraft = ({ value: v, files }: DraftOffer<AddPaymentDraft>) => {
+    if (v.billNo !== null) {
+      setBillNo(v.billNo);
+      setBillNoTouched(true);
+    }
+    const values: Partial<InvoiceValues> = {
+      dueDate: v.dueDate,
+      amount: v.amount,
+      description: v.description,
+      contact: v.contact.id,
+      contactInput: v.contactInput,
+      accountCode: v.accountCode,
+      ...(v.invoiceDate !== null ? { invoiceDate: v.invoiceDate } : {}),
+    };
+    if (values.invoiceDate !== undefined) setInvoiceDate(values.invoiceDate);
+    setDueDate(v.dueDate);
+    setAmount(v.amount);
+    setDescription(v.description);
+    setContact(v.contact.id);
+    setContactInput(v.contactInput);
+    setAccountCode(v.accountCode);
+    // the reader treats them as typed: a later read only offers its own reading beside them
+    const fields: [InvoiceField, keyof InvoiceValues][] = [
+      ["invoiceDate", "invoiceDate"],
+      ["dueDate", "dueDate"],
+      ["amount", "amount"],
+      ["description", "description"],
+      ["supplier", "contactInput"],
+      ["account", "accountCode"],
+    ];
+    for (const [field, key] of fields) {
+      if (values[key]) readerEdit(field, values);
+    }
+    const sig = (f: File) => `${f.name}|${f.size}|${f.lastModified}`;
+    const have = new Set(uploadedFiles.map((x) => sig(x.file)));
+    const added = files.filter((f) => !have.has(sig(f))).map(stagedEntry);
+    if (added.length > 0) {
+      setUploadedFiles((prev) => [...prev, ...added]);
+      setPreviewFileId(added[added.length - 1].id);
+      clearFieldError("attachments");
+    }
   };
 
   const handleSaveDraft = async () => {
@@ -754,6 +908,8 @@ export function PaymentRequestModal({
         console.error("Could not store attachments for preview:", e);
       }
 
+      // saved for real: the browser's copy goes
+      draftClearRef.current?.();
       onSaveDraft?.();
       onClose();
       if (notUploaded.length > 0) {
@@ -783,7 +939,9 @@ export function PaymentRequestModal({
     }
   };
 
+  // Cancel throws what was typed away, the draft too; the X, Escape and the backdrop keep it.
   const handleCancel = () => {
+    draftClearRef.current?.();
     onCancel?.();
     onClose();
   };
@@ -857,6 +1015,7 @@ export function PaymentRequestModal({
         console.error("Could not store attachments for preview:", e);
       }
 
+      draftClearRef.current?.();
       onConfirm?.();
       onClose();
       if (notUploaded.length > 0) {
@@ -927,6 +1086,14 @@ export function PaymentRequestModal({
 
         <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-4 py-4 sm:px-6 sm:py-6">
           <div className="flex flex-col gap-6">
+            <AddPaymentDraftKeeper
+              ready={referenceSettled}
+              value={draftValue}
+              dirty={draftDirty}
+              files={uploadedFiles.map((x) => x.file)}
+              onRestore={restoreDraft}
+              clearRef={draftClearRef}
+            />
             <ErrorSummary look="classic" items={summaryItems} attempt={summaryAttempt} />
             <div className="min-w-0">
               {previewFile && previewObjectUrl ? (
@@ -1112,12 +1279,14 @@ export function PaymentRequestModal({
                     setFormError(null);
                     if (v.trim() === "") {
                       setBillNo("");
+                      setBillNoTouched(false);
                       void fetchSuggestedBillReference()
                         .then((r) => setBillNo(r.reference))
                         .catch(() => {});
                       return;
                     }
                     setBillNo(v);
+                    setBillNoTouched(true);
                   }}
                   aria-invalid={!!fieldErrors.billNo}
                   aria-describedby={fieldErrors.billNo ? "pr-bill-no-error" : undefined}

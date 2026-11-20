@@ -14,8 +14,9 @@ import { PaymentRequestDetailBody } from "@/components/payment-request/PaymentRe
 import { entityBillAccounts } from "@/lib/__fixtures__/accounts";
 import { audit, bill, billAttachment, payment } from "@/lib/__fixtures__/bills";
 import { SUPPLIERS } from "@/lib/__fixtures__/contacts";
-import { unsignedToken } from "@/lib/__fixtures__/tokens";
+import { moduleTokenClaims, unsignedToken } from "@/lib/__fixtures__/tokens";
 import { setAuth } from "@/lib/auth";
+import { draftFiles, keptDrafts } from "@/test/draftFiles";
 
 const ENTITY_ID = "360812e1-9f3a-4c21-8e5b-1a2b3c4d5e6f";
 const ENTITY_NAME = "Olive & Vine";
@@ -983,5 +984,217 @@ describe("the duplicate reminder before a save (owner's decisions doc DUP1, 2026
     await waitFor(() => expect(puts(calls)).toHaveLength(2));
     expect(puts(calls)[1].body).toMatchObject({ status: "submitted", confirm_duplicate: true });
     expect(puts(calls)[0].body).not.toHaveProperty("confirm_duplicate");
+  });
+});
+
+// Auto-saved drafts (owner's decisions doc L1, 2026-11-20): an edit is kept in this browser 2 s
+// after the last change, against the request's `updated_at`, and offered back above the request
+// when the page opens again - ask first. Only Save Changes writes the request.
+describe("the auto-saved draft of an edit", () => {
+  const DESCRIPTION = "Corporate stationery and printer supplies";
+  const notice = () => screen.queryByText(/You have unsaved changes from/);
+
+  beforeEach(() => {
+    setAuth(unsignedToken(moduleTokenClaims()), ENTITY_ID, ENTITY_NAME);
+  });
+
+  /** Edit, change the description (and stage a file), then leave the page with the edit open. */
+  async function editAndLeave({ file = false }: { file?: boolean } = {}) {
+    const view = show();
+    await loaded();
+    await userEvent.click(screen.getByRole("button", { name: "Edit" }));
+    const description = await screen.findByDisplayValue(DESCRIPTION);
+    await userEvent.clear(description);
+    await userEvent.type(description, "Half-typed");
+    if (file) {
+      await userEvent.click(screen.getByRole("button", { name: "Add more attachments" }));
+      const upload = await screen.findByRole("dialog");
+      await userEvent.upload(
+        within(upload).getByLabelText("Choose files to attach"),
+        new File(["x"], "receipt.pdf", { type: "application/pdf" }),
+      );
+      await userEvent.click(within(upload).getByRole("button", { name: "Upload" }));
+      await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    }
+    view.unmount();
+  }
+
+  it("keeps the edit 2 seconds after the last change, against the request's version", async () => {
+    const { calls } = serve();
+    show();
+    await loaded();
+    await userEvent.click(screen.getByRole("button", { name: "Edit" }));
+    await userEvent.type(await screen.findByDisplayValue(DESCRIPTION), " and toner");
+
+    await waitFor(() => expect(keptDrafts()).toHaveLength(1), { timeout: 4000 });
+
+    const [kept] = keptDrafts();
+    expect(kept.key).toBe(
+      `minty:draft:1:${moduleTokenClaims().user_id}:${ENTITY_ID}:pr.bill-edit:${BILL_ID}`,
+    );
+    expect(kept.value).toMatchObject({
+      basedOn: "2026-03-03T02:00:00Z",
+      value: { fields: { description: `${DESCRIPTION} and toner` }, deletes: [] },
+    });
+    expect(calls.filter((c) => c.method === "PUT")).toEqual([]);
+  });
+
+  it("asks first when the page opens again; Restore goes into edit with the draft and its file", async () => {
+    await editAndLeave({ file: true });
+    expect([...draftFiles.data.values()].flat().map((f) => f.name)).toEqual(["receipt.pdf"]);
+
+    show();
+    await loaded();
+
+    expect(
+      await screen.findByText(/You have unsaved changes from \d\d:\d\d\./),
+    ).toBeInTheDocument();
+    // nothing changes until the person picks
+    expect(screen.getByText(DESCRIPTION)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Edit" })).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Restore" }));
+
+    expect(notice()).toBeNull();
+    expect(await screen.findByDisplayValue("Half-typed")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Save Changes" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Select attachment receipt.pdf")).toBeInTheDocument();
+    expect(screen.getByLabelText("Select attachment invoice.pdf")).toBeInTheDocument();
+  });
+
+  it("takes a file the person took off away again on Restore", async () => {
+    const twoFiles = bill({
+      id: BILL_ID,
+      status: "submitted",
+      contact: "Young Bros Transport",
+      reference: "PR-0001",
+      attachments: [
+        billAttachment(),
+        billAttachment({
+          id: "bill-attachment-2",
+          attachment: {
+            ...billAttachment().attachment,
+            id: "attachment-2",
+            original_name: "po.pdf",
+          },
+        }),
+      ],
+    });
+    serve({ detail: twoFiles });
+    const view = show();
+    await loaded();
+    await userEvent.click(screen.getByRole("button", { name: "Edit" }));
+    await userEvent.click(await screen.findByLabelText("Select attachment invoice.pdf"));
+    await userEvent.click(screen.getByRole("button", { name: "Delete attachment" }));
+    await userEvent.click(
+      within(await screen.findByRole("alertdialog")).getByRole("button", { name: "Delete" }),
+    );
+    await waitFor(() =>
+      expect(screen.queryByLabelText("Select attachment invoice.pdf")).not.toBeInTheDocument(),
+    );
+    view.unmount();
+    expect(keptDrafts()[0].value).toMatchObject({ value: { deletes: ["bill-attachment-1"] } });
+
+    const { calls } = serve({ detail: twoFiles });
+    show();
+    await loaded();
+    await userEvent.click(await screen.findByRole("button", { name: "Restore" }));
+    await screen.findByRole("button", { name: "Save Changes" });
+    expect(screen.queryByLabelText("Select attachment invoice.pdf")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Select attachment po.pdf")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Save Changes" }));
+
+    await waitFor(() =>
+      expect(
+        calls.some(
+          (c) => c.method === "DELETE" && c.path.endsWith("/attachments/bill-attachment-1"),
+        ),
+      ).toBe(true),
+    );
+  });
+
+  it("Discard removes it and leaves the request as saved", async () => {
+    await editAndLeave();
+    show();
+    await loaded();
+
+    await userEvent.click(await screen.findByRole("button", { name: "Discard" }));
+
+    expect(notice()).toBeNull();
+    expect(keptDrafts()).toEqual([]);
+    expect(screen.getByText(DESCRIPTION)).toBeInTheDocument();
+  });
+
+  it("Save Changes clears it", async () => {
+    await editAndLeave();
+    const { calls } = serve();
+    show();
+    await loaded();
+    await userEvent.click(await screen.findByRole("button", { name: "Restore" }));
+    await screen.findByDisplayValue("Half-typed");
+
+    await userEvent.click(screen.getByRole("button", { name: "Save Changes" }));
+
+    await waitFor(() => expect(screen.getByRole("button", { name: "Edit" })).toBeInTheDocument());
+    expect(calls.find((c) => c.method === "PUT")?.body).toMatchObject({
+      description: "Half-typed",
+    });
+    expect(keptDrafts()).toEqual([]);
+  });
+
+  it("Cancel's Discard changes clears it too", async () => {
+    show();
+    await loaded();
+    await userEvent.click(screen.getByRole("button", { name: "Edit" }));
+    await userEvent.type(await screen.findByDisplayValue(DESCRIPTION), " more");
+
+    await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    await userEvent.click(
+      within(screen.getByRole("dialog", { name: "Leave without saving?" })).getByRole("button", {
+        name: "Discard changes",
+      }),
+    );
+
+    await waitFor(() => expect(screen.getByRole("button", { name: "Edit" })).toBeInTheDocument());
+    expect(keptDrafts()).toEqual([]);
+  });
+
+  it("is only shown, never put back, when the request was saved again since", async () => {
+    await editAndLeave();
+    serve({
+      detail: bill({
+        id: BILL_ID,
+        status: "submitted",
+        contact: "Young Bros Transport",
+        reference: "PR-0001",
+        attachments: [billAttachment()],
+        updated_at: "2026-03-04T09:00:00Z",
+      }),
+    });
+    show();
+    await loaded();
+
+    expect(
+      await screen.findByText(/This was saved again after your unsaved changes from/),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Restore" })).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "Show what I typed" }));
+    expect(screen.getByText("Half-typed")).toBeInTheDocument();
+    expect(screen.getByText(DESCRIPTION)).toBeInTheDocument();
+  });
+
+  it("is only shown when this person can no longer edit the request", async () => {
+    await editAndLeave();
+    setAuth(unsignedToken(moduleTokenClaims({ is_view_only: true })), ENTITY_ID, ENTITY_NAME);
+    show();
+    await loaded();
+
+    expect(
+      await screen.findByText(
+        /You can.t change this any more, so we haven.t put back your unsaved changes from/,
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Restore" })).toBeNull();
   });
 });
