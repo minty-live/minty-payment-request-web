@@ -795,8 +795,10 @@ export function PaymentRequestTable({
                   label={`Open ${row.contactTitle}`}
                 />
                 <div className="flex gap-3">
-                  <div
-                    className="relative z-[1] hidden shrink-0 pt-0.5 sm:block"
+                  {/* Every width (owner's mobile-first rule, 2026-11-19: a phone picks rows for Bulk
+                      Actions too). The label is the 44px tap target around the 16px box. */}
+                  <label
+                    className={`relative z-[1] -m-3 flex h-11 w-11 shrink-0 items-center justify-center ${isVoided ? "cursor-not-allowed" : "cursor-pointer"}`}
                     onClick={(e) => e.stopPropagation()}
                   >
                     <input
@@ -812,7 +814,7 @@ export function PaymentRequestTable({
                       }
                       suppressHydrationWarning
                     />
-                  </div>
+                  </label>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-start gap-2">
                       <div className="min-w-0 flex-1">

@@ -12,6 +12,7 @@ import { expect, test } from "@playwright/test";
 
 import { billListItem } from "../lib/__fixtures__/bills";
 import {
+  cors,
   expectNoSideScroll,
   handoff,
   pagesOf,
@@ -375,5 +376,94 @@ for (const width of [1280, 1440]) {
     await openList(page);
     await expect(page.getByRole("table")).toBeVisible();
     await expectNoSideScroll(page, width);
+  });
+}
+
+// Bulk Publish when Xero archived a contact a bill uses (owner's decisions C4, 2026-11-19): the
+// list opens the same form a single bill does, maps the contact, and publishes only that bill
+// again - at a phone's width first (the card list picks rows too since 2026-11-19), then the table.
+for (const width of [360, 1024, 1440]) {
+  test(`bulk Publish maps a contact Xero archived, then publishes that bill, at ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await stubApi(page, { bills: ROWS });
+    const published: string[] = [];
+    let held = true;
+    const reply = (route: import("@playwright/test").Route, status: number, body: unknown) =>
+      route.fulfill({
+        status,
+        headers: cors(route),
+        contentType: "application/json",
+        body: JSON.stringify(body),
+      });
+    await page.route("**/api/v1/bills/*/publish/", async (route) => {
+      if (route.request().method() === "OPTIONS") return route.fallback();
+      const id = new URL(route.request().url()).pathname.split("/").at(-3)!;
+      published.push(id);
+      if (id === "b-3000" && held) {
+        return reply(route, 409, {
+          detail:
+            "Exact Three Thousand is archived in Xero. Restore it in Xero, or map it to another contact now.",
+          archived_contacts: [{ id: "mc-3000", name: "Exact Three Thousand" }],
+        });
+      }
+      return reply(route, 200, ROWS.find((r) => r.id === id) ?? {});
+    });
+    await page.route("**/api/v1/entity-bill-contacts/xero/", (route) =>
+      route.request().method() === "OPTIONS"
+        ? route.fallback()
+        : reply(route, 200, [{ xero_contact_id: "x-3000", name: "Exact 3000 Holdings" }]),
+    );
+    await page.route("**/api/v1/entity-bill-contacts/mc-3000/xero-link/", (route) => {
+      if (route.request().method() === "OPTIONS") return route.fallback();
+      held = false;
+      return reply(route, 200, {
+        message: "Exact Three Thousand now uses Exact 3000 Holdings in Xero.",
+        contact_id: "mc-3000",
+      });
+    });
+    await handoff(page, creds(), pagesOf(creds()).list);
+    await expect(page.getByRole("searchbox")).toBeVisible();
+
+    for (const supplier of ["Exact Three Thousand", "Three Hundred"]) {
+      const box = page
+        .getByRole("checkbox", { name: `Select row ${supplier}` })
+        .filter({ visible: true })
+        .first();
+      // a finger's size: the label around the 16px box is the target
+      const target = await box.evaluate(
+        (el) => el.closest("label")?.getBoundingClientRect() ?? el.getBoundingClientRect(),
+      );
+      if (width < 1024) expect(Math.min(target.width, target.height)).toBeGreaterThanOrEqual(44);
+      await box.check();
+    }
+    await page
+      .getByRole("button", { name: /Bulk actions, 2 selected/ })
+      .filter({ visible: true })
+      .first()
+      .click();
+    await page.getByRole("menuitem", { name: "Publish" }).click();
+
+    const form = page.getByRole("dialog", { name: "A contact is archived in Xero" });
+    await expect(form).toBeVisible();
+    await expect(form).toContainText(
+      "Exact Three Thousand is archived in Xero. Restore it in Xero, or map it to another contact now.",
+    );
+    expect([...published].sort()).toEqual(["b-300", "b-3000"]);
+    await expectNoSideScroll(page, width);
+    if (process.env.E2E_SHOTS) {
+      await page.screenshot({ path: `${process.env.E2E_SHOTS}/bulk_archived_${width}.png` });
+    }
+
+    await form.getByRole("combobox", { name: "Map Exact Three Thousand to" }).click();
+    await page.getByRole("option", { name: "Exact 3000 Holdings" }).click();
+    const go = form.getByRole("button", { name: "Map and publish" });
+    expect((await go.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    await go.click();
+
+    await expect(form).toBeHidden();
+    await expect.poll(() => published.filter((id) => id === "b-3000").length).toBe(2);
+    expect(published.filter((id) => id === "b-300")).toHaveLength(1);
   });
 }

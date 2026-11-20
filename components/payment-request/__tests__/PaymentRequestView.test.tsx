@@ -44,11 +44,19 @@ const answer = (status: number, body: unknown) =>
 function serve({
   pages = [ALL_STATUSES],
   onBills,
-}: { pages?: unknown[][]; onBills?: (page: number) => void } = {}) {
+  route,
+}: {
+  pages?: unknown[][];
+  onBills?: (page: number) => void;
+  /** Answers a path before the defaults; undefined falls through to them. */
+  route?: (path: string, init?: RequestInit) => Response | undefined;
+} = {}) {
   const billsCalls: number[] = [];
-  fetchMock.mockImplementation(async (input) => {
+  fetchMock.mockImplementation(async (input, init) => {
     const url = new URL(String(input));
     const path = url.pathname;
+    const routed = route?.(path, init);
+    if (routed) return routed;
     if (path.endsWith("/auth/entitlements")) return answer(200, { billing_enabled: true });
     if (path.endsWith("/auth/entity-currency")) return answer(200, { currency_code: "HKD" });
     if (path.endsWith("/auth/xero-status")) return answer(200, { connected: true });
@@ -374,5 +382,118 @@ describe("a system superuser looking at a company they are not in", () => {
     expect(
       await screen.findByText("Read-only access — you are not a member of this entity."),
     ).toBeInTheDocument();
+  });
+});
+
+describe("bulk Publish", () => {
+  const KEE = billListItem({
+    id: "b-kee",
+    reference: "PR-0101",
+    status: "submitted",
+    contact: "Kee Wah",
+  });
+  const SAM = billListItem({
+    id: "b-sam",
+    reference: "PR-0102",
+    status: "submitted",
+    contact: "Sam's Fish",
+  });
+  const LEE = billListItem({
+    id: "b-lee",
+    reference: "PR-0103",
+    status: "submitted",
+    contact: "Lee Garden",
+  });
+  const ARCHIVED = {
+    detail: "Kee Wah is archived in Xero. Restore it in Xero, or map it to another contact now.",
+    archived_contacts: [{ id: "mc-kee", name: "Kee Wah" }],
+  };
+
+  async function publishThree() {
+    await loaded();
+    for (const name of ["Kee Wah", "Sam's Fish", "Lee Garden"]) {
+      await userEvent.click(table().getByRole("checkbox", { name: `Select row ${name}` }));
+    }
+    await userEvent.click(screen.getByRole("button", { name: "Bulk actions, 3 selected" }));
+    await userEvent.click(screen.getByRole("menuitem", { name: "Publish" }));
+  }
+
+  it("opens the archived-contact form, maps, and publishes only the bills it held back", async () => {
+    const published: string[] = [];
+    let keeTries = 0;
+    serve({
+      pages: [[KEE, SAM, LEE]],
+      route: (path, init) => {
+        const m = path.match(/\/bills\/([^/]+)\/publish\/$/);
+        if (m && init?.method === "POST") {
+          published.push(m[1]);
+          if (m[1] === "b-kee") return keeTries++ === 0 ? answer(409, ARCHIVED) : answer(200, KEE);
+          if (m[1] === "b-lee")
+            return answer(400, {
+              detail: "Lee Garden has no account code yet. Add one to publish it.",
+            });
+          return answer(200, SAM);
+        }
+        if (path.endsWith("/entity-bill-contacts/xero/"))
+          return answer(200, [{ xero_contact_id: "x-kwb", name: "Kee Wah Bakery" }]);
+        if (path.endsWith("/entity-bill-contacts/mc-kee/xero-link/"))
+          return answer(200, {
+            message: "Kee Wah now uses Kee Wah Bakery in Xero.",
+            contact_id: "mc-kee",
+          });
+        return undefined;
+      },
+    });
+    show();
+    await publishThree();
+
+    const dialog = await screen.findByRole("dialog", { name: "A contact is archived in Xero" });
+    expect(published.sort()).toEqual(["b-kee", "b-lee", "b-sam"]);
+    expect(
+      await screen.findByText(
+        "1 payment request wasn't published. Lee Garden has no account code yet. Add one to publish it.",
+      ),
+    ).toBeInTheDocument();
+
+    const box = within(dialog).getByRole("combobox", { name: "Map Kee Wah to" });
+    await userEvent.click(box);
+    await userEvent.clear(box);
+    await userEvent.click(await screen.findByRole("option", { name: "Kee Wah Bakery" }));
+    await userEvent.click(within(dialog).getByRole("button", { name: "Map and publish" }));
+
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog", { name: "A contact is archived in Xero" })).toBeNull(),
+    );
+    await waitFor(() => expect(published.filter((id) => id === "b-kee")).toHaveLength(2));
+    expect(published.filter((id) => id !== "b-kee").sort()).toEqual(["b-lee", "b-sam"]);
+  });
+
+  it("Go back leaves the held bills unpublished and the list reloaded", async () => {
+    // list reads made once publishing began: the reload that shows what went
+    let readsAfterPublish = 0;
+    let publishing = false;
+    serve({
+      pages: [[KEE, SAM, LEE]],
+      onBills: () => {
+        if (publishing) readsAfterPublish++;
+      },
+      route: (path, init) => {
+        if (/\/publish\/$/.test(path) && init?.method === "POST") publishing = true;
+        if (/\/bills\/b-kee\/publish\/$/.test(path) && init?.method === "POST")
+          return answer(409, ARCHIVED);
+        if (/\/publish\/$/.test(path) && init?.method === "POST") return answer(200, SAM);
+        if (path.endsWith("/entity-bill-contacts/xero/"))
+          return answer(200, [{ xero_contact_id: "x-kwb", name: "Kee Wah Bakery" }]);
+        return undefined;
+      },
+    });
+    show();
+    await publishThree();
+
+    const dialog = await screen.findByRole("dialog", { name: "A contact is archived in Xero" });
+    await waitFor(() => expect(readsAfterPublish).toBeGreaterThan(0));
+    await userEvent.click(within(dialog).getByRole("button", { name: "Go back" }));
+    expect(screen.queryByRole("dialog", { name: "A contact is archived in Xero" })).toBeNull();
+    expect(document.querySelector("[data-toast-type='error']")).toBeNull();
   });
 });

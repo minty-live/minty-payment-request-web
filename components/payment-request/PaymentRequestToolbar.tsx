@@ -156,6 +156,8 @@ export function PaymentRequestToolbar({
   const filterButtonRef = useRef<HTMLButtonElement | null>(null);
   const bulkWrapRef = useRef<HTMLDivElement | null>(null);
   const bulkButtonRef = useRef<HTMLButtonElement | null>(null);
+  /** Where the bulk button was when its menu opened: a scroll that leaves it there keeps the menu. */
+  const bulkAnchorRef = useRef<{ bottom: number; right: number } | null>(null);
   const statusWrapRef = useRef<HTMLDivElement | null>(null);
   const statusButtonRef = useRef<HTMLButtonElement | null>(null);
   const [minAmount, setMinAmount] = useState("");
@@ -272,6 +274,19 @@ export function PaymentRequestToolbar({
       }
     };
     const onResizeOrScroll = () => {
+      // The menu is placed under the button once, so it closes when the button moves - not on a
+      // scroll that left it where it was (2026-11-19: on a phone the page can still be settling
+      // from a flick, or from bringing the button into view, as it is tapped, and that late scroll
+      // event used to close the menu the moment it opened).
+      const now = bulkButtonRef.current?.getBoundingClientRect();
+      const then = bulkAnchorRef.current;
+      if (
+        now &&
+        then &&
+        Math.abs(now.bottom - then.bottom) < 1 &&
+        Math.abs(now.right - then.right) < 1
+      )
+        return;
       setBulkOpen(false);
       setBulkMenu(null);
     };
@@ -326,6 +341,7 @@ export function PaymentRequestToolbar({
         return false;
       }
       const rect = trigger.getBoundingClientRect();
+      bulkAnchorRef.current = { bottom: rect.bottom, right: rect.right };
       const left = Math.max(8, rect.right - BULK_MENU_MIN_WIDTH_PX);
       const top = rect.bottom + 8;
       setBulkMenu({ top, left, minWidth: BULK_MENU_MIN_WIDTH_PX });
@@ -525,7 +541,9 @@ export function PaymentRequestToolbar({
           </div>
         </div>
 
-        <div className="flex w-full min-w-0 flex-row items-center gap-2 sm:gap-2 xl:w-auto xl:max-w-3xl xl:flex-1">
+        {/* A phone: search on its own line, its buttons on the next (Bulk Actions included - the owner's
+            mobile-first rule, 2026-11-19); one line from 640px. */}
+        <div className="flex w-full min-w-0 flex-row flex-wrap items-center gap-2 sm:flex-nowrap sm:gap-2 xl:w-auto xl:max-w-3xl xl:flex-1">
           <label htmlFor="payment-request-search" className="sr-only">
             Search by supplier, description or amount
           </label>
@@ -535,7 +553,7 @@ export function PaymentRequestToolbar({
           so a keydown test can never fire there. Submitting works on both.
         */}
           <form
-            className="relative min-w-0 flex-1"
+            className="relative w-full min-w-0 sm:w-auto sm:flex-1"
             onSubmit={(e) => {
               e.preventDefault();
               onSearchSubmit?.();
@@ -554,7 +572,7 @@ export function PaymentRequestToolbar({
               suppressHydrationWarning
             />
           </form>
-          <div className="flex shrink-0 items-center gap-2">
+          <div className="flex min-w-0 flex-wrap items-center gap-2 sm:shrink-0 sm:flex-nowrap">
             <div ref={filterWrapRef} className="relative">
               <button
                 ref={filterButtonRef}
@@ -764,7 +782,7 @@ export function PaymentRequestToolbar({
               startDate={csvRange?.start}
               endDate={csvRange?.end}
             />
-            <div ref={bulkWrapRef} className="relative hidden sm:block">
+            <div ref={bulkWrapRef} className="relative">
               <button
                 ref={bulkButtonRef}
                 type="button"

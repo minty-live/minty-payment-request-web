@@ -17,6 +17,7 @@ import {
 import { PaymentRequestPagination, PAGE_SIZE_OPTIONS } from "./PaymentRequestPagination";
 import { PaymentRequestTotalsBanner } from "./PaymentRequestTotalsBanner";
 import { billsCsvRange } from "./BillCsvDownload";
+import { ArchivedContactsDialog } from "./ArchivedContactsDialog";
 import { BulkDeleteConfirmModal } from "./BulkDeleteConfirmModal";
 import { RecordPaymentModal } from "./RecordPaymentModal";
 import { RowDeleteConfirmModal } from "./RowDeleteConfirmModal";
@@ -26,11 +27,8 @@ import {
   deleteBill,
   fetchBill,
   fetchBills,
-  isXeroAuthError,
   ApiError,
-  publishBill,
   returnBill,
-  XERO_RECONNECT_MESSAGE,
   type BillAttachment,
   type BillListItem,
   type BillDetail,
@@ -45,6 +43,7 @@ import {
   isoDateInTimeZone,
 } from "@/lib/dateDisplayFormat";
 import { getAuth } from "@/lib/auth";
+import { failedSummary, publishEach, type BulkPublishResult } from "@/lib/bulkPublish";
 import { compareRows, type SortKey } from "@/lib/paymentRequestRowSort";
 import { rowMatchesSearch, type SearchMode } from "@/lib/paymentRequestSearch";
 import { useUserRole } from "@/lib/useUserRole";
@@ -206,6 +205,8 @@ export function PaymentRequestView({ easyView }: PaymentRequestViewProps) {
   >([]);
   const [easyViewInvoiceLoading, setEasyViewInvoiceLoading] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
+  /** Bills a publish held back over contacts Xero archived (C4): map them, then publish these again. */
+  const [heldBack, setHeldBack] = useState<BulkPublishResult["archived"] | null>(null);
   const [bulkDeleteModalOpen, setBulkDeleteModalOpen] = useState(false);
   const [bulkDeletePending, setBulkDeletePending] = useState(false);
   const [easyViewBankSlipRowId, setEasyViewBankSlipRowId] = useState<string | null>(null);
@@ -804,21 +805,34 @@ export function PaymentRequestView({ easyView }: PaymentRequestViewProps) {
     }
   }, [activeSelectedIds, loadBills, removeBillsLocally, showToast]);
 
+  /**
+   * Publish from the list - Bulk Actions, a row's Publish or Republish (owner's decisions C4,
+   * 2026-11-19). Every bill is sent and every answer waited for (`publishEach`), then the list is
+   * read again, so bills that went are shown as published even when others were refused. Bills
+   * held back over contacts Xero archived open the same form a single bill does (each contact
+   * once); once mapped, only those bills are published again. Any other refusal is one toast.
+   * Returns the bills that did not go.
+   */
+  const publishBills = useCallback(
+    async (ids: string[]): Promise<string[]> => {
+      const result = await publishEach(ids);
+      await loadBills();
+      const refused = result.failed;
+      if (refused.length) {
+        showToast(ids.length === 1 ? refused[0].message : (failedSummary(refused) ?? ""), "error");
+      }
+      if (result.archived.billIds.length) setHeldBack(result.archived);
+      return [...result.archived.billIds, ...refused.map((f) => f.id)];
+    },
+    [loadBills, showToast],
+  );
+
   const runBulkPublishSelected = useCallback(async () => {
     if (activeSelectedIds.length < 2) return;
-    try {
-      await Promise.all(activeSelectedIds.map((id) => publishBill(id)));
-      await loadBills();
-      setSelectedIds(new Set());
-    } catch (err) {
-      showToast(
-        err instanceof ApiError
-          ? err.message
-          : "Those payments didn't quite make it over. Mind trying again?",
-        "error",
-      );
-    }
-  }, [activeSelectedIds, loadBills, showToast]);
+    // what went leaves the selection; what did not stays picked, ready to try again
+    const notSent = await publishBills(activeSelectedIds);
+    setSelectedIds(new Set(notSent));
+  }, [activeSelectedIds, publishBills]);
 
   /** A deliberate narrowing of the list: search or the filter panel. */
   const hasActiveFilters =
@@ -1032,38 +1046,13 @@ export function PaymentRequestView({ easyView }: PaymentRequestViewProps) {
                   }
                 }}
                 onRowPublish={async (rowId) => {
-                  try {
-                    await publishBill(rowId);
-                    await loadBills();
-                  } catch (err) {
-                    showToast(
-                      err instanceof ApiError
-                        ? err.message
-                        : "This payment didn't quite make it over. Mind trying again?",
-                      "error",
-                    );
-                  }
+                  await publishBills([rowId]);
                 }}
+                // Same endpoint as publish - there is no separate republish route. Republish is
+                // the path taken right after reconnecting Xero, so a Xero sign-in refusal reads
+                // as the reconnect hint (publishEach), as on the detail page.
                 onRowRepublish={async (rowId) => {
-                  // Same endpoint as publish - there is no separate republish
-                  // route. This prop was declared and called by the row menu
-                  // but never passed, so the menu item did nothing at all.
-                  try {
-                    await publishBill(rowId);
-                    await loadBills();
-                  } catch (err) {
-                    // Republish is the path taken right after reconnecting
-                    // Xero, so surface the reconnect hint the detail page
-                    // already gives rather than a raw API message.
-                    showToast(
-                      isXeroAuthError(err)
-                        ? XERO_RECONNECT_MESSAGE
-                        : err instanceof ApiError
-                          ? err.message
-                          : "This payment didn't quite make it over. Mind trying again?",
-                      "error",
-                    );
-                  }
+                  await publishBills([rowId]);
                 }}
                 onBankSlipUploaded={loadBills}
                 onRetryBankSlips={retryBankSlips}
@@ -1074,6 +1063,25 @@ export function PaymentRequestView({ easyView }: PaymentRequestViewProps) {
           </>
         )}
       </main>
+      {heldBack ? (
+        <ArchivedContactsDialog
+          contacts={heldBack.contacts}
+          onCancel={() => setHeldBack(null)}
+          onMapped={() => {
+            const ids = heldBack.billIds;
+            setHeldBack(null);
+            void publishBills(ids).then((notSent) =>
+              setSelectedIds((picked) => {
+                const next = new Set(picked);
+                ids.forEach((id) => {
+                  if (!notSent.includes(id)) next.delete(id);
+                });
+                return next;
+              }),
+            );
+          }}
+        />
+      ) : null}
       <BulkDeleteConfirmModal
         open={bulkDeleteModalOpen}
         selectedCount={activeSelectedIds.length}

@@ -276,9 +276,18 @@ archived in Xero. Restore it in Xero, or map it to another contact now." and a s
 again.". **Go back** changes nothing; **Map and publish** stays greyed, its reason beside it,
 until every contact has a pick, then sends `POST /entity-bill-contacts/<id>/xero-link/` for each,
 toasts each answer's sentence and publishes again. A refused mapping shows its sentence in the
-dialog, which stays open; a contact already mapped is not sent twice. Bulk publish and the list
-row's Publish / Republish keep the error toast with the API's sentence (the person maps from that
-request's page). Minty never restores anything in the customer's Xero.
+dialog, which stays open; a contact already mapped is not sent twice. **The list** (Bulk Actions'
+Publish, a row's Publish and Republish; 2026-11-19) goes through `PaymentRequestView`'s
+`publishBills` and `lib/bulkPublish.ts`'s `publishEach`: every bill is sent and every answer waited
+for (one refusal no longer hides what the others did), then the list is read again. Bills held back
+over archived contacts open the same dialog, each contact once however many bills share it, and
+once mapped only those bills are published again; any other refusal is one error toast
+(`failedSummary`: "2 payment requests weren't published." and each distinct sentence once; a single
+row's own sentence; a Xero sign-in refusal reads as the reconnect sentence). After a bulk publish the
+bills that went leave the selection and the ones that did not stay picked. Rows are picked at every
+width (2026-11-19, the owner's mobile-first rule): the card list below 1024px has each card's
+checkbox in a 44px tap target, and on a phone the toolbar puts search on its own line with Filter,
+Download CSV and Bulk Actions on the next (one line from 640px). Minty never restores anything in the customer's Xero.
 
 ## The duplicate reminder before a save (owner's decisions doc DUP1, 2026-11-19)
 
