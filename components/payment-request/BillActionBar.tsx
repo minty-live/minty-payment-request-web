@@ -16,6 +16,8 @@ type BillActionBarProps = {
   onPublishToXero?: () => void;
   deleteDisabled?: boolean;
   publishDisabled?: boolean;
+  /** Why Publish is held, shown beside it (a gated button says why; e.g. an edit not saved yet). */
+  publishDisabledReason?: string;
   publishStatus?: "draft" | "published" | "failed";
   publishPending?: boolean;
   draftSubmit?: {
@@ -41,6 +43,7 @@ export function BillActionBar({
   onPublishToXero,
   deleteDisabled,
   publishDisabled,
+  publishDisabledReason,
   publishStatus,
   publishPending,
   draftSubmit,
@@ -60,6 +63,7 @@ export function BillActionBar({
   const removePrimaryLabel = isDraftBill ? "Delete Payment" : "Void Payment";
   const isPublished = publishStatus === "published";
   const menuId = useId();
+  const publishReasonId = useId();
   const btnRef = useRef<HTMLButtonElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [pos, setPos] = useState({ top: 0, left: 0 });
@@ -110,25 +114,37 @@ export function BillActionBar({
             style={{ top: pos.top, left: pos.left, minWidth: ROW_MENU_MIN_WIDTH_PX }}
           >
             {(overflowShowPublish || overflowShowRepublish) && !mintyOnly ? (
-              <button
-                type="button"
-                role="menuitem"
-                disabled={publishItemDisabled}
-                className="block w-full cursor-pointer px-3 py-2 text-left text-sm font-medium text-text-secondary transition-colors hover:bg-state-hover disabled:cursor-not-allowed disabled:opacity-50"
-                onClick={() => {
-                  if (publishItemDisabled) return;
-                  setMenuOpen(false);
-                  void onPublishToXero?.();
-                }}
-              >
-                {publishPending
-                  ? overflowShowRepublish
-                    ? "Republishing…"
-                    : "Publishing…"
-                  : overflowShowRepublish
-                    ? "Republish"
-                    : "Publish"}
-              </button>
+              <>
+                <button
+                  type="button"
+                  role="menuitem"
+                  disabled={publishItemDisabled}
+                  aria-describedby={publishDisabledReason ? publishReasonId : undefined}
+                  className="block w-full cursor-pointer px-3 py-2 text-left text-sm font-medium text-text-secondary transition-colors hover:bg-state-hover disabled:cursor-not-allowed disabled:opacity-50"
+                  onClick={() => {
+                    if (publishItemDisabled) return;
+                    setMenuOpen(false);
+                    void onPublishToXero?.();
+                  }}
+                >
+                  {publishPending
+                    ? overflowShowRepublish
+                      ? "Republishing…"
+                      : "Publishing…"
+                    : overflowShowRepublish
+                      ? "Republish"
+                      : "Publish"}
+                </button>
+                {publishDisabledReason ? (
+                  // w-0 + min-w-full: the line wraps to the menu's width instead of widening it.
+                  <p
+                    id={publishReasonId}
+                    className="w-0 min-w-full px-3 pb-2 text-xs text-text-muted"
+                  >
+                    {publishDisabledReason}
+                  </p>
+                ) : null}
+              </>
             ) : null}
             <button
               type="button"
@@ -222,7 +238,8 @@ export function BillActionBar({
           disabled={isPublished || publishPending || publishDisabled}
           title={
             publishDisabled
-              ? "This payment's been voided, so there's nothing to publish."
+              ? (publishDisabledReason ??
+                "This payment's been voided, so there's nothing to publish.")
               : undefined
           }
           className={

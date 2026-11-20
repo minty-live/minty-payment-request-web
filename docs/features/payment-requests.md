@@ -228,7 +228,10 @@ is fresh.
   **Void** / Delete; while a publish runs, a `role="status"` "Publishing…" is shown and
   the trigger is disabled; a failure is an error toast (`components/Toast.tsx`,
   `role="alert"`). Elevated roles only for publish, void, return and payments
-  (`useUserRole`).
+  (`useUserRole`). While the request is being edited, **Publish** / **Republish** is greyed
+  with "Save your changes first, then publish." under it in the menu (`publishDisabledReason`,
+  the item's `aria-describedby`; 2026-11-20): a publish sends what is saved, not what is being
+  typed. Void / Delete stay offered behind their question.
 - the attachment preview (`InvoiceAttachmentPreview.tsx`, PDFs rendered with pdf.js from
   `/public/pdfjs` — `PdfJsCanvasPreview.tsx`; images inline) with upload / delete
   (`UploadInvoiceAttachmentModal`, `AttachmentDeleteConfirmModal`) — the bytes are fetched

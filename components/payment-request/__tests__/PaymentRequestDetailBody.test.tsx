@@ -502,6 +502,55 @@ describe("publishing it", () => {
     );
     expect(calls.some((c) => c.path.endsWith(`/bills/${BILL_ID}/publish/`))).toBe(true);
   });
+
+  // 2026-11-20 (Save buttons that cover what the screen saves, item 5): a publish sends what is
+  // saved, not what is being typed, so Publish waits for Save Changes and says so beside it.
+  it("is held while the request is being edited, with the reason beside it", async () => {
+    const { calls } = serve();
+    show();
+    await loaded();
+
+    await userEvent.click(screen.getByRole("button", { name: "Edit" }));
+    await screen.findByRole("button", { name: "Save Changes" });
+    await userEvent.click(screen.getByRole("button", { name: "More payment actions" }));
+
+    const publish = await screen.findByRole("menuitem", { name: "Publish" });
+    expect(publish).toBeDisabled();
+    expect(publish).toHaveAccessibleDescription("Save your changes first, then publish.");
+    expect(screen.getByText("Save your changes first, then publish.")).toBeVisible();
+
+    await userEvent.click(publish);
+    expect(calls.some((c) => c.path.endsWith("/publish/"))).toBe(false);
+  });
+
+  it("is offered again once the edit is left", async () => {
+    serve();
+    show();
+    await loaded();
+
+    await userEvent.click(screen.getByRole("button", { name: "Edit" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Cancel" }));
+    await screen.findByRole("button", { name: "Edit" });
+    await userEvent.click(screen.getByRole("button", { name: "More payment actions" }));
+
+    const publish = await screen.findByRole("menuitem", { name: "Publish" });
+    expect(publish).toBeEnabled();
+    expect(screen.queryByText("Save your changes first, then publish.")).not.toBeInTheDocument();
+  });
+
+  it("still lets Void be asked for while editing, behind its question", async () => {
+    const { calls } = serve();
+    show();
+    await loaded();
+
+    await userEvent.click(screen.getByRole("button", { name: "Edit" }));
+    await screen.findByRole("button", { name: "Save Changes" });
+    await userEvent.click(screen.getByRole("button", { name: "More payment actions" }));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Void" }));
+
+    expect(await screen.findByRole("alertdialog")).toHaveAccessibleName("Void this payment?");
+    expect(calls.some((c) => c.method === "DELETE")).toBe(false);
+  });
 });
 
 // "Map it to another contact now" (owner's decisions, C4, 2026-11-19): a publish refused over

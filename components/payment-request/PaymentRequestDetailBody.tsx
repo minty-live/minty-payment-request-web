@@ -1504,8 +1504,15 @@ export function PaymentRequestDetailBody({ onBillUpdated }: PaymentRequestDetail
               (!!bill && billLockedForRole(bill.status, isElevated))
             }
             publishDisabled={
-              loadingBill || !bill || isViewOnly || bill?.status === "void" || !isElevated
+              loadingBill ||
+              !bill ||
+              isViewOnly ||
+              bill?.status === "void" ||
+              !isElevated ||
+              isEditing
             }
+            // A publish sends what is saved, not what is being typed (2026-11-20).
+            publishDisabledReason={isEditing ? "Save your changes first, then publish." : undefined}
             publishStatus={(bill?.published as "draft" | "published" | "failed") ?? "draft"}
             publishPending={isPublishing}
             showVoidBill={false}
