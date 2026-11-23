@@ -544,7 +544,7 @@ describe("an invoice in another currency", () => {
     await attachAndRead(pdf());
     await waitFor(() => expect(byId("pr-amount")).toHaveValue("96.82"));
     // owner, 2026-11-23: the original amount and the rate follow the description
-    expect(byId("pr-description")).toHaveValue("Office chairs · USD 12.34 Exchange Rate 7.846");
+    expect(byId("pr-description")).toHaveValue("Office chairs (USD 12.34 @7.846)");
     expect(byId("pr-amount")).toHaveAccessibleDescription(
       "Suggested from the invoice. Converted from USD\u00a012.34 at 1 USD = 7.846 HKD (13 Nov 2026 rate).",
     );
@@ -577,7 +577,7 @@ describe("an invoice in another currency", () => {
     show();
     await attachAndRead(pdf());
     await waitFor(() => expect(byId("pr-amount")).toHaveValue("96.82"));
-    expect(byId("pr-description")).toHaveValue("USD 12.34 Exchange Rate 7.846");
+    expect(byId("pr-description")).toHaveValue("(USD 12.34 @7.846)");
   });
 
   it("a person's own amount drops the conversion", async () => {
@@ -617,5 +617,82 @@ describe("an invoice in another currency", () => {
         "I couldn't get an exchange rate for TWD. Enter the amount in HKD.",
       ),
     ).toBeInTheDocument();
+  });
+});
+
+// The owner's launch decisions, 2026-11-23 (IRD "A Guide to Keeping Business Records").
+const NO_EVIDENCE =
+  "We can't tell what this payment was for, so this document isn't sufficient as an invoice. Please attach a receipt or invoice that shows the goods or services.";
+const SEVERAL = "This file contains more than one invoice. Please upload each invoice separately.";
+
+describe("an invoice that isn't one record of a payment", () => {
+  it("one that doesn't say what was paid for fills nothing and says why; the file stays", async () => {
+    serve({ extract: () => json(200, { suggestions: null, reason: "no_description" }) });
+    show();
+    await attachAndRead(pdf());
+
+    expect(await within(dialog()).findByText(NO_EVIDENCE)).toHaveAttribute("role", "status");
+    expect(byId("pr-amount")).toHaveValue("");
+    expect(within(dialog()).queryByText(FAILED)).toBeNull();
+    expect(within(dialog()).queryByText(CAUTION)).toBeNull();
+    expect(within(dialog()).getAllByText("invoice.pdf").length).toBeGreaterThan(0);
+    expect(
+      within(dialog()).queryByText("The supplier is still empty. Choose a supplier to continue."),
+    ).toBeNull();
+  });
+
+  it("several in one file ask for one at a time in an OK-only question", async () => {
+    serve({ extract: () => json(200, { suggestions: null, reason: "several_documents" }) });
+    show();
+    await attachAndRead(pdf("two.pdf"));
+
+    const question = await screen.findByRole("alertdialog", { name: "More than one invoice" });
+    expect(question).toHaveTextContent(SEVERAL);
+    expect(within(question).getAllByRole("button")).toHaveLength(1);
+    expect(byId("pr-amount")).toHaveValue("");
+    await userEvent.click(within(question).getByRole("button", { name: "OK" }));
+    expect(screen.queryByRole("alertdialog")).toBeNull();
+    expect(within(dialog()).getAllByText("two.pdf").length).toBeGreaterThan(0);
+  });
+
+  it("another read takes the sentence away", async () => {
+    let answer: unknown = { suggestions: null, reason: "no_description" };
+    serve({ extract: () => json(200, answer) });
+    show();
+    await attachAndRead(pdf());
+    await within(dialog()).findByText(NO_EVIDENCE);
+    answer = READ;
+    await attachAndRead(pdf("another.pdf"));
+    await waitFor(() => expect(byId("pr-amount")).toHaveValue("1,200.50"));
+    expect(within(dialog()).queryByText(NO_EVIDENCE)).toBeNull();
+  });
+});
+
+describe("required fields the read left empty", () => {
+  it("turn red at once with their sentence - no summary, no focus move", async () => {
+    const rest = { ...READ.suggestions, supplier: undefined, account: undefined };
+    serve({ extract: () => json(200, { suggestions: rest, reason: null }) });
+    show();
+    await attachAndRead(pdf());
+    await waitFor(() => expect(byId("pr-amount")).toHaveValue("1,200.50"));
+
+    const supplierLine = "The supplier is still empty. Choose a supplier to continue.";
+    expect(within(dialog()).getByText(supplierLine)).toBeInTheDocument();
+    expect(
+      within(dialog()).getByText("The account is still empty. Choose an account to continue."),
+    ).toBeInTheDocument();
+    expect(
+      within(dialog()).queryByText("The amount is still empty. Add the amount to continue."),
+    ).toBeNull();
+    expect(byId("pr-contact")).not.toHaveFocus();
+    expect(screen.queryByText(/details need a look/)).toBeNull(); // the summary is a refused Confirm's
+  });
+
+  it("a read that fills every required field marks nothing", async () => {
+    serve();
+    show();
+    await attachAndRead(pdf());
+    await waitFor(() => expect(byId("pr-amount")).toHaveValue("1,200.50"));
+    expect(within(dialog()).queryByText(/is still empty/)).toBeNull();
   });
 });

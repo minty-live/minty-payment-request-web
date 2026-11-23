@@ -118,8 +118,22 @@ rate (minty-payment-request-api `docs/features/invoice-reader.md`), so it fills 
 "Suggested from the invoice. Converted from USD 12.34 at 1 USD = 7.846 HKD (13 Nov 2026 rate)." (plus
 ", the last business day before ..." when a weekend or holiday moved the rate's day); the caution
 stays the one sentence. Draft and Confirm send `exchange` (`exchangeFields`) only while the amount
-still holds the converted figure; another amount drops it. The description gets the original amount and the rate after what was read (owner, 2026-11-23): "Office chairs · PHP 10,000.00 Exchange Rate 0.13456" (`exchangeText`), or that alone - only when this read's converted amount filled the Amount box, never over a typed description. No rate: the amount stays empty with "I
+still holds the converted figure; another amount drops it. The description gets the original amount and the rate after what was read (owner, 2026-11-23): "Office chairs (PHP 10,000.00 @0.13456)" (`@minty/shared`'s `exchangeNote`, owner's launch decisions), or that alone - only when this read's converted amount filled the Amount box, never over a typed description. No rate: the amount stays empty with "I
 couldn't get an exchange rate for TWD. Enter the amount in HKD." under it.
+**An invoice that isn't one record of a payment** (owner's launch decisions, 2026-11-23, after IRD's
+"A Guide to Keeping Business Records"): the API answers `{suggestions: null}` with `no_description`
+(what was paid for can't be described or inferred) or `several_documents`, through
+`useDocumentReader`'s `onRefused`. `no_description` puts "We can't tell what this payment was for,
+so this document isn't sufficient as an invoice. Please attach a receipt or invoice that shows the
+goods or services." (`NO_EVIDENCE`) where the failure line goes; `several_documents` opens an
+OK-only question (`ConfirmDialog`, `acknowledgeOnly`): "More than one invoice" - "This file contains
+more than one invoice. Please upload each invoice separately." (`SEVERAL_INVOICES`). Nothing is
+filled, the file stays, and nothing is blocked; another read or file takes it away. An inferred
+description comes in the low band ("Check it before you submit."). **Required fields a read left
+empty** (owner, 2026-11-23): after a read that filled anything, the supplier, account, amount and
+the two dates still empty turn red at once with their own sentences (`lib/formMessages.ts`) - with
+no error summary and no focus move, which stay a refused Confirm's (`ErrorSummary` shows only once
+Confirm has been refused).
 
 - **Filling:** a suggestion fills the supplier (by its Xero id from the company's list), the
   invoice and due dates, the amount (in the company currency's places), the description and the

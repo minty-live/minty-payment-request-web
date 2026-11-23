@@ -198,3 +198,76 @@ for (const size of [
       await page.screenshot({ path: `${process.env.E2E_SHOTS}/prw-fx-${size.width}.png` });
   });
 }
+
+// The owner's launch decisions, 2026-11-23 (IRD "A Guide to Keeping Business Records").
+for (const size of [
+  { width: 360, height: 740 },
+  { width: 768, height: 1024 },
+  { width: 1440, height: 900 },
+]) {
+  test(`an invoice that doesn't say what was paid for fills nothing and says why (${size.width}px)`, async ({
+    page,
+  }) => {
+    await page.setViewportSize(size);
+    const { dialog } = await openAddDialog(page, true, {
+      suggestions: null,
+      reason: "no_description",
+    });
+    await dialog.locator('input[type="file"]').first().setInputFiles(PDF);
+    await dialog.getByRole("button", { name: "Read invoice" }).click();
+
+    const line = dialog.getByText(
+      "We can't tell what this payment was for, so this document isn't sufficient as an invoice. Please attach a receipt or invoice that shows the goods or services.",
+    );
+    await expect(line).toBeVisible();
+    await expect(dialog.locator("#pr-amount")).toHaveValue("");
+    await expectNoSideScroll(page, size.width);
+    await line.scrollIntoViewIfNeeded();
+    if (process.env.E2E_SHOTS)
+      await page.screenshot({ path: `${process.env.E2E_SHOTS}/prw-no-evidence-${size.width}.png` });
+  });
+
+  test(`several invoices in one file ask for one at a time (${size.width}px)`, async ({ page }) => {
+    await page.setViewportSize(size);
+    const { dialog } = await openAddDialog(page, true, {
+      suggestions: null,
+      reason: "several_documents",
+    });
+    await dialog.locator('input[type="file"]').first().setInputFiles(PDF);
+    await dialog.getByRole("button", { name: "Read invoice" }).click();
+
+    const question = page.getByRole("alertdialog", { name: "More than one invoice" });
+    await expect(question).toContainText(
+      "This file contains more than one invoice. Please upload each invoice separately.",
+    );
+    await expectNoSideScroll(page, size.width);
+    if (process.env.E2E_SHOTS)
+      await page.screenshot({ path: `${process.env.E2E_SHOTS}/prw-several-${size.width}.png` });
+    await question.getByRole("button", { name: "OK" }).click();
+    await expect(question).toHaveCount(0);
+    await expect(dialog.locator("#pr-amount")).toHaveValue("");
+  });
+
+  test(`required fields a read left empty are red with their sentence (${size.width}px)`, async ({
+    page,
+  }) => {
+    await page.setViewportSize(size);
+    const { dialog } = await openAddDialog(page, true); // amount and description only
+    await dialog.locator('input[type="file"]').first().setInputFiles(PDF);
+    await dialog.getByRole("button", { name: "Read invoice" }).click();
+
+    await expect(dialog.locator("#pr-amount")).toHaveValue("1,200.50");
+    const supplierLine = dialog.getByText(
+      "The supplier is still empty. Choose a supplier to continue.",
+    );
+    await expect(supplierLine).toBeVisible();
+    await expect(
+      dialog.getByText("The account is still empty. Choose an account to continue."),
+    ).toBeVisible();
+    await expect(dialog.getByText(/details need a look/)).toHaveCount(0);
+    await expectNoSideScroll(page, size.width);
+    await supplierLine.scrollIntoViewIfNeeded();
+    if (process.env.E2E_SHOTS)
+      await page.screenshot({ path: `${process.env.E2E_SHOTS}/prw-red-${size.width}.png` });
+  });
+}

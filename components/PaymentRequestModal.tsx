@@ -55,6 +55,7 @@ import {
 } from "@minty/shared/money";
 import { useAmountInput } from "@minty/shared/amountInput";
 import { ErrorSummary } from "@minty/shared/ui";
+import { ConfirmDialog } from "@/components/payment-request/ConfirmDialog";
 import {
   cleared,
   AiCaution,
@@ -63,6 +64,7 @@ import {
   exchangeFields,
   exchangeKept,
   exchangeOf,
+  type EvidenceRefusal,
   type Exchange,
   AllowanceNote,
   ReadButton,
@@ -83,6 +85,7 @@ import {
   invoiceSpec,
   invoiceState,
   NEW_CONTACT_DETAIL,
+  NO_EVIDENCE,
   readNameDetail,
   readContact,
   READ_FAILED,
@@ -91,6 +94,7 @@ import {
   READING_TITLE,
   showedAnything,
   rateMissingText,
+  SEVERAL_INVOICES,
   suggestedText,
   USE_LABEL,
   withInvoiceSuggestions,
@@ -535,6 +539,9 @@ export function PaymentRequestModal({
   const [rateMissing, setRateMissing] = useState<string | null>(null);
   // the supplier's name as the last read invoice prints it, said beside the picked supplier
   const [readName, setReadName] = useState<string | null>(null);
+  // an invoice that isn't one record of a payment (owner, 2026-11-23): nothing filled, and the form
+  // says why - a line under the upload, or an OK-only question for several invoices
+  const [refused, setRefused] = useState<EvidenceRefusal | null>(null);
   const reader = useDocumentReader<InvoiceSuggestions>({
     field: "invoice",
     latch: INVOICE_LATCH,
@@ -556,10 +563,25 @@ export function PaymentRequestModal({
       const missing = exchangeFailedOf(suggestions);
       setRateMissing(missing);
       const showed = showedAnything(next) || missing !== null;
-      if (showed) setAiFilled(true);
+      if (showed) {
+        setAiFilled(true);
+        // owner, 2026-11-23: a required field the read left empty is red at once, with its
+        // sentence - no summary and no focus move (those are a refused Confirm's)
+        const v = next.values;
+        const empty = validatePaymentRequestForm({
+          amount: v.amount,
+          contact: v.contact || (readContact(v)?.name ?? ""),
+          accountCode: v.accountCode,
+          invoiceDate: v.invoiceDate,
+          dueDate: v.dueDate,
+          attachmentCount: 1,
+        });
+        setFieldErrors((prev) => ({ ...prev, ...empty }));
+      }
       return showed;
     },
     onStatus: setReaderStatus,
+    onRefused: setRefused,
   });
   const { cancel: cancelRead } = reader;
   // One file per read (owner, 2026-11-18): the person chooses it by selecting it in the list (the
@@ -582,6 +604,7 @@ export function PaymentRequestModal({
     latest.current = { ...latest.current, aux: next, values: next.values };
   };
   const dropSuggestions = () => {
+    setRefused(null);
     setAiFilled(false);
     setExchange(null);
     setRateMissing(null);
@@ -712,6 +735,7 @@ export function PaymentRequestModal({
     setReadFileId(null);
     setReadAsked(false);
     setAiFilled(false);
+    setRefused(null);
     setExchange(null);
     setRateMissing(null);
     setReadName(null);
@@ -1123,7 +1147,12 @@ export function PaymentRequestModal({
               onRestore={restoreDraft}
               clearRef={draftClearRef}
             />
-            <ErrorSummary look="classic" items={summaryItems} attempt={summaryAttempt} />
+            {/* a refused Confirm's (a read's red fields never raise it; owner, 2026-11-23) */}
+            <ErrorSummary
+              look="classic"
+              items={summaryAttempt > 0 ? summaryItems : []}
+              attempt={summaryAttempt}
+            />
             <div className="min-w-0">
               {previewFile && previewObjectUrl ? (
                 <PaymentRequestInlinePreview
@@ -1254,6 +1283,8 @@ export function PaymentRequestModal({
               <ReadingNotice title={READING_TITLE} detail={READING_DETAIL} />
             ) : reader.failed ? (
               <ReadFailedLine text={READ_FAILED} />
+            ) : refused === "no_description" ? (
+              <ReadFailedLine text={NO_EVIDENCE} />
             ) : null}
             {readerStatus?.enabled && fileToRead && !INVOICE_LATCH.readerOff() ? (
               <div>
@@ -1269,6 +1300,7 @@ export function PaymentRequestModal({
                         dropSuggestions();
                         setReadFileId(fileToRead.id);
                       }
+                      setRefused(null);
                       setReadAsked(true);
                       void reader.read(fileToRead.file);
                     }}
@@ -1607,6 +1639,15 @@ export function PaymentRequestModal({
         currencyCode={entityCurrency}
         saves={{ draft: () => void handleSaveDraft(), confirm: () => void handleConfirm() }}
       />
+      <ConfirmDialog
+        open={refused === "several_documents"}
+        zIndex={440}
+        title={SEVERAL_INVOICES.title}
+        acknowledgeOnly
+        onClose={() => setRefused(null)}
+      >
+        {SEVERAL_INVOICES.text}
+      </ConfirmDialog>
     </div>,
     document.body,
   );
