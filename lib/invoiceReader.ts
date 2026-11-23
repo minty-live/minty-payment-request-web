@@ -43,6 +43,14 @@ export type InvoiceSuggestions = {
   exchange_failed?: { currency?: string };
 };
 
+/**
+ * "PHP 10,000.00 Exchange Rate 0.13456" (owner, 2026-11-23): the invoice's amount in its own
+ * currency and the rate used, for the description. A plain space - it is saved and sent to Xero.
+ */
+export function exchangeText(ex: Exchange): string {
+  return `${ex.original_currency} ${formatAmount(ex.original_amount, 2)} Exchange Rate ${ex.rate}`;
+}
+
 /** No rate for the invoice's currency (owner, 2026-11-19): the amount is the person's to type. */
 export function rateMissingText(currency: string, code: string | null | undefined): string {
   return code
@@ -248,11 +256,16 @@ export function withInvoiceSuggestions(
     );
   }
 
-  // The description: filled only, never argued with (as for receipts).
+  // The description: filled only, never argued with (as for receipts). A converted amount this read
+  // filled adds its currency and rate after it (owner, 2026-11-23): "Office chairs · PHP 10,000.00
+  // Exchange Rate 0.13456" - or the conversion alone when nothing was read.
   const description = s.description;
-  if (description?.applied && description.value && blank(values.description)) {
-    values.description = description.value;
-    marks.description = description.band;
+  const said = description?.applied && description.value ? description.value : "";
+  const conversion = s.exchange && filled.includes("amount") ? exchangeText(s.exchange) : "";
+  const text = [said, conversion].filter(Boolean).join(" · ");
+  if (text && blank(values.description)) {
+    values.description = text;
+    marks.description = said ? description!.band : "medium";
     filled.push("description");
   }
 

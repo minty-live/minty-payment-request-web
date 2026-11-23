@@ -442,6 +442,8 @@ describe("an invoice in another currency", () => {
     show();
     await attachAndRead(pdf());
     await waitFor(() => expect(byId("pr-amount")).toHaveValue("96.82"));
+    // owner, 2026-11-23: the original amount and the rate follow the description
+    expect(byId("pr-description")).toHaveValue("Office chairs · USD 12.34 Exchange Rate 7.846");
     expect(byId("pr-amount")).toHaveAccessibleDescription(
       "Suggested from the invoice. Converted from USD\u00a012.34 at 1 USD = 7.846 HKD (13 Nov 2026 rate).",
     );
@@ -460,6 +462,20 @@ describe("an invoice in another currency", () => {
         exchange_rate_source: "Frankfurter",
       },
     });
+  });
+
+  it("with no description read, the description is the conversion alone", async () => {
+    serve({
+      extract: () =>
+        json(200, {
+          ...CONVERTED,
+          suggestions: { ...CONVERTED.suggestions, description: { ...field(""), applied: false } },
+        }),
+    });
+    show();
+    await attachAndRead(pdf());
+    await waitFor(() => expect(byId("pr-amount")).toHaveValue("96.82"));
+    expect(byId("pr-description")).toHaveValue("USD 12.34 Exchange Rate 7.846");
   });
 
   it("a person's own amount drops the conversion", async () => {

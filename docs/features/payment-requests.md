@@ -119,7 +119,7 @@ rate (minty-payment-request-api `docs/features/invoice-reader.md`), so it fills 
 ", the last business day before ..." when a weekend or holiday moved the rate's day), and the
 caution - which here names the invoice ("...against the invoice before saving.") - adds the rate's
 sentence. Draft and Confirm send `exchange` (`exchangeFields`) only while the amount
-still holds the converted figure; another amount drops it. No rate: the amount stays empty with "I
+still holds the converted figure; another amount drops it. The description gets the original amount and the rate after what was read (owner, 2026-11-23): "Office chairs · PHP 10,000.00 Exchange Rate 0.13456" (`exchangeText`), or that alone - only when this read's converted amount filled the Amount box, never over a typed description. No rate: the amount stays empty with "I
 couldn't get an exchange rate for TWD. Enter the amount in HKD." under it.
 
 - **Filling:** a suggestion fills the supplier (by its Xero id from the company's list), the
