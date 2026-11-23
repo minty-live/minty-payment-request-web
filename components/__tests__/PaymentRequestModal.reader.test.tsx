@@ -369,9 +369,8 @@ describe("Read invoice: the file and the company's AI allowance", () => {
 });
 
 // Owner, 2026-11-19: once a read has filled a field, the caution sits under the fields until the
-// bill is saved.
-const CAUTION =
-  "AI suggestions may be inaccurate. Please check every field against the invoice before saving.";
+// bill is saved. One sentence since 2026-11-23 (owner).
+const CAUTION = "AI suggestions may be inaccurate.";
 
 describe("the caution under AI-filled fields", () => {
   it("shows under the fields once a read fills them, read with Confirm and Save as Draft", async () => {
@@ -417,8 +416,6 @@ describe("the caution under AI-filled fields", () => {
 });
 
 // Owner, 2026-11-19: an invoice in another currency comes back converted at Frankfurter's rate.
-const FX_CAUTION =
-  "The exchange rate is a central bank reference rate and may differ from the amount actually charged.";
 const CONVERTED = {
   suggestions: {
     ...READ.suggestions,
@@ -447,7 +444,8 @@ describe("an invoice in another currency", () => {
     expect(byId("pr-amount")).toHaveAccessibleDescription(
       "Suggested from the invoice. Converted from USD\u00a012.34 at 1 USD = 7.846 HKD (13 Nov 2026 rate).",
     );
-    expect(document.getElementById("pr-ai-caution")).toHaveTextContent(`${CAUTION} ${FX_CAUTION}`);
+    // owner, 2026-11-23: the caution stays one sentence, no exchange-rate sentence
+    expect(document.getElementById("pr-ai-caution")?.textContent).toBe(CAUTION);
 
     await userEvent.click(screen.getByRole("button", { name: /^Confirm/ }));
     await waitFor(() => expect(seen.submits).toHaveLength(1));

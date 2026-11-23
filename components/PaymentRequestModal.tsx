@@ -1523,9 +1523,7 @@ export function PaymentRequestModal({
                 {readerExtras("account")}
               </div>
             </div>
-            {aiFilled ? (
-              <AiCaution id={AI_CAUTION_ID} exchange={converted !== null} document="invoice" />
-            ) : null}
+            {aiFilled ? <AiCaution id={AI_CAUTION_ID} /> : null}
           </div>
         </div>
 

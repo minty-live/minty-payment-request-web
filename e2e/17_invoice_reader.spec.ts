@@ -108,9 +108,7 @@ for (const size of [
     expect(reads[0]).toContain('name="invoice"; filename="invoice.pdf"');
     await expect(button).toHaveCount(0);
     // owner, 2026-11-19: the caution under the filled fields, read with Confirm
-    const caution = dialog.getByText(
-      "AI suggestions may be inaccurate. Please check every field against the invoice before saving.",
-    );
+    const caution = dialog.getByText("AI suggestions may be inaccurate.", { exact: true });
     await expect(caution).toBeVisible();
     await expect(dialog.getByRole("button", { name: "Confirm" })).toHaveAccessibleDescription(
       /^AI suggestions may be inaccurate/,
@@ -193,9 +191,7 @@ for (const size of [
       "Suggested from the invoice. Converted from USD\u00a012.34 at 1 USD = 7.846 HKD (13 Nov 2026 rate).",
     );
     const caution = dialog.locator("#pr-ai-caution");
-    await expect(caution).toContainText(
-      "The exchange rate is a central bank reference rate and may differ from the amount actually charged.",
-    );
+    await expect(caution).toHaveText("AI suggestions may be inaccurate."); // one sentence (owner, 2026-11-23)
     await expectNoSideScroll(page, size.width);
     await amount.scrollIntoViewIfNeeded();
     if (process.env.E2E_SHOTS)

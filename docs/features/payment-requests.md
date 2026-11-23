@@ -108,17 +108,16 @@ answer (`onStatus`); used up, the button is disabled with the reason beside it, 
 `limit_reached` is not the failure line. A failed read uses none of it. While it reads, "Minty is reading the
 invoice details." shows in its place and the form stays usable. **The caution** (owner,
 2026-11-19): once a read has filled, noted or offered anything, `AiCaution` sits under the fields,
-above the buttons - "AI suggestions may be inaccurate. Please check every field against the
-invoice before saving." (Petty Cash's says "receipt") - and is Confirm's and Save as Draft's
+above the buttons - "AI suggestions may be inaccurate." (one sentence since 2026-11-23, owner;
+the same in Petty Cash) - and is Confirm's and Save as Draft's
 description. It stays while the person edits and goes when the bill is saved, the dialog is
 reopened, or the read file's suggestions go (another file read, or that file removed).
 **An invoice in another currency** (owner, 2026-11-19): the API converts the amount at Frankfurter's
 rate (minty-payment-request-api `docs/features/invoice-reader.md`), so it fills like any amount
 (an older API's unconverted foreign amount is still only offered in a note). Its line reads
 "Suggested from the invoice. Converted from USD 12.34 at 1 USD = 7.846 HKD (13 Nov 2026 rate)." (plus
-", the last business day before ..." when a weekend or holiday moved the rate's day), and the
-caution - which here names the invoice ("...against the invoice before saving.") - adds the rate's
-sentence. Draft and Confirm send `exchange` (`exchangeFields`) only while the amount
+", the last business day before ..." when a weekend or holiday moved the rate's day); the caution
+stays the one sentence. Draft and Confirm send `exchange` (`exchangeFields`) only while the amount
 still holds the converted figure; another amount drops it. The description gets the original amount and the rate after what was read (owner, 2026-11-23): "Office chairs · PHP 10,000.00 Exchange Rate 0.13456" (`exchangeText`), or that alone - only when this read's converted amount filled the Amount box, never over a typed description. No rate: the amount stays empty with "I
 couldn't get an exchange rate for TWD. Enter the amount in HKD." under it.
 
