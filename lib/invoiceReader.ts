@@ -32,6 +32,8 @@ export type InvoiceSuggestions = {
   supplier?: ReadField & {
     contact_id?: string;
     detected_name?: string;
+    /** The supplier's name as the invoice prints it (the user, 2026-11-23). */
+    read_name?: string;
     /** The detected name signed for this company: the save sends it and the API adds the supplier. */
     new_supplier_token?: string;
   };
@@ -85,6 +87,21 @@ export type InvoiceValues = {
 export function readContact(values: InvoiceValues): NewContact | null {
   const read = values.newContact;
   return !values.contact && read && values.contactInput.trim() === read.name ? read : null;
+}
+
+/**
+ * Said with the supplier's suggested line when the invoice prints another name than the picked
+ * supplier's (the user, 2026-11-23: "滬江 -> Wu Kong" - a wrong "similar" pick is easy to spot);
+ * null when they are the same (case and outer spaces ignored).
+ */
+export function readNameDetail(
+  readName: string | null | undefined,
+  supplier: string,
+): string | null {
+  const read = (readName ?? "").trim();
+  return read && read.toLowerCase() !== supplier.trim().toLowerCase()
+    ? `The invoice reads "${read}".`
+    : null;
 }
 
 /** Said with the supplier's suggested line while it is a new supplier (the user, 2026-11-23). */

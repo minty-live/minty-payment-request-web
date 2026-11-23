@@ -146,6 +146,46 @@ describe("the invoice reader", () => {
     expect(screen.getByText(/Minty read the invoice and filled 6 fields/)).toBeInTheDocument();
   });
 
+  it("names what the invoice printed beside a supplier picked as similar, and only then", async () => {
+    // the user, 2026-11-23: "滬江 -> Wu Kong" - a wrong "similar" pick is easy to spot
+    const pick = (read_name: string) => ({
+      ...READ,
+      suggestions: {
+        ...READ.suggestions,
+        supplier: field("ABC Furniture", "high", { contact_id: "XERO-2", read_name }),
+      },
+    });
+    serve({ extract: () => json(200, pick("ABC 家具 Kowloon")) });
+    show();
+    await attachAndRead(pdf());
+    await waitFor(() => expect(byId("pr-contact")).toHaveValue("ABC Furniture"));
+    expect(
+      within(dialog()).getByText(
+        'Suggested from the invoice. The invoice reads "ABC 家具 Kowloon".',
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("says nothing more when the invoice prints the supplier's own name", async () => {
+    serve({
+      extract: () =>
+        json(200, {
+          ...READ,
+          suggestions: {
+            ...READ.suggestions,
+            supplier: field("ABC Furniture", "high", {
+              contact_id: "XERO-2",
+              read_name: " abc furniture ",
+            }),
+          },
+        }),
+    });
+    show();
+    await attachAndRead(pdf());
+    await waitFor(() => expect(byId("pr-contact")).toHaveValue("ABC Furniture"));
+    expect(within(dialog()).queryByText(/The invoice reads/)).toBeNull();
+  });
+
   it("never overwrites what the person set - a touched default included - but offers it", async () => {
     serve();
     show();

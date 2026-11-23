@@ -130,7 +130,10 @@ couldn't get an exchange rate for TWD. Enter the amount in HKD." under it.
   default back. Editing a field makes it the person's. A field holding the person's value keeps
   it, and the invoice's different reading is offered in a grey note with "Use the value from the
   invoice"; the low band only offers. An amount in another currency than the company's is only
-  offered. A supplier name that matches nobody goes into the supplier box. With the API's signed
+  offered. When the invoice prints another name than the picked supplier's (the API picks the same or
+  a similar one, the user 2026-11-23), the supplier's line adds it - "Suggested from the invoice.
+  The invoice reads "滬江"." (`readNameDetail`, from `read_name`) - so a wrong "similar" pick is
+  easy to spot. A supplier name that matches nobody goes into the supplier box. With the API's signed
   `new_supplier_token` (the user, 2026-11-23) it is a new supplier:
   - the box is ringed, and the line under it adds "It isn't in your suppliers yet, so it's added
     when you save this payment.";

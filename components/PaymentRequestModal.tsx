@@ -83,6 +83,7 @@ import {
   invoiceSpec,
   invoiceState,
   NEW_CONTACT_DETAIL,
+  readNameDetail,
   readContact,
   READ_FAILED,
   READ_LABEL,
@@ -532,6 +533,8 @@ export function PaymentRequestModal({
   // found for
   const [exchange, setExchange] = useState<{ how: Exchange; converted: string } | null>(null);
   const [rateMissing, setRateMissing] = useState<string | null>(null);
+  // the supplier's name as the last read invoice prints it, said beside the picked supplier
+  const [readName, setReadName] = useState<string | null>(null);
   const reader = useDocumentReader<InvoiceSuggestions>({
     field: "invoice",
     latch: INVOICE_LATCH,
@@ -549,6 +552,7 @@ export function PaymentRequestModal({
       setExchange(
         how && suggestions.amount?.value ? { how, converted: suggestions.amount.value } : null,
       );
+      setReadName(suggestions.supplier?.read_name ?? null);
       const missing = exchangeFailedOf(suggestions);
       setRateMissing(missing);
       const showed = showedAnything(next) || missing !== null;
@@ -581,12 +585,17 @@ export function PaymentRequestModal({
     setAiFilled(false);
     setExchange(null);
     setRateMissing(null);
+    setReadName(null);
     applyReader(withoutSuggestions(readerNow(), invoiceSpec(latest.current.defaults)));
   };
   const clearSuggestion = (field: InvoiceField) =>
     applyReader(cleared(readerNow(), field, invoiceSpec(latest.current.defaults)));
   const takeSuggestion = (field: InvoiceField) => applyReader(usedNote(readerNow(), field));
 
+  const readSupplierDetail = readNameDetail(
+    readName,
+    contactsMap.get(contact)?.name ?? contactInput,
+  );
   // the conversion holds while the amount is still the converted figure
   const converted =
     exchange && exchangeKept(amount ?? "", exchange.converted) ? exchange.how : null;
@@ -603,7 +612,9 @@ export function PaymentRequestModal({
               ? `${suggestedText(band)} ${convertedText(converted, entityCurrency).replace(/^c/, "C")}.`
               : field === "supplier" && readContactNow
                 ? `${suggestedText(band)} ${NEW_CONTACT_DETAIL}`
-                : suggestedText(band)
+                : field === "supplier" && contact && readSupplierDetail
+                  ? `${suggestedText(band)} ${readSupplierDetail}`
+                  : suggestedText(band)
           }
           clearLabel={CLEAR_LABEL}
           onClear={() => clearSuggestion(field)}
@@ -703,6 +714,7 @@ export function PaymentRequestModal({
     setAiFilled(false);
     setExchange(null);
     setRateMissing(null);
+    setReadName(null);
     setBillNo("");
     setBillNoTouched(false);
     setDescription("");
