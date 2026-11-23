@@ -521,6 +521,8 @@ export type PaymentAttachment = BillAttachment;
 export type BillCreatePayload = {
   contact?: string;
   xero_contact_id?: string;
+  /** The invoice reader's signed supplier name: the API adds that supplier on save (2026-11-23). */
+  new_contact_token?: string;
   description?: string;
   // Always an exact decimal string ("1234.50"), on create and edit alike, to preserve
   // precision end-to-end (owner, 2026-10-26).

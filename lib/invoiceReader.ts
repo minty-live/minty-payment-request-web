@@ -29,7 +29,12 @@ import {
 import { formatIsoDateAsDdMmmYyyy as formatDisplayDate } from "@/lib/dateDisplayFormat";
 
 export type InvoiceSuggestions = {
-  supplier?: ReadField & { contact_id?: string; detected_name?: string };
+  supplier?: ReadField & {
+    contact_id?: string;
+    detected_name?: string;
+    /** The detected name signed for this company: the save sends it and the API adds the supplier. */
+    new_supplier_token?: string;
+  };
   account?: ReadField & { code?: string; name?: string };
   amount?: ReadField;
   description?: ReadField;
@@ -58,6 +63,9 @@ export function rateMissingText(currency: string, code: string | null | undefine
     : `I couldn't get an exchange rate for ${currency}. Enter the amount yourself.`;
 }
 
+/** A supplier the invoice names and the company lacks: added by the API when the bill is saved. */
+export type NewContact = { name: string; token: string };
+
 /** The form's values the reader may fill (the modal keeps each in its own state). */
 export type InvoiceValues = {
   /** Xero ContactID ("" while a name is only typed). */
@@ -69,7 +77,19 @@ export type InvoiceValues = {
   description: string;
   /** "code - name", as the account select holds it. */
   accountCode: string;
+  /** The read supplier the company lacks (the user, 2026-11-23), while the box holds its name. */
+  newContact?: NewContact | null;
 };
+
+/** The read supplier the save will add, while no supplier is picked and the box holds its name. */
+export function readContact(values: InvoiceValues): NewContact | null {
+  const read = values.newContact;
+  return !values.contact && read && values.contactInput.trim() === read.name ? read : null;
+}
+
+/** Said with the supplier's suggested line while it is a new supplier (the user, 2026-11-23). */
+export const NEW_CONTACT_DETAIL =
+  "It isn't in your suppliers yet, so it's added when you save this payment.";
 
 export type InvoiceField =
   "supplier" | "invoiceDate" | "dueDate" | "amount" | "description" | "account";
@@ -105,6 +125,7 @@ export const EMPTY_INVOICE: InvoiceValues = {
   amount: "",
   description: "",
   accountCode: "",
+  newContact: null,
 };
 
 export function invoiceState(values: InvoiceValues = EMPTY_INVOICE): InvoiceState {
@@ -118,7 +139,7 @@ const sameAmount = (a: string, b: string) =>
 /** The rules' view of the form: Clear puts a default back; the amount grouped on blur is no change. */
 export function invoiceSpec(defaults: InvoiceDefaults): ReaderSpec<InvoiceValues, InvoiceField> {
   const CLEARED: Record<InvoiceField, Partial<InvoiceValues>> = {
-    supplier: { contact: "", contactInput: "" },
+    supplier: { contact: "", contactInput: "", newContact: null },
     invoiceDate: { invoiceDate: defaults.invoiceDate },
     dueDate: { dueDate: "" },
     amount: { amount: "" },
@@ -280,7 +301,7 @@ export function withInvoiceSuggestions(
       offer(
         "supplier",
         supplier,
-        { contact: known.xero_contact_id, contactInput: known.name },
+        { contact: known.xero_contact_id, contactInput: known.name, newContact: null },
         `"${known.name}"`,
         `"${current}"`,
         supplierBlank,
@@ -289,6 +310,15 @@ export function withInvoiceSuggestions(
   } else if (supplier?.detected_name?.trim() && supplierBlank) {
     detectedName = supplier.detected_name.trim();
     values.contactInput = detectedName;
+    // with the API's signed token it is a new supplier, added when the bill is saved (the user,
+    // 2026-11-23) - filled and marked like any suggestion; nothing is created here
+    const token = supplier.new_supplier_token ?? "";
+    if (token) {
+      values.newContact = { name: detectedName, token };
+      marks.supplier = "medium";
+      delete notes.supplier;
+      filled.push("supplier");
+    }
   }
 
   // The account: by its code from the select's own options only.
@@ -319,7 +349,9 @@ export function withInvoiceSuggestions(
     );
   if (detectedName)
     parts.push(
-      `The invoice names a supplier that is not in your list: ${detectedName}. You can add it as a new supplier.`,
+      values.newContact
+        ? `The invoice names a supplier that is not in your list: ${detectedName}. It is added as a new supplier when you save this payment.`
+        : `The invoice names a supplier that is not in your list: ${detectedName}. You can add it as a new supplier.`,
     );
   if (s.exchange && filled.includes("amount"))
     parts.push(

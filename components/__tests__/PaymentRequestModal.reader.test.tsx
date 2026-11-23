@@ -211,6 +211,70 @@ describe("the invoice reader", () => {
     });
   });
 
+  it("a supplier the company lacks is a new supplier: ringed, said, and Confirm sends its token (2026-11-23)", async () => {
+    const seen = serve({
+      extract: () =>
+        json(200, {
+          ...READ,
+          suggestions: {
+            ...READ.suggestions,
+            supplier: field("", "medium", {
+              contact_id: "",
+              detected_name: "Corner Bakery",
+              new_supplier_token: "signed",
+              applied: false,
+            }),
+          },
+        }),
+    });
+    show();
+    await attachAndRead(pdf());
+    await waitFor(() => expect(byId("pr-contact")).toHaveValue("Corner Bakery"));
+    expect(byId("pr-contact")).toHaveClass(...SUGGESTED_RING.split(" "));
+    expect(
+      within(dialog()).getByText(
+        "Suggested from the invoice. Check it before you submit. It isn't in your suppliers yet, so it's added when you save this payment.",
+      ),
+    ).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: /^Confirm/ }));
+
+    await waitFor(() => expect(seen.submits).toHaveLength(1));
+    expect(seen.submits[0]).toMatchObject({
+      contact: "Corner Bakery",
+      new_contact_token: "signed",
+    });
+    expect(seen.submits[0]).not.toHaveProperty("xero_contact_id");
+  });
+
+  it("typing over the read supplier drops it: Confirm then asks for a supplier", async () => {
+    const seen = serve({
+      extract: () =>
+        json(200, {
+          ...READ,
+          suggestions: {
+            ...READ.suggestions,
+            supplier: field("", "medium", {
+              contact_id: "",
+              detected_name: "Corner Bakery",
+              new_supplier_token: "signed",
+              applied: false,
+            }),
+          },
+        }),
+    });
+    show();
+    await attachAndRead(pdf());
+    await waitFor(() => expect(byId("pr-contact")).toHaveValue("Corner Bakery"));
+    await userEvent.type(byId("pr-contact"), "s");
+    await userEvent.keyboard("{Escape}");
+
+    await userEvent.click(screen.getByRole("button", { name: /^Confirm/ }));
+
+    expect(seen.submits).toHaveLength(0);
+    expect(byId("pr-contact")).toHaveAttribute("aria-invalid", "true");
+  });
+
   it("a failed read says so in one quiet line; the form is untouched", async () => {
     serve({ extract: () => json(200, { suggestions: null, reason: "timeout" }) });
     show();

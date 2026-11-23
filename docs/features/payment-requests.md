@@ -130,8 +130,19 @@ couldn't get an exchange rate for TWD. Enter the amount in HKD." under it.
   default back. Editing a field makes it the person's. A field holding the person's value keeps
   it, and the invoice's different reading is offered in a grey note with "Use the value from the
   invoice"; the low band only offers. An amount in another currency than the company's is only
-  offered. A supplier name that matches nobody goes into the supplier box as typed text, so the
-  picker's "+ Add ... as a new supplier" offers it. The bill number is never read. A filled field
+  offered. A supplier name that matches nobody goes into the supplier box. With the API's signed
+  `new_supplier_token` (the user, 2026-11-23) it is a new supplier:
+  - the box is ringed, and the line under it adds "It isn't in your suppliers yet, so it's added
+    when you save this payment.";
+  - it counts as the supplier for Confirm;
+  - Save as Draft and Confirm send `new_contact_token` with its name, and the API adds the
+    supplier with the bill (for anyone who may add a bill);
+  - typing over the name or picking another supplier drops it. The read creates nothing;
+  - the local draft (L1, shape 2) keeps it.
+
+  Without a token (an older API) the name is only typed text, and the picker's "+ Add ... as a new
+  supplier" offers it. The account is always the closest one the reader finds (minty-shared-py
+  v0.13). The bill number is never read. A filled field
   is never left red. One polite live region says what was filled or offered.
 - **Cancelled by:** another readable file added, or another file read (its predecessor's
   suggestions go; typed values stay),

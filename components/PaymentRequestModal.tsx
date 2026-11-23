@@ -82,6 +82,8 @@ import {
   INVOICE_LATCH,
   invoiceSpec,
   invoiceState,
+  NEW_CONTACT_DETAIL,
+  readContact,
   READ_FAILED,
   READ_LABEL,
   READING_DETAIL,
@@ -95,6 +97,7 @@ import {
   type InvoiceState,
   type InvoiceSuggestions,
   type InvoiceValues,
+  type NewContact,
 } from "@/lib/invoiceReader";
 import { useCompanyPages } from "@/lib/useCompanyPages";
 import { joinNames, uploadEachAttachment } from "@/lib/uploadAttachments";
@@ -261,8 +264,10 @@ type AddPaymentDraft = {
   contact: { id: string; name: string };
   contactInput: string;
   accountCode: string;
+  /** The invoice reader's new supplier (2026-11-23): its signed name, so the save still adds it. */
+  newContact: NewContact | null;
 };
-const ADD_PAYMENT_DRAFT_SHAPE = 1;
+const ADD_PAYMENT_DRAFT_SHAPE = 2;
 
 /**
  * The draft keeper, drawn only while the dialog is open: each opening reads the draft afresh
@@ -378,6 +383,8 @@ export function PaymentRequestModal({
   /** Xero ContactID (empty while user is typing a new name). */
   const [contact, setContact] = useState("");
   const [contactInput, setContactInput] = useState("");
+  // the invoice's supplier the company lacks, added by the API when the bill is saved (2026-11-23)
+  const [newContact, setNewContact] = useState<NewContact | null>(null);
   const [accountCode, setAccountCode] = useState("");
   const [invoiceDate, setInvoiceDate] = useState("");
   const [dueDate, setDueDate] = useState("");
@@ -471,7 +478,9 @@ export function PaymentRequestModal({
     amount,
     description,
     accountCode,
+    newContact,
   };
+  const readContactNow = readContact(readerValues);
   const readerDefaults = { invoiceDate: openedOn, accountCode: "" };
 
   // The form's latest state, for the answer that arrives seconds after the read started.
@@ -499,6 +508,7 @@ export function PaymentRequestModal({
     const v = next.values;
     setContact(v.contact);
     setContactInput(v.contactInput);
+    setNewContact(v.newContact ?? null);
     setInvoiceDate(v.invoiceDate);
     setDueDate(v.dueDate);
     setAmount(v.amount);
@@ -591,7 +601,9 @@ export function PaymentRequestModal({
           text={
             field === "amount" && converted
               ? `${suggestedText(band)} ${convertedText(converted, entityCurrency).replace(/^c/, "C")}.`
-              : suggestedText(band)
+              : field === "supplier" && readContactNow
+                ? `${suggestedText(band)} ${NEW_CONTACT_DETAIL}`
+                : suggestedText(band)
           }
           clearLabel={CLEAR_LABEL}
           onClear={() => clearSuggestion(field)}
@@ -679,6 +691,7 @@ export function PaymentRequestModal({
     setAmount("");
     setContact("");
     setContactInput("");
+    setNewContact(null);
     setAccountCode("");
     const today = todayLocalISODate();
     setInvoiceDate(today);
@@ -798,6 +811,7 @@ export function PaymentRequestModal({
     contact: { id: contact, name: contactsMap.get(contact)?.name ?? contactInput },
     contactInput,
     accountCode,
+    newContact: readContactNow,
   };
   const draftDirty =
     billNoTouched ||
@@ -831,6 +845,7 @@ export function PaymentRequestModal({
     setDescription(v.description);
     setContact(v.contact.id);
     setContactInput(v.contactInput);
+    setNewContact(v.newContact ?? null);
     setAccountCode(v.accountCode);
     // the reader treats them as typed: a later read only offers its own reading beside them
     const fields: [InvoiceField, keyof InvoiceValues][] = [
@@ -868,8 +883,9 @@ export function PaymentRequestModal({
       const selectedContact = contactsMap.get(contact);
       const contactName = selectedContact?.name ?? contact;
       const bill = await saveBillDraft({
-        contact: contactName || undefined,
+        contact: (readContactNow?.name ?? contactName) || undefined,
         xero_contact_id: selectedContact?.xero_contact_id || undefined,
+        new_contact_token: readContactNow?.token,
         description: description || undefined,
         amount: amountStr,
         currency_code: entityCurrency,
@@ -952,7 +968,7 @@ export function PaymentRequestModal({
     cancelRead();
     const next = validatePaymentRequestForm({
       amount,
-      contact,
+      contact: contact || (readContactNow ? readContactNow.name : ""),
       accountCode,
       invoiceDate,
       dueDate,
@@ -978,8 +994,9 @@ export function PaymentRequestModal({
       const selectedContact = contactsMap.get(contact);
       const contactName = selectedContact?.name ?? contact;
       const bill = await submitBill({
-        contact: contactName,
+        contact: readContactNow?.name ?? contactName,
         xero_contact_id: selectedContact?.xero_contact_id || undefined,
+        new_contact_token: readContactNow?.token,
         description,
         amount: amountStr,
         currency_code: entityCurrency,
@@ -1479,13 +1496,21 @@ export function PaymentRequestModal({
                   xeroContactId={contact}
                   contactName={contactInput}
                   onChange={({ xero_contact_id, contact: nm }) => {
+                    // a pick, or typing over the read name, drops the read supplier
+                    const keep = !xero_contact_id && newContact?.name === nm.trim();
                     setContact(xero_contact_id);
                     setContactInput(nm);
-                    readerEdit("supplier", { contact: xero_contact_id, contactInput: nm });
+                    if (!keep) setNewContact(null);
+                    readerEdit("supplier", {
+                      contact: xero_contact_id,
+                      contactInput: nm,
+                      ...(keep ? {} : { newContact: null }),
+                    });
                     clearFieldError("contact");
                   }}
                   refetchContacts={refetchEntityBillContacts}
                   error={!!fieldErrors.contact}
+                  controlRoundedClassName={"rounded-2xl" + ring("supplier")}
                 />
                 {fieldErrors.contact ? (
                   <p className="mt-1 text-xs text-status-danger-ink" role="alert">
