@@ -144,6 +144,7 @@ couldn't get an exchange rate for TWD. Enter the amount in HKD." under it.
   supplier" offers it. The account is always the closest one the reader finds (minty-shared-py
   v0.13). The bill number is never read. A filled field
   is never left red. One polite live region says what was filled or offered.
+
 - **Cancelled by:** another readable file added, or another file read (its predecessor's
   suggestions go; typed values stay),
   removing the file that was read, closing or reopening the dialog, Save as Draft and Confirm.
