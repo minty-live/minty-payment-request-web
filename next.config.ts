@@ -75,6 +75,8 @@ const nextConfig: NextConfig = {
     SUBSCRIPTION_API_URL: process.env.SUBSCRIPTION_API_URL ?? "",
     MAINTENANCE_SHOW_NEW_LINK: process.env.MAINTENANCE_SHOW_NEW_LINK ?? "",
   },
+  /** `next upgrade --agent` reads this: security releases only (2026-11-23, 16.4.2 → 16.4.6). */
+  experimental: { agentUpgrade: "security" },
 };
 
 export default nextConfig;
