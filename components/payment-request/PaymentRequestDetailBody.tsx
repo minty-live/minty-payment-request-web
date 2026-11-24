@@ -6,8 +6,8 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { useUserRole } from "@/lib/useUserRole";
 import { useAutoSaveDraft, type DraftOffer } from "@minty/shared/drafts";
 import { guardLeave, useLeaveGuard } from "@minty/shared/leaveGuard";
-import { DraftNotice } from "@minty/shared/ui";
-import { billDraftBasis, currentDraftScope, describeBillFields } from "@/lib/draftScope";
+import { DraftRestore } from "@minty/shared/ui";
+import { billDraftBasis, currentDraftScope } from "@/lib/draftScope";
 import { LeaveDialog } from "@/features/subscription/components/InterruptedDialogs";
 import {
   ApiError,
@@ -747,8 +747,8 @@ export function PaymentRequestDetailBody({ onBillUpdated }: PaymentRequestDetail
       attachments.filter((a) => !a.pendingUploadKey).length !== (bill?.attachments?.length ?? 0));
 
   // The same changes are kept as an auto-saved draft in this browser (owner's decisions doc L1,
-  // 2026-11-20), against the request's version: a request saved again since, or one this person
-  // can no longer edit, only shows the draft.
+  // 2026-11-20), against the request's version, and put back at once (the user, 2026-11-24): a
+  // request saved again since, or one this person can no longer edit, drops it silently.
   const [draftScope] = useState(currentDraftScope);
   const billEditable =
     !!bill && !isViewOnly && bill.status !== "void" && !billLockedForRole(bill.status, isElevated);
@@ -1568,21 +1568,13 @@ export function PaymentRequestDetailBody({ onBillUpdated }: PaymentRequestDetail
         </div>
         <div className="flex min-w-0 max-lg:order-4 flex-col gap-4 sm:gap-5 lg:order-none lg:col-start-2 lg:row-start-2">
           {editOffer && offeredFields ? (
-            <DraftNotice
-              savedAt={editOffer.savedAt}
+            <DraftRestore
               stale={editOffer.stale && !billEditable ? "locked" : editOffer.stale}
-              missing={editOffer.missing}
               onRestore={() => {
                 const taken = editDraft.restore();
                 if (taken) restoreEditDraft(taken);
               }}
               onDiscard={editDraft.discard}
-              describe={() =>
-                describeBillFields(
-                  offeredFields,
-                  editOffer.files.map((f) => f.name),
-                )
-              }
             />
           ) : null}
           {loadingBill ? (

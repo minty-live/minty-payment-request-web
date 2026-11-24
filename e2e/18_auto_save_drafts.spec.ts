@@ -1,7 +1,7 @@
 // Auto-saved drafts (owner's decisions doc L1, 2026-11-20): Add Payment keeps what is typed - and
 // the file picked - in this browser 2 seconds after the last change (localStorage, the file in
-// IndexedDB), and asks first when it opens again: "You have unsaved changes from 10:42." Restore
-// puts it back; only Save as Draft or Confirm writes the request, and that clears the copy.
+// IndexedDB), and puts it back at once when it opens again - no notice, nothing to pick (the
+// user, 2026-11-24). Only Save as Draft or Confirm writes the request, and that clears the copy.
 //
 // STUBBED - every `/api/v1/**` call is answered from the fixtures, so this needs `npm run dev`
 // and nothing else. A real reload in between, so the real IndexedDB store is what round-trips
@@ -55,7 +55,7 @@ for (const size of [
   { width: 360, height: 740 },
   { width: 1440, height: 900 },
 ]) {
-  test(`Add Payment keeps what was typed across a reload, and asks first (${size.width}px)`, async ({
+  test(`Add Payment keeps what was typed across a reload, and puts it back at once (${size.width}px)`, async ({
     page,
   }) => {
     await page.setViewportSize(size);
@@ -75,35 +75,22 @@ for (const size of [
     await page.waitForLoadState("networkidle");
     dialog = await openAddPayment(page);
 
-    const notice = dialog.getByText(/You have unsaved changes from \d\d:\d\d\./);
-    await expect(notice).toBeVisible();
-    // nothing changes until the person picks
-    await expect(dialog.locator("#pr-description")).toHaveValue("");
-    const restore = dialog.getByRole("button", { name: "Restore" });
-    const discard = dialog.getByRole("button", { name: "Discard" });
-    for (const button of [restore, discard]) {
-      const box = await button.boundingBox();
-      expect(box!.height).toBeGreaterThanOrEqual(44);
-      expect(box!.x + box!.width).toBeLessThanOrEqual(size.width);
-    }
-    await expectNoSideScroll(page, size.width);
-    if (process.env.E2E_SHOTS)
-      await page.screenshot({ path: `${process.env.E2E_SHOTS}/prw-draft-${size.width}.png` });
-
-    await restore.click();
-
-    await expect(notice).toHaveCount(0);
     await expect(dialog.locator("#pr-description")).toHaveValue("Printer paper");
     await expect(dialog.locator("#pr-amount")).toHaveValue("1,234.50");
     await expect(dialog.getByRole("button", { name: "Preview invoice.pdf" })).toBeVisible();
     await expect(dialog.locator("#pr-bill-no")).toHaveValue("PR-E2E-18");
+    // nothing about the draft is drawn
+    await expect(dialog.getByText(/unsaved changes/)).toHaveCount(0);
+    await expect(dialog.getByRole("button", { name: "Restore" })).toHaveCount(0);
+    await expectNoSideScroll(page, size.width);
+    if (process.env.E2E_SHOTS)
+      await page.screenshot({ path: `${process.env.E2E_SHOTS}/prw-draft-${size.width}.png` });
 
     await dialog.getByRole("button", { name: "Save as Draft" }).click();
     await expect(page.getByRole("dialog")).toHaveCount(0);
     expect(drafts).toHaveLength(1);
 
     dialog = await openAddPayment(page);
-    await expect(dialog.getByText(/You have unsaved changes from/)).toHaveCount(0);
     await expect(dialog.locator("#pr-description")).toHaveValue("");
   });
 }

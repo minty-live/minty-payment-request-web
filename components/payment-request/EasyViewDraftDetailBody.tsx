@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAutoSaveDraft, type DraftOffer } from "@minty/shared/drafts";
-import { DraftNotice } from "@minty/shared/ui";
+import { DraftRestore } from "@minty/shared/ui";
 import type { ThemedSelectOption } from "@/components/ThemedSelect";
 import {
   ApiError,
@@ -21,7 +21,7 @@ import {
   type EntityBillContact,
 } from "@/lib/api";
 import { enrichAccountCodeWithOptions } from "@/lib/billFormSelectOptions";
-import { billDraftBasis, currentDraftScope, describeBillFields } from "@/lib/draftScope";
+import { billDraftBasis, currentDraftScope } from "@/lib/draftScope";
 import { useEntityCurrencyDecimals } from "@/lib/entityCurrency";
 import { DuplicateBillQuestion, useDuplicateBillQuestion } from "./DuplicateBillDialog";
 import {
@@ -190,8 +190,8 @@ export function EasyViewDraftDetailBody({
   }, [billId, applyEntityBillContacts]);
 
   // What is typed is kept in this browser as an auto-saved draft (owner's decisions doc L1,
-  // 2026-11-20), against the request's version: saved again since, or no longer editable by this
-  // person, it is only shown.
+  // 2026-11-20), against the request's version, and put back at once (the user, 2026-11-24): saved
+  // again since, or no longer editable by this person, it is dropped silently.
   const [draftScope] = useState(currentDraftScope);
   const editable =
     !!bill &&
@@ -342,19 +342,15 @@ export function EasyViewDraftDetailBody({
   ]);
 
   const inlineOffer = inlineDraft.offer;
-  const offeredFields = inlineOffer?.value ?? null;
-  const draftNotice =
-    inlineOffer && offeredFields ? (
-      <DraftNotice
-        savedAt={inlineOffer.savedAt}
+  const draftRestore =
+    inlineOffer && inlineOffer.value ? (
+      <DraftRestore
         stale={inlineOffer.stale && !editable ? "locked" : inlineOffer.stale}
-        missing={inlineOffer.missing}
         onRestore={() => {
           const taken = inlineDraft.restore();
           if (taken) restoreInlineDraft(taken);
         }}
         onDiscard={inlineDraft.discard}
-        describe={() => describeBillFields(offeredFields)}
       />
     ) : null;
 
@@ -378,7 +374,7 @@ export function EasyViewDraftDetailBody({
   if (isEditing && draft) {
     return (
       <div className="w-full min-w-0 max-w-full space-y-4">
-        {draftNotice}
+        {draftRestore}
         <EasyViewDraftDetailedInformationEdit
           actions={actions}
           data={draft}
@@ -418,13 +414,11 @@ export function EasyViewDraftDetailBody({
       editDisabled={detailDisabled}
     />
   );
-  return draftNotice ? (
-    <div className="w-full min-w-0 max-w-full space-y-4">
-      {draftNotice}
+  return (
+    <>
+      {draftRestore}
       {readView}
-    </div>
-  ) : (
-    readView
+    </>
   );
 }
 

@@ -324,31 +324,28 @@ Download CSV and Bulk Actions on the next (one line from 640px). Minty never res
 
 What the person types is kept **in this browser only**, 2 seconds after their last change, as a
 separate copy - never the real request, which only their own Save writes (`@minty/shared/drafts`
-`useAutoSaveDraft` and `ui`'s `DraftNotice`, v0.28; the package README's "Auto-saved drafts" has
+`useAutoSaveDraft` and `ui`'s `DraftRestore`, v0.33; the package README's "Auto-saved drafts" has
 the storage, limits and expiry). Kept per person and company (`lib/draftScope.ts`
 `currentDraftScope()`, the token's `user_id` and `entity_id`); card details are never kept.
-When the form opens again it **asks first** - "You have unsaved changes from 10:42." with
-**Restore** and **Discard** (44px, stacked on a phone) - and nothing changes until the person
-picks; while that question waits, nothing new is kept.
+When the form opens again the draft is **put back at once, with no notice and nothing to pick**
+(the user, 2026-11-24; v0.28's Restore / Discard question is gone). Files too large to keep are
+simply not among the restored ones.
 
-| Form                                                   | Key (`form`, `record`)      | What is kept                                                                                                                                                                                                                                                                         | Removed by                                                                                                                                             |
-| ------------------------------------------------------ | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Add Payment (`PaymentRequestModal.tsx`)                | `pr.add-payment`, `new`     | due date, amount, description, supplier (id, name and the typed text), account; the Payment No. and invoice date only when the person changed them (otherwise the fresh suggestion and today stand); the picked files (IndexedDB). Never the invoice reader's marks or exchange rate | Save as Draft and Confirm succeeding, **Cancel**, Discard. The **X, Escape and the backdrop keep it** (a pending save is written as the dialog closes) |
-| A request's Edit (`PaymentRequestDetailBody.tsx`)      | `pr.bill-edit`, the bill id | the edit's fields and the request's files taken off; the staged files                                                                                                                                                                                                                | Save Changes (and a draft's Submit) succeeding, Cancel or the leave dialog's Discard changes (`handleCancel`), deleting the draft request, Discard     |
-| Easy View's draft edit (`EasyViewDraftDetailBody.tsx`) | `pr.easy-view`, the bill id | the inline fields                                                                                                                                                                                                                                                                    | Save Changes succeeding, Cancel, Discard                                                                                                               |
+| Form                                                   | Key (`form`, `record`)      | What is kept                                                                                                                                                                                                                                                                         | Removed by                                                                                                                                       |
+| ------------------------------------------------------ | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Add Payment (`PaymentRequestModal.tsx`)                | `pr.add-payment`, `new`     | due date, amount, description, supplier (id, name and the typed text), account; the Payment No. and invoice date only when the person changed them (otherwise the fresh suggestion and today stand); the picked files (IndexedDB). Never the invoice reader's marks or exchange rate | Save as Draft and Confirm succeeding, **Cancel**. The **X, Escape and the backdrop keep it** (a pending save is written as the dialog closes)    |
+| A request's Edit (`PaymentRequestDetailBody.tsx`)      | `pr.bill-edit`, the bill id | the edit's fields and the request's files taken off; the staged files                                                                                                                                                                                                                | Save Changes (and a draft's Submit) succeeding, Cancel or the leave dialog's Discard changes (`handleCancel`), deleting the draft request, stale |
+| Easy View's draft edit (`EasyViewDraftDetailBody.tsx`) | `pr.easy-view`, the bill id | the inline fields                                                                                                                                                                                                                                                                    | Save Changes succeeding, Cancel, stale                                                                                                           |
 
-- Add Payment's notice sits at the top of the dialog's body, and is read only once the suggested
-  Payment No. has come back, so Restore is never overwritten by it. Restore puts the values back
-  as the person's own (a later read only offers the invoice's reading beside them) and adds the
-  files to the list.
-- A request's notice sits above its details card (Easy View's above the card). Restore enters edit
-  mode from the request **as it is now**, with the draft's fields over it, its staged files back
-  in the preview and its taken-off files taken off again - only those the request still has.
+- Add Payment's draft is read only once the suggested Payment No. has come back, so the restore
+  is never overwritten by it. It puts the values back as the person's own (a later read only
+  offers the invoice's reading beside them) and adds the files to the list.
+- A request's (and Easy View's) restore enters edit mode from the request **as it is now**, with
+  the draft's fields over it, its staged files back in the preview and its taken-off files taken
+  off again - only those the request still has.
 - **Stale:** an edit is kept against the request's `updated_at`. If the request was saved again
   since, or this person can no longer edit it (view-only, voided, or locked for their role -
-  `billDraftBasis`), the notice says "This was saved again after your unsaved changes from
-  10:42, so we haven't put them back." with **Show what I typed** (the fields, read-only) and
-  Discard - never Restore.
+  `billDraftBasis`), the draft is **dropped silently** - removed, never put back, nothing shown.
 - An explicit sign-out (the sidebar's Logout, My Profile's Log Out: `components/ui/sidebarHost.ts`
   `endSession`) removes this person's drafts in this app within 500 ms, before the cookies go. A
   session that expires on its own (a 401, "Your session has expired") keeps them - that is one
@@ -356,8 +353,8 @@ picks; while that question waits, nothing new is kept.
 - Tests: the "auto-saved draft" cases in `PaymentRequestModal.test.tsx`,
   `PaymentRequestDetailBody.test.tsx` and `EasyViewDraftDetailBody.test.tsx`, the sign-out cases
   in `sidebarHost.test.ts` (files in `test/draftFiles.ts`'s in-memory store), and
-  `e2e/18_auto_save_drafts.spec.ts` (stubbed; 360 and 1440: type and attach, reload, Restore
-  puts the fields and the file back, Save as Draft clears it).
+  `e2e/18_auto_save_drafts.spec.ts` (stubbed; 360 and 1440: type and attach, reload, the fields
+  and the file are back with no notice, Save as Draft clears it).
 
 ## The duplicate reminder before a save (owner's decisions doc DUP1, 2026-11-19)
 

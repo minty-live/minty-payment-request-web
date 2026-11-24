@@ -10,8 +10,6 @@
 import { draftScopeFromToken, type DraftScope } from "@minty/shared/drafts";
 
 import { getAuth } from "@/lib/auth";
-import { formatIsoDateForDisplay } from "@/lib/dateDisplayFormat";
-import type { PaymentRequestDetailedInfoData } from "@/components/payment-request/PaymentRequestDetailedInfo";
 
 /** The signed-in person and company (the token's `user_id`, `entity_id`), or null: no drafts. */
 export function currentDraftScope(): DraftScope | null {
@@ -19,28 +17,7 @@ export function currentDraftScope(): DraftScope | null {
 }
 
 /** A bill edit's draft is kept against its `updated_at`; a bill this person can no longer edit
- * gets a marker that never matches, so its draft is only shown, never put back. */
+ * gets a marker that never matches, so its draft is dropped, never put back. */
 export function billDraftBasis(updatedAt: string | null | undefined, editable: boolean): string {
   return editable ? (updatedAt ?? "") : `locked:${updatedAt ?? ""}`;
-}
-
-/** What a kept bill edit holds, for the notice's Show what I typed (a stale draft). */
-export function describeBillFields(
-  d: Pick<
-    PaymentRequestDetailedInfoData,
-    "billNo" | "invoiceDate" | "dueDate" | "amount" | "description" | "contact" | "accountCode"
-  >,
-  files: readonly string[] = [],
-): { label: string; value: string }[] {
-  const rows = [
-    { label: "Payment No.", value: d.billNo },
-    { label: "Invoice Date", value: d.invoiceDate ? formatIsoDateForDisplay(d.invoiceDate) : "" },
-    { label: "Due Date", value: d.dueDate ? formatIsoDateForDisplay(d.dueDate) : "" },
-    { label: "Amount", value: d.amount },
-    { label: "Description", value: d.description },
-    { label: "Supplier", value: d.contact },
-    { label: "Account Code", value: d.accountCode },
-  ];
-  if (files.length) rows.push({ label: "Files", value: files.join(", ") });
-  return rows;
 }

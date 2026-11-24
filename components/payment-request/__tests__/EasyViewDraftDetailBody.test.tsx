@@ -469,11 +469,19 @@ describe("the duplicate reminder before a save (owner's decisions doc DUP1, 2026
 });
 
 // Auto-saved drafts (owner's decisions doc L1, 2026-11-20): the inline edit of a draft is kept in
-// this browser 2 s after the last change, against the request's `updated_at`, and offered back
-// when the card opens again - ask first. Only Save Changes writes the request.
+// this browser 2 s after the last change, against the request's `updated_at`, and put back at
+// once when the card opens again - no notice, nothing to pick (the user, 2026-11-24); a stale one
+// is dropped silently. Only Save Changes writes the request.
 describe("the auto-saved draft of an inline edit", () => {
   const DESCRIPTION = "Corporate stationery and printer supplies";
-  const notice = () => screen.queryByText(/You have unsaved changes from/);
+  const DRAFT_KEY = `minty:draft:1:${moduleTokenClaims().user_id}:${ENTITY_ID}:pr.easy-view:${BILL_ID}`;
+  /** Nothing about the draft is drawn: no notice, no Restore, Discard or Show what I typed. */
+  const noNotice = () => {
+    expect(screen.queryByText(/unsaved changes/)).toBeNull();
+    for (const name of ["Restore", "Discard", "Show what I typed"]) {
+      expect(screen.queryByRole("button", { name })).toBeNull();
+    }
+  };
 
   beforeEach(() => {
     setAuth(unsignedToken(moduleTokenClaims()), ENTITY_ID, ENTITY_NAME);
@@ -499,9 +507,7 @@ describe("the auto-saved draft of an inline edit", () => {
     await waitFor(() => expect(keptDrafts()).toHaveLength(1), { timeout: 4000 });
 
     const [kept] = keptDrafts();
-    expect(kept.key).toBe(
-      `minty:draft:1:${moduleTokenClaims().user_id}:${ENTITY_ID}:pr.easy-view:${BILL_ID}`,
-    );
+    expect(kept.key).toBe(DRAFT_KEY);
     expect(kept.value).toMatchObject({
       basedOn: "2026-03-03T02:00:00Z",
       value: { description: `${DESCRIPTION} and toner` },
@@ -509,39 +515,18 @@ describe("the auto-saved draft of an inline edit", () => {
     expect(calls.filter((c) => c.method === "PUT")).toEqual([]);
   });
 
-  it("asks first when the card opens again; Restore goes into edit with what was typed", async () => {
+  it("opening the card again goes straight into edit with what was typed, asking nothing", async () => {
     await editAndClose();
     showDraft();
-    await loaded();
 
-    expect(
-      await screen.findByText(/You have unsaved changes from \d\d:\d\d\./),
-    ).toBeInTheDocument();
-    expect(screen.getByText(DESCRIPTION)).toBeInTheDocument();
-
-    await userEvent.click(screen.getByRole("button", { name: "Restore" }));
-
-    expect(notice()).toBeNull();
     expect(await screen.findByDisplayValue("Half-typed")).toBeInTheDocument();
-  });
-
-  it("Discard removes it", async () => {
-    await editAndClose();
-    showDraft();
-    await loaded();
-
-    await userEvent.click(await screen.findByRole("button", { name: "Discard" }));
-
-    expect(notice()).toBeNull();
-    expect(keptDrafts()).toEqual([]);
+    noNotice();
   });
 
   it("Save Changes clears it", async () => {
     await editAndClose();
     const { calls } = serve();
     showDraft();
-    await loaded();
-    await userEvent.click(await screen.findByRole("button", { name: "Restore" }));
     await screen.findByDisplayValue("Half-typed");
 
     await userEvent.click(screen.getByRole("button", { name: "Save Changes" }));
@@ -566,7 +551,7 @@ describe("the auto-saved draft of an inline edit", () => {
     expect(keptDrafts()).toEqual([]);
   });
 
-  it("is only shown, never put back, when the request was saved again since", async () => {
+  it("is dropped silently, never put back, when the request was saved again since", async () => {
     await editAndClose();
     serve({
       detail: bill({
@@ -578,14 +563,26 @@ describe("the auto-saved draft of an inline edit", () => {
         updated_at: "2026-03-04T09:00:00Z",
       }),
     });
+    expect(localStorage.getItem(DRAFT_KEY)).not.toBeNull();
     showDraft();
     await loaded();
 
-    expect(
-      await screen.findByText(/This was saved again after your unsaved changes from/),
-    ).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Restore" })).toBeNull();
-    await userEvent.click(screen.getByRole("button", { name: "Show what I typed" }));
-    expect(screen.getByText("Half-typed")).toBeInTheDocument();
+    await waitFor(() => expect(localStorage.getItem(DRAFT_KEY)).toBeNull());
+    expect(screen.getByText(DESCRIPTION)).toBeInTheDocument();
+    expect(screen.queryByDisplayValue("Half-typed")).toBeNull();
+    expect(screen.getByRole("button", { name: "Edit" })).toBeInTheDocument();
+    noNotice();
+  });
+
+  it("is dropped silently when this person can no longer edit the request", async () => {
+    await editAndClose();
+    expect(localStorage.getItem(DRAFT_KEY)).not.toBeNull();
+    showDraft({ isViewOnly: true });
+    await loaded();
+
+    await waitFor(() => expect(localStorage.getItem(DRAFT_KEY)).toBeNull());
+    expect(screen.getByText(DESCRIPTION)).toBeInTheDocument();
+    expect(screen.queryByDisplayValue("Half-typed")).toBeNull();
+    noNotice();
   });
 });

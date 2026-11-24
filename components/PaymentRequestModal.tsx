@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
 import { useEffect, useId, useRef, useState, type ReactNode, type RefObject } from "react";
 import { useAutoSaveDraft, type DraftOffer } from "@minty/shared/drafts";
-import { DraftNotice } from "@minty/shared/ui";
+import { DraftRestore } from "@minty/shared/ui";
 import { pushAppScrollLock } from "@/lib/appScrollRoot";
 import { getEntityIdSnapshot } from "@/lib/auth";
 import { currentDraftScope } from "@/lib/draftScope";
@@ -275,8 +275,8 @@ type AddPaymentDraft = {
 const ADD_PAYMENT_DRAFT_SHAPE = 2;
 
 /**
- * The draft keeper, drawn only while the dialog is open: each opening reads the draft afresh
- * and asks first ("You have unsaved changes from 10:42." - Restore / Discard). Closing with the
+ * The draft keeper, mounted only while the dialog is open: each opening reads the draft afresh
+ * and puts it back at once, asking nothing (the user, 2026-11-24). Closing with the
  * X, Escape or the backdrop keeps what was typed (a pending save is written as it unmounts);
  * the dialog calls `clearRef` after its own save and on Cancel.
  */
@@ -315,10 +315,8 @@ function AddPaymentDraftKeeper({
   }, [clear, clearRef]);
   if (!offer) return null;
   return (
-    <DraftNotice
-      savedAt={offer.savedAt}
+    <DraftRestore
       stale={offer.stale}
-      missing={offer.missing}
       onRestore={() => {
         const taken = restore();
         if (taken) onRestore(taken);

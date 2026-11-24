@@ -951,10 +951,16 @@ describe("the duplicate reminder before a save (owner's decisions doc DUP1, 2026
 });
 
 // Auto-saved drafts (owner's decisions doc L1, 2026-11-20): what is typed is kept in this browser
-// 2 seconds after the last change (`@minty/shared/drafts`), and offered back - ask first - when
-// the dialog opens again. Never the real bill: only Save as Draft or Confirm writes that.
+// 2 seconds after the last change (`@minty/shared/drafts`), and put back at once, with no notice
+// and nothing to pick (the user, 2026-11-24), when the dialog opens again. Never the real bill:
+// only Save as Draft or Confirm writes that.
 describe("the auto-saved draft", () => {
-  const notice = () => screen.queryByText(/You have unsaved changes from/);
+  /** Nothing about the draft is drawn: no notice, no Restore or Discard. */
+  const noNotice = () => {
+    expect(screen.queryByText(/unsaved changes/)).toBeNull();
+    expect(screen.queryByRole("button", { name: "Restore" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Discard" })).toBeNull();
+  };
 
   /** The page's own button, with the dialog it opens: open/closed the way the list drives it. */
   function Harness() {
@@ -1041,24 +1047,15 @@ describe("the auto-saved draft", () => {
     expect(keptDrafts()).toEqual([]);
   });
 
-  it("the X keeps it; opening again asks first, and Restore puts the fields and the file back", async () => {
+  it("the X keeps it; opening again puts the fields and the file back at once, asking nothing", async () => {
     await typeAndClose();
     expect(keptDrafts()).toHaveLength(1);
     expect([...draftFiles.data.values()].flat().map((f) => f.name)).toEqual(["invoice.pdf"]);
 
     await reopen();
 
-    expect(
-      await screen.findByText(/You have unsaved changes from \d\d:\d\d\./),
-    ).toBeInTheDocument();
-    // nothing changes until the person picks
-    expect(description()).toHaveValue("");
-    expect(within(dialog()).getByText(/Uploaded files \(0\)/)).toBeInTheDocument();
-
-    await userEvent.click(within(dialog()).getByRole("button", { name: "Restore" }));
-
-    expect(notice()).toBeNull();
-    expect(description()).toHaveValue("Printer paper");
+    await waitFor(() => expect(description()).toHaveValue("Printer paper"));
+    noNotice();
     expect(within(dialog()).getByPlaceholderText("0.00")).toHaveValue("1,234.50");
     expect(within(dialog()).getByText(/Uploaded files \(1\)/)).toBeInTheDocument();
     expect(
@@ -1076,35 +1073,26 @@ describe("the auto-saved draft", () => {
     });
     await userEvent.click(screen.getByRole("button", { name: "Close" }));
 
-    await reopen();
-    await userEvent.click(await within(dialog()).findByRole("button", { name: "Restore" }));
+    await userEvent.click(screen.getByRole("button", { name: "Add Payment" }));
 
-    expect(within(dialog()).getByLabelText(/Payment No\./)).toHaveValue("INV-77");
-  });
-
-  it("Discard removes it, files and all", async () => {
-    await typeAndClose();
-    await reopen();
-
-    await userEvent.click(await within(dialog()).findByRole("button", { name: "Discard" }));
-
-    expect(notice()).toBeNull();
-    expect(keptDrafts()).toEqual([]);
-    expect(draftFiles.data.size).toBe(0);
-    expect(description()).toHaveValue("");
+    await waitFor(() =>
+      expect(within(dialog()).getByLabelText(/Payment No\./)).toHaveValue("INV-77"),
+    );
+    noNotice();
   });
 
   it("Save as Draft clears it, so the next Add Payment starts clean", async () => {
     await typeAndClose();
     await reopen();
-    await userEvent.click(await within(dialog()).findByRole("button", { name: "Restore" }));
+    await waitFor(() => expect(description()).toHaveValue("Printer paper"));
 
     await userEvent.click(saveDraft());
 
     await waitFor(() => expect(onSaveDraft).toHaveBeenCalled());
     expect(keptDrafts()).toEqual([]);
     await reopen();
-    expect(notice()).toBeNull();
+    expect(description()).toHaveValue("");
+    noNotice();
   });
 
   it("Confirm clears it too", async () => {
@@ -1136,7 +1124,8 @@ describe("the auto-saved draft", () => {
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(keptDrafts()).toEqual([]);
     await reopen();
-    expect(notice()).toBeNull();
+    expect(description()).toHaveValue("");
+    noNotice();
   });
 
   it("Escape and the backdrop keep it, like the X", async () => {
@@ -1147,7 +1136,7 @@ describe("the auto-saved draft", () => {
     expect(keptDrafts()).toHaveLength(1);
 
     await reopen();
-    await userEvent.click(await within(dialog()).findByRole("button", { name: "Restore" }));
+    await waitFor(() => expect(description()).toHaveValue("Printer paper"));
     await userEvent.type(description(), " and toner");
     await userEvent.click(screen.getByRole("button", { name: "Close dialog" }));
 
@@ -1164,6 +1153,7 @@ describe("the auto-saved draft", () => {
     render(<Harness />);
     await suggested();
 
-    expect(notice()).toBeNull();
+    expect(description()).toHaveValue("");
+    noNotice();
   });
 });
