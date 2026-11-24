@@ -544,9 +544,9 @@ describe("an invoice in another currency", () => {
     await attachAndRead(pdf());
     await waitFor(() => expect(byId("pr-amount")).toHaveValue("96.82"));
     // owner, 2026-11-23: the original amount and the rate follow the description
-    expect(byId("pr-description")).toHaveValue("Office chairs (USD 12.34 @7.846)");
+    expect(byId("pr-description")).toHaveValue("Office chairs (USD 12.34 @ 1 USD = 7.85 HKD)");
     expect(byId("pr-amount")).toHaveAccessibleDescription(
-      "Suggested from the invoice. Converted from USD\u00a012.34 at 1 USD = 7.846 HKD (13 Nov 2026 rate).",
+      "Suggested from the invoice. Converted from USD\u00a012.34 at 1 USD = 7.85 HKD (13 Nov 2026 rate).",
     );
     // owner, 2026-11-23: the caution stays one sentence, no exchange-rate sentence
     expect(document.getElementById("pr-ai-caution")?.textContent).toBe(CAUTION);
@@ -577,7 +577,34 @@ describe("an invoice in another currency", () => {
     show();
     await attachAndRead(pdf());
     await waitFor(() => expect(byId("pr-amount")).toHaveValue("96.82"));
-    expect(byId("pr-description")).toHaveValue("(USD 12.34 @7.846)");
+    expect(byId("pr-description")).toHaveValue("(USD 12.34 @ 1 USD = 7.85 HKD)");
+  });
+
+  it("a currency weaker than the company's writes 1 HKD = n of it (owner, 2026-11-24)", async () => {
+    serve({
+      extract: () =>
+        json(200, {
+          ...CONVERTED,
+          suggestions: {
+            ...CONVERTED.suggestions,
+            amount: field("1345.60"),
+            currency: "PHP",
+            exchange: {
+              ...CONVERTED.suggestions.exchange,
+              original_currency: "PHP",
+              original_amount: "10000.00",
+              rate: "0.13456",
+            },
+          },
+        }),
+    });
+    show();
+    await attachAndRead(pdf());
+    await waitFor(() => expect(byId("pr-amount")).toHaveValue("1,345.60"));
+    expect(byId("pr-description")).toHaveValue("Office chairs (PHP 10,000.00 @ 1 HKD = 7.43 PHP)");
+    expect(byId("pr-amount")).toHaveAccessibleDescription(
+      "Suggested from the invoice. Converted from PHP 10,000.00 at 1 HKD = 7.43 PHP (13 Nov 2026 rate).",
+    );
   });
 
   it("a person's own amount drops the conversion", async () => {

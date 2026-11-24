@@ -188,7 +188,7 @@ for (const size of [
     const amount = dialog.locator("#pr-amount");
     await expect(amount).toHaveValue("96.82");
     await expect(amount).toHaveAccessibleDescription(
-      "Suggested from the invoice. Converted from USD\u00a012.34 at 1 USD = 7.846 HKD (13 Nov 2026 rate).",
+      "Suggested from the invoice. Converted from USD\u00a012.34 at 1 USD = 7.85 HKD (13 Nov 2026 rate).",
     );
     const caution = dialog.locator("#pr-ai-caution");
     await expect(caution).toHaveText("AI suggestions may be inaccurate."); // one sentence (owner, 2026-11-23)

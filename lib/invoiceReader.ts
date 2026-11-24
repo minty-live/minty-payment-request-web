@@ -298,11 +298,12 @@ export function withInvoiceSuggestions(
   }
 
   // The description: filled only, never argued with (as for receipts). A converted amount this read
-  // filled adds its currency and rate after it (owner, 2026-11-23): "Office chairs (PHP 10,000.00
-  // @0.13456)" - or the conversion alone when nothing was read.
+  // filled adds its amount and rate after it, both currencies named (owner, 2026-11-24): "Office
+  // chairs (PHP 10,000.00 @ 1 HKD = 7.43 PHP)" - or the conversion alone when nothing was read.
   const description = s.description;
   const said = description?.applied && description.value ? description.value : "";
-  const conversion = s.exchange && filled.includes("amount") ? exchangeNote(s.exchange) : "";
+  const conversion =
+    s.exchange && currency && filled.includes("amount") ? exchangeNote(s.exchange, currency) : "";
   const text = [said, conversion].filter(Boolean).join(" ");
   if (text && blank(values.description)) {
     values.description = text;
