@@ -5,7 +5,7 @@
 // contract that lets it stack over a modal - Escape closes the viewer and nothing else,
 // because it listens in the capture phase.
 
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -13,9 +13,11 @@ import {
   AttachmentFullScreenViewer,
   fileToPreviewItem,
   nameToPreviewMime,
+  PreviewBlock,
   resolvePreviewMime,
   type AttachmentPreviewItem,
 } from "@/components/payment-request/AttachmentFullScreenViewer";
+import { fetchProxyBlob } from "@/lib/previewProxy";
 
 // pdf.js needs a canvas, which jsdom has not got, so the renderer is stubbed at its module
 // boundary and named instead - rendering one for real is e2e's job.
@@ -24,6 +26,8 @@ vi.mock("@/components/PdfJsCanvasPreview", () => ({
     <div data-pdf={src}>{`pdf: ${title}`}</div>
   ),
 }));
+// the authenticated fetch of a file through the API (a HEIC's JPEG, made on the fly)
+vi.mock("@/lib/previewProxy", () => ({ fetchProxyBlob: vi.fn() }));
 
 const IMAGE: AttachmentPreviewItem = {
   url: "blob:receipt",
@@ -180,5 +184,64 @@ describe("resolving the type", () => {
       name: "receipt.jpg",
       mime: "image/jpeg",
     });
+  });
+});
+
+// An iPhone HEIC (the user, 2026-11-24) is stored as uploaded. Safari 17+ draws it as it is;
+// where the browser can't, a saved one is fetched again as a JPEG the API makes on the fly.
+describe("an iPhone HEIC", () => {
+  const proxy = vi.mocked(fetchProxyBlob);
+  const HEIC = {
+    url: "https://b2.example/presigned",
+    name: "IMG_1.HEIC",
+    mime: "image/heic",
+    previewApiPath: "/api/v1/bills/b1/attachments/a1/preview/",
+  };
+  const photo = () => screen.getByRole("img", { name: "IMG_1.HEIC" });
+
+  beforeEach(() => proxy.mockReset());
+
+  it("is drawn as it is where the browser can, with nothing fetched", () => {
+    render(<PreviewBlock {...HEIC} />);
+
+    expect(photo()).toHaveAttribute("src", HEIC.url);
+    expect(proxy).not.toHaveBeenCalled();
+  });
+
+  it("is fetched as a JPEG made on the fly where the browser can't draw it", async () => {
+    proxy.mockResolvedValue("blob:jpeg");
+    render(<PreviewBlock {...HEIC} />);
+
+    fireEvent.error(photo());
+
+    await waitFor(() => expect(photo()).toHaveAttribute("src", "blob:jpeg"));
+    expect(proxy).toHaveBeenCalledWith(`${HEIC.previewApiPath}?as=jpeg`, "image/jpeg");
+  });
+
+  it("says it can't be shown when the JPEG can't be made either", async () => {
+    proxy.mockResolvedValue(null);
+    render(<PreviewBlock {...HEIC} />);
+
+    fireEvent.error(photo());
+
+    expect(await screen.findByText("This photo can't be shown here.")).toBeInTheDocument();
+  });
+
+  it("not yet saved, says it can be seen once saved", () => {
+    render(<PreviewBlock url="blob:staged" name="IMG_1.HEIC" mime="image/heic" />);
+
+    fireEvent.error(photo());
+
+    expect(screen.getByText("This photo can be viewed once it's saved.")).toBeInTheDocument();
+    expect(proxy).not.toHaveBeenCalled();
+  });
+
+  it("leaves any other image that won't draw exactly as before", () => {
+    render(<PreviewBlock url="blob:x" name="slip.png" mime="image/png" />);
+
+    fireEvent.error(screen.getByRole("img", { name: "slip.png" }));
+
+    expect(screen.getByRole("img", { name: "slip.png" })).toHaveAttribute("src", "blob:x");
+    expect(proxy).not.toHaveBeenCalled();
   });
 });

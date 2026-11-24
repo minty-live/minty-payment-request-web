@@ -13,8 +13,11 @@
 // At a PHONE viewport throughout - the overlay stacks over a modal that is itself full-width
 // there, which is where clipping and trapped scroll would show up first.
 
+import { readFileSync } from "node:fs";
+
 import { expect, test, type Page } from "@playwright/test";
 
+import { billAttachment, billListItem } from "../lib/__fixtures__/bills";
 import {
   expectNoSideScroll,
   handoff,
@@ -184,7 +187,7 @@ test("a spreadsheet is not offered, and is refused if forced past the picker", a
 
   // The refusal names the file, so "is it staged?" is a question for the list, not the text.
   await expect(
-    dialog.getByText(/^I can't open .+\. Choose a PDF, JPEG, PNG or HTML file\.$/),
+    dialog.getByText(/^I can't open .+\. Choose a PDF, JPEG, PNG, HEIC or HTML file\.$/),
   ).toBeVisible();
   await expect(dialog.getByText(/Excel/)).toHaveCount(0);
   await expect(stagedRow(page, "books.xlsx")).toHaveCount(0);
@@ -263,3 +266,86 @@ test("scrolling the dialog never uncovers the page below the backdrop", async ({
   expect(covered).toEqual({ inside: true, scrolled: 0 });
   await expect(dialog).toBeVisible();
 });
+
+// An iPhone HEIC (the user, 2026-11-24) is stored as it is. Chromium can't draw HEIC, which is
+// exactly the browser this needs: a staged one says when it can be seen, and a saved one is
+// fetched again through the API as a JPEG made on the fly.
+const HEIC = {
+  name: "IMG_1.HEIC",
+  mimeType: "image/heic",
+  buffer: readFileSync("e2e/fixtures/tiny.heic"),
+};
+
+for (const width of [360, 768, 1440]) {
+  test(`a staged iPhone HEIC is taken, and says it can be seen once saved (${width}px)`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 800 });
+    const dialog = await openAddDialog(page);
+    const picker = dialog.locator('input[type="file"]').first();
+    await expect(picker).toHaveAttribute(
+      "accept",
+      /^image\/jpeg,image\/png,application\/pdf,image\/heic/,
+    );
+    await expect(picker).not.toHaveAttribute("capture");
+
+    await picker.setInputFiles(HEIC);
+
+    await expect(stagedRow(page, "IMG_1.HEIC")).toBeVisible();
+    await expect(
+      dialog.getByText("This photo can be viewed once it's saved.").first(),
+    ).toBeVisible();
+    await expectNoSideScroll(page, width);
+  });
+
+  test(`a saved iPhone HEIC is shown as the JPEG the API makes when the browser can't draw it (${width}px)`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 800 });
+    const asked: string[] = [];
+    const saved = billAttachment({
+      attachment: {
+        ...billAttachment().attachment,
+        original_name: "IMG_1.HEIC",
+        mime_type: "image/heic",
+        file_extension: "HEIC",
+        download_url: "https://files.test/IMG_1.HEIC",
+      },
+    });
+    await stubFlaskHub(page);
+    await stubApi(page, {
+      // the details read a bill's attachments from the bill itself
+      bills: [
+        {
+          ...billListItem({ id: "b-1", reference: "PR-0001", status: "submitted" }),
+          attachments: [saved],
+        } as ReturnType<typeof billListItem>,
+      ],
+    });
+    // registered after stubApi, so these answer first
+    await page.route("https://files.test/IMG_1.HEIC", (route) =>
+      route.fulfill({ body: HEIC.buffer, contentType: "image/heic" }),
+    );
+    await page.route("**/attachments/*/preview/**", (route) => {
+      const cors = {
+        "Access-Control-Allow-Origin": route.request().headers()["origin"] ?? "*",
+        "Access-Control-Allow-Headers": "authorization, x-entity-id",
+      };
+      if (route.request().method() === "OPTIONS")
+        return route.fulfill({ status: 204, headers: cors });
+      asked.push(route.request().url());
+      return route.fulfill({
+        body: readFileSync("e2e/fixtures/tiny.jpg"),
+        contentType: "image/jpeg",
+        headers: cors,
+      });
+    });
+
+    await handoff(page, creds(), pagesOf(creds()).request("b-1", "PR-0001"));
+
+    const photo = page.getByRole("img", { name: "IMG_1.HEIC" }).first();
+    await expect.poll(() => photo.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBe(1);
+    expect(asked.some((url) => url.endsWith("/preview/?as=jpeg"))).toBe(true);
+    await expectNoSideScroll(page, width);
+  });
+}

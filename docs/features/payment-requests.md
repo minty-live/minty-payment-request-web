@@ -79,7 +79,19 @@ html — **no spreadsheets since 2026-10-09**, so every accepted type is one the
 draw; every file is uploaded exactly as chosen - no shrinking and no conversion, here or in
 the API (owner, 2026-11-04; `lib/compressImage.ts` is gone)). The allowlist is the shared
 `ATTACHMENT_ACCEPT` / `isAllowedAttachment` from `lib/fileAttachmentPreview.ts`, so this
-modal, the upload-invoice modal and the bank-slip modal agree by construction. The server
+modal, the upload-invoice modal and the bank-slip modal agree by construction.
+
+**Phone camera and iPhone HEIC (the user, 2026-11-24).** No "Take photo" button: the `accept`
+list mixes images and PDF, so iOS's sheet offers Take Photo / Photo Library / Choose File and
+Android's chooser offers its camera; there is no `capture` (it would skip Files and PDFs). JPEG
+is listed first, so iOS hands a HEIC photo over as JPEG; a real HEIC (Files, a Mac, Android
+"high-efficiency" photos) is taken and stored as it is, and `application/octet-stream` counts as
+no type (the extension decides, as the API does). `PreviewBlock` draws a HEIC as it is where the
+browser can (Safari 17+); where the `<img>` fails, a saved one is fetched through the API's
+`/preview/?as=jpeg` (`lib/previewProxy.ts`), a JPEG made on the fly, and a staged one says "This
+photo can be viewed once it's saved." Saved invoice attachments carry the proxy path for HEIC
+as for PDF; a saved HEIC bank slip goes through the fetched preview, not its presigned URL. The
+reader offers "Read invoice" for a HEIC too. The server
 (`attachment_service.py`) still accepts Excel — it is shared with bank slips and with Xero
 re-publish of bills that already hold one — so narrowing it is a separate decision.
 

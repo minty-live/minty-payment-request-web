@@ -1,5 +1,6 @@
 import { fetchPayments, listPaymentAttachments, type PaymentItem } from "./api";
 import { currencyLabelForCode } from "./currencyDisplay";
+import { isHeic } from "@minty/shared/heic";
 import { formatMoney } from "@minty/shared/money";
 import type {
   BankSlipDetails,
@@ -53,8 +54,11 @@ function directImagePreviewUrl(att: {
   if (!u) return undefined;
   const mime = (att.mime_type || "").toLowerCase();
   const name = (att.original_name || "").trim();
+  // An iPhone HEIC goes through the fetched preview, which knows its proxy path: where the
+  // browser can't draw HEIC it asks the API for a JPEG made on the fly (the user, 2026-11-24).
+  if (isHeic(mime, name)) return undefined;
   if (mime.startsWith("image/")) return u;
-  if (/\.(jpe?g|png|gif|webp|heic|heif)$/i.test(name)) return u;
+  if (/\.(jpe?g|png|gif|webp)$/i.test(name)) return u;
   return undefined;
 }
 

@@ -27,7 +27,7 @@ export function filesTooBig(names: string[]): string {
 
 /** One or more files of a type the forms can't open, by name. */
 export function filesNotOpenable(names: string[]): string {
-  return `I can't open ${names.join(", ")}. Choose a PDF, JPEG, PNG or HTML file.`;
+  return `I can't open ${names.join(", ")}. Choose a PDF, JPEG, PNG, HEIC or HTML file.`;
 }
 
 /** A new supplier, created in the company's Xero organisation. */

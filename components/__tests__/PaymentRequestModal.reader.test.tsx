@@ -353,6 +353,19 @@ describe("the invoice reader", () => {
     expect(seen.extracts).toHaveLength(0);
   });
 
+  // the user, 2026-11-24: an iPhone photo kept as HEIC is read like any photo (the API makes the
+  // model's copy a JPEG)
+  it("an iPhone HEIC is offered for reading", async () => {
+    const seen = serve();
+    show();
+    await attach(new File(["heic"], "IMG_1.HEIC", { type: "image/heic" }));
+
+    expect(
+      await within(dialog()).findByRole("button", { name: "Read invoice" }),
+    ).toBeInTheDocument();
+    expect(seen.extracts).toHaveLength(0);
+  });
+
   it("attaching reads nothing; the button offers the read, and pressing it reads once", async () => {
     const seen = serve();
     show();

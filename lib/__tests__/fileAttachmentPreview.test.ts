@@ -84,29 +84,53 @@ describe("isHtmlFile", () => {
 });
 
 describe("the attachment allowlist", () => {
-  it("is PDF, JPEG, PNG and HTML", () => {
-    expect([...ATTACHMENT_EXTENSIONS]).toEqual(["pdf", "jpg", "jpeg", "png", "html", "htm"]);
+  it("is PDF, JPEG, PNG, HEIC and HTML", () => {
+    expect([...ATTACHMENT_EXTENSIONS]).toEqual([
+      "pdf",
+      "jpg",
+      "jpeg",
+      "png",
+      "heic",
+      "heif",
+      "html",
+      "htm",
+    ]);
     expect([...ATTACHMENT_MIME_TYPES]).toEqual([
       "application/pdf",
       "image/jpeg",
       "image/jpg",
       "image/png",
+      "image/heic",
+      "image/heif",
       "text/html",
     ]);
   });
 
+  // JPEG first: iOS hands a HEIC photo over as the first type it can, so most iPhone photos
+  // arrive as JPEG; HEIC is still taken as it is (the user, 2026-11-24). Mixed with PDF, the
+  // list also makes Android offer its camera beside its files.
   it("is offered to the file picker exactly as the input needs it", () => {
     expect(ATTACHMENT_ACCEPT).toBe(
-      ".pdf,.jpg,.jpeg,.png,.html,.htm,application/pdf,image/jpeg,image/png,text/html",
+      "image/jpeg,image/png,application/pdf,image/heic,image/heif,text/html,.jpg,.jpeg,.png,.pdf,.heic,.heif,.html,.htm",
     );
   });
 
-  it.each(["invoice.pdf", "photo.jpg", "photo.jpeg", "photo.png", "page.html", "page.htm"])(
-    "accepts %s when the browser reports no type",
-    (name) => {
-      expect(isAllowedAttachment(file(name))).toBe(true);
-    },
-  );
+  it("takes an iPhone HEIC by its type", () => {
+    expect(isAllowedAttachment(file("IMG_1.HEIC", "image/heic"))).toBe(true);
+    expect(isAllowedAttachment(file("IMG_1.heif", "image/heif"))).toBe(true);
+  });
+
+  it.each([
+    "invoice.pdf",
+    "photo.jpg",
+    "photo.jpeg",
+    "photo.png",
+    "IMG_1.HEIC",
+    "page.html",
+    "page.htm",
+  ])("accepts %s when the browser reports no type", (name) => {
+    expect(isAllowedAttachment(file(name))).toBe(true);
+  });
 
   it.each(["payload.exe", "logo.svg", "bundle.zip", "sheet.xlsx", "noextension"])(
     "refuses %s",
@@ -118,12 +142,15 @@ describe("the attachment allowlist", () => {
 
 describe("isAllowedFileType", () => {
   // CHARACTERISATION: when the browser reports a type, ONLY that is checked - the extension is
-  // not consulted at all. So a file named .exe that claims application/pdf passes here, and a
-  // real .pdf whose type comes through as application/octet-stream is refused. The API
+  // not consulted at all. So a file named .exe that claims application/pdf passes here. The API
   // re-checks the upload, which is what makes this safe; it is not a client-side guarantee.
-  it("trusts the reported MIME over the extension, in both directions", () => {
+  // application/octet-stream says nothing (some Android pickers give it for a HEIC photo), so
+  // the extension decides, as the API's own check does (2026-11-24; it used to be refused).
+  it("trusts the reported MIME over the extension, unless it is octet-stream", () => {
     expect(isAllowedAttachment(file("payload.exe", "application/pdf"))).toBe(true);
-    expect(isAllowedAttachment(file("invoice.pdf", "application/octet-stream"))).toBe(false);
+    expect(isAllowedAttachment(file("invoice.pdf", "application/octet-stream"))).toBe(true);
+    expect(isAllowedAttachment(file("IMG_1.HEIC", "application/octet-stream"))).toBe(true);
+    expect(isAllowedAttachment(file("payload.exe", "application/octet-stream"))).toBe(false);
   });
 
   it("takes its allowlists as arguments, so another field can have its own", () => {

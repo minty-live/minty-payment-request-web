@@ -148,10 +148,14 @@ const READ_TARGET_ID = "pr-ai-read-target";
 const ALLOWANCE_ID = "pr-ai-allowance";
 const AI_CAUTION_ID = "pr-ai-caution";
 
-/** What the invoice reader can read: the model takes PDF, JPEG and PNG (the form takes HTML too). */
-const READABLE = /\.(pdf|jpe?g|png)$/i;
+/**
+ * What the invoice reader can read: PDF, JPEG, PNG and an iPhone HEIC (the API sends the model a
+ * JPEG of it; the user, 2026-11-24). The form takes HTML too, which is not read.
+ */
+const READABLE = /\.(pdf|jpe?g|png|hei[cf])$/i;
 const isReadable = (file: File) =>
-  /^(application\/pdf|image\/jpe?g|image\/png)$/i.test(file.type) || READABLE.test(file.name);
+  /^(application\/pdf|image\/jpe?g|image\/png|image\/hei[cf])$/i.test(file.type) ||
+  READABLE.test(file.name);
 
 /** Material Symbols icon + color for uploaded file row (Google Material Icons naming). */
 function getUploadedFileIconInfo(filename: string): { icon: string; iconClass: string } {
@@ -1285,7 +1289,7 @@ export function PaymentRequestModal({
                       Click or drag files here to upload
                     </p>
                     <p className="mt-1 px-2 text-center text-[12px] leading-tight text-text-disabled">
-                      PDF, JPEG, PNG, HTML (Max 10MB)
+                      PDF, JPEG, PNG, HEIC, HTML (Max 10MB)
                     </p>
                   </div>
                 </div>

@@ -16,6 +16,7 @@ import { SUPPLIERS } from "@/lib/__fixtures__/contacts";
 import { entityBillAccounts } from "@/lib/__fixtures__/accounts";
 import { moduleTokenClaims, unsignedToken } from "@/lib/__fixtures__/tokens";
 import { setAuth } from "@/lib/auth";
+import { ATTACHMENT_ACCEPT } from "@/lib/fileAttachmentPreview";
 import { draftFiles, keptDrafts } from "@/test/draftFiles";
 
 const ENTITY_ID = "360812e1-9f3a-4c21-8e5b-1a2b3c4d5e6f";
@@ -650,6 +651,20 @@ describe("the attachments", () => {
     expect(filePicker()).not.toHaveAttribute("aria-invalid");
   });
 
+  // the user, 2026-11-24: a phone's own chooser offers the camera (no capture attribute, which
+  // would skip Files and PDFs), and an iPhone HEIC is taken as it is
+  it("offers the phone's camera and files, and takes an iPhone HEIC", async () => {
+    show();
+    const input = within(dialog()).getByLabelText("Choose files to attach");
+
+    expect(input.getAttribute("accept")).toBe(ATTACHMENT_ACCEPT);
+    expect(input).not.toHaveAttribute("capture");
+
+    await attach(file("IMG_1.HEIC", "image/heic"));
+
+    expect(await screen.findByRole("button", { name: "Remove IMG_1.HEIC" })).toBeInTheDocument();
+  });
+
   it("does not offer a spreadsheet in the picker at all", async () => {
     show();
     const input = within(dialog()).getByLabelText("Choose files to attach");
@@ -672,10 +687,10 @@ describe("the attachments", () => {
     drop(input, file("books.xlsx", "application/vnd.ms-excel"));
 
     const refusal = await screen.findByText(
-      /^I can't open .+\. Choose a PDF, JPEG, PNG or HTML file\.$/,
+      /^I can't open .+\. Choose a PDF, JPEG, PNG, HEIC or HTML file\.$/,
     );
     expect(refusal).toHaveTextContent(
-      "I can't open books.xlsx. Choose a PDF, JPEG, PNG or HTML file.",
+      "I can't open books.xlsx. Choose a PDF, JPEG, PNG, HEIC or HTML file.",
     );
     expect(refusal).not.toHaveTextContent("Excel");
     expect(screen.queryByText("books.xlsx")).toBeNull();

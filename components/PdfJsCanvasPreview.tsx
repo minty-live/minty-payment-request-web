@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { getAuth, redirectToLogin } from "@/lib/auth";
-import { API_BASE } from "@/lib/apiBase";
+import { fetchProxyBlob } from "@/lib/previewProxy";
 
 // pdf.js runtime assets (worker, cMaps, standard fonts) are self-hosted under
 // /public/pdfjs — copied out of node_modules by scripts/copy-pdfjs-assets.mjs
@@ -78,36 +77,6 @@ export type PdfJsCanvasPreviewProps = {
  */
 function isLocalSrc(src: string): boolean {
   return src.startsWith("blob:") || src.startsWith("data:");
-}
-
-/**
- * Fetch a PDF from a Django proxy endpoint with JWT auth headers.
- * Returns a blob: URL on success, or null on failure.
- */
-async function fetchProxyBlob(apiPath: string): Promise<string | null> {
-  try {
-    const auth = getAuth();
-    if (!auth?.token) {
-      redirectToLogin();
-      return null;
-    }
-    const headers = new Headers();
-    headers.set("Authorization", `Bearer ${auth.token}`);
-    headers.set("X-Entity-Id", auth.entityId);
-    const url = `${API_BASE.replace(/\/$/, "")}${apiPath}`;
-    const res = await fetch(url, { headers });
-    if (!res.ok) return null;
-    const blob = await res.blob();
-    if (blob.size === 0) return null;
-    // Ensure the blob has the correct MIME type so pdf.js accepts it.
-    const typed =
-      blob.type && blob.type !== "application/octet-stream"
-        ? blob
-        : new Blob([await blob.arrayBuffer()], { type: "application/pdf" });
-    return URL.createObjectURL(typed);
-  } catch {
-    return null;
-  }
 }
 
 export function PdfJsCanvasPreview({
@@ -194,7 +163,8 @@ function PdfJsProxyFetcher({
     let createdUrl: string | null = null;
 
     void (async () => {
-      const url = await fetchProxyBlob(apiPath);
+      // untyped bytes are called a PDF, so pdf.js accepts them
+      const url = await fetchProxyBlob(apiPath, "application/pdf");
       if (cancelled) {
         if (url) URL.revokeObjectURL(url);
         return;

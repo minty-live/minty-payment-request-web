@@ -19,7 +19,7 @@ describe("the bill forms' messages", () => {
       "These files are over 10 MB: a.pdf, b.png. Choose files up to 10 MB.",
     );
     expect(filesNotOpenable(["books.xlsx"])).toBe(
-      "I can't open books.xlsx. Choose a PDF, JPEG, PNG or HTML file.",
+      "I can't open books.xlsx. Choose a PDF, JPEG, PNG, HEIC or HTML file.",
     );
     expect(AMOUNT_TOO_LONG).toBe(
       "The amount is too long. Use up to 11 digits before the decimal point.",

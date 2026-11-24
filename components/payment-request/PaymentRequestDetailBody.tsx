@@ -5,6 +5,7 @@ import type { CSSProperties } from "react";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useUserRole } from "@/lib/useUserRole";
 import { useAutoSaveDraft, type DraftOffer } from "@minty/shared/drafts";
+import { isHeic } from "@minty/shared/heic";
 import { guardLeave, useLeaveGuard } from "@minty/shared/leaveGuard";
 import { DraftRestore } from "@minty/shared/ui";
 import { billDraftBasis, currentDraftScope } from "@/lib/draftScope";
@@ -642,8 +643,10 @@ export function PaymentRequestDetailBody({ onBillUpdated }: PaymentRequestDetail
           url: ba.attachment.download_url,
           name: ba.attachment.original_name,
           mime: ba.attachment.mime_type || "application/octet-stream",
+          // a PDF is drawn through the API; so is an iPhone HEIC the browser can't draw (as JPEG)
           previewApiPath:
-            (ba.attachment.mime_type || "").toLowerCase() === "application/pdf"
+            (ba.attachment.mime_type || "").toLowerCase() === "application/pdf" ||
+            isHeic(ba.attachment.mime_type, ba.attachment.original_name)
               ? `/api/v1/bills/${requestId}/attachments/${ba.id}/preview/`
               : undefined,
           billAttachmentId: ba.id,

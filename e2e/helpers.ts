@@ -302,7 +302,8 @@ export async function stubApi(page: Page, stub: ApiStub = {}): Promise<void> {
         ...row,
         xero_contact_id: "",
         updated_at: row.created_at,
-        attachments: [],
+        // a spec may give a row its saved attachments; none otherwise
+        attachments: (row as { attachments?: unknown[] }).attachments ?? [],
         line_items: [],
       });
     }

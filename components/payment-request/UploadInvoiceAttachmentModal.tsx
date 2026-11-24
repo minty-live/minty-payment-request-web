@@ -351,7 +351,7 @@ export function UploadInvoiceAttachmentModal({
                       Click or drag files here to upload
                     </p>
                     <p className="mt-1 px-2 text-center text-[12px] leading-tight text-text-disabled">
-                      PDF, JPEG, PNG, HTML (Max 10MB)
+                      PDF, JPEG, PNG, HEIC, HTML (Max 10MB)
                     </p>
                   </div>
                 </div>

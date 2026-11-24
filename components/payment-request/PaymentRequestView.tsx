@@ -35,6 +35,7 @@ import {
 } from "@/lib/api";
 import type { InvoiceAttachmentPreviewItem } from "./InvoiceAttachmentPreview";
 import { useEntityCurrency } from "@/lib/entityCurrency";
+import { isHeic } from "@minty/shared/heic";
 import { formatAmount, formatMoney, parseAmount } from "@minty/shared/money";
 import { fetchBillBankSlipEnrichment, type BankSlipEnrichment } from "@/lib/bankSlipEnrichment";
 import {
@@ -138,8 +139,10 @@ function mapBillAttachmentsToPreviewItems(
       url: ba.attachment.download_url,
       name: ba.attachment.original_name,
       mime: ba.attachment.mime_type || "application/octet-stream",
+      // a PDF is drawn through the API; so is an iPhone HEIC the browser can't draw (as JPEG)
       previewApiPath:
-        (ba.attachment.mime_type || "").toLowerCase() === "application/pdf"
+        (ba.attachment.mime_type || "").toLowerCase() === "application/pdf" ||
+        isHeic(ba.attachment.mime_type, ba.attachment.original_name)
           ? `/api/v1/bills/${billId}/attachments/${ba.id}/preview/`
           : undefined,
       billAttachmentId: ba.id,

@@ -12,8 +12,10 @@
 
 import { createPortal } from "react-dom";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { isHeic } from "@minty/shared/heic";
 import { PdfJsCanvasPreview } from "@/components/PdfJsCanvasPreview";
 import { pushAppScrollLock } from "@/lib/appScrollRoot";
+import { fetchProxyBlob } from "@/lib/previewProxy";
 
 const MIN_SCALE = 0.6;
 const MAX_SCALE = 3;
@@ -76,7 +78,16 @@ export function PreviewBlock({
       ? "mx-auto block h-auto max-h-[calc(100dvh-7rem)] w-full object-contain"
       : "mx-auto block h-auto max-h-[min(75vh,56rem)] w-full object-contain";
   if (mimeLower.startsWith("image/")) {
-    return <img src={url} alt={name || "Attachment"} className={imgClass} draggable={false} />;
+    return (
+      <PreviewImage
+        key={url}
+        url={url}
+        name={name}
+        mime={mime}
+        previewApiPath={previewApiPath}
+        className={imgClass}
+      />
+    );
   }
   if (mimeLower === "application/pdf") {
     return (
@@ -112,6 +123,72 @@ export function PreviewBlock({
       <p className="text-sm font-medium text-text-secondary">{name || "File"}</p>
       <p className="text-xs text-text-muted">Preview is not available for this file type.</p>
     </div>
+  );
+}
+
+/**
+ * An image as it is. An iPhone HEIC (the user, 2026-11-24) is stored as uploaded: Safari 17+
+ * draws it; where the browser can't (the `<img>` fails - the photo itself is the test, never the
+ * user agent), a saved one is fetched again through the API as `?as=jpeg`, a JPEG made on the fly,
+ * and one not yet saved says when it can be seen. Any other image is drawn exactly as before.
+ */
+function PreviewImage({
+  url,
+  name,
+  mime,
+  previewApiPath,
+  className,
+}: AttachmentPreviewItem & { className: string }) {
+  const [state, setState] = useState<
+    { kind: "original" } | { kind: "loading" } | { kind: "jpeg"; url: string } | { kind: "none" }
+  >({ kind: "original" });
+  const heic = isHeic(mime, name);
+
+  // the JPEG's object URL lives as long as this image (PreviewBlock keys it on the file's URL)
+  useEffect(
+    () => () => {
+      if (state.kind === "jpeg") URL.revokeObjectURL(state.url);
+    },
+    [state],
+  );
+
+  const onError = () => {
+    if (!heic || state.kind !== "original") return;
+    if (!previewApiPath) {
+      setState({ kind: "none" });
+      return;
+    }
+    setState({ kind: "loading" });
+    void fetchProxyBlob(`${previewApiPath}?as=jpeg`, "image/jpeg").then((jpeg) =>
+      setState(jpeg ? { kind: "jpeg", url: jpeg } : { kind: "none" }),
+    );
+  };
+
+  if (state.kind === "none" || state.kind === "loading") {
+    return (
+      <div className="flex flex-col items-center justify-center gap-2 bg-surface-sunk px-4 py-8 text-center">
+        <span className="material-symbols-outlined text-[40px] text-text-disabled" aria-hidden>
+          {state.kind === "loading" ? "progress_activity" : "image"}
+        </span>
+        <p className="text-sm font-medium text-text-secondary">{name || "Photo"}</p>
+        <p className="text-xs text-text-muted">
+          {state.kind === "loading"
+            ? "Loading preview…"
+            : previewApiPath
+              ? "This photo can't be shown here."
+              : "This photo can be viewed once it's saved."}
+        </p>
+      </div>
+    );
+  }
+  return (
+    <img
+      src={state.kind === "jpeg" ? state.url : url}
+      alt={name || "Attachment"}
+      className={className}
+      draggable={false}
+      onError={onError}
+    />
   );
 }
 

@@ -3,6 +3,7 @@
 import { createPortal } from "react-dom";
 import type { ChangeEvent } from "react";
 import { useEffect, useId, useRef, useState } from "react";
+import { isHeic } from "@minty/shared/heic";
 import { pushAppScrollLock } from "@/lib/appScrollRoot";
 import {
   ApiError,
@@ -134,7 +135,7 @@ function pickExistingPaymentIdForBankSlipUpload(
 function fileIconForName(filename: string): { icon: string; iconClass: string } {
   const ext = filename.trim().split(".").pop()?.toLowerCase() ?? "";
   if (ext === "pdf") return { icon: "picture_as_pdf", iconClass: "text-status-danger-ink" };
-  if (ext === "jpg" || ext === "jpeg" || ext === "png")
+  if (ext === "jpg" || ext === "jpeg" || ext === "png" || ext === "heic" || ext === "heif")
     return { icon: "image", iconClass: "text-status-info-ink" };
   if (ext === "html" || ext === "htm")
     return { icon: "html", iconClass: "text-status-warning-ink" };
@@ -147,7 +148,7 @@ function isPdfName(name: string): boolean {
 
 function isImageName(name: string): boolean {
   const ext = name.trim().split(".").pop()?.toLowerCase() ?? "";
-  return ext === "jpg" || ext === "jpeg" || ext === "png" || ext === "gif" || ext === "webp";
+  return ["jpg", "jpeg", "png", "gif", "webp", "heic", "heif"].includes(ext);
 }
 
 function isHtmlName(name: string): boolean {
@@ -255,15 +256,16 @@ function FetchedPreviewContent({
         );
         if (cancelled) return;
 
+        // The Django proxy: a PDF is drawn through it so the browser never loads the raw B2
+        // presigned URL inside a canvas/frame (Edge's cross-origin block, "Unsafe attempt to load
+        // URL https://s3.us-east-005..."); an iPhone HEIC the browser can't draw is fetched
+        // through it as a JPEG made on the fly (the user, 2026-11-24).
+        const proxyPath = `/api/v1/bills/${source.billId}/payments/${source.paymentId}/attachments/${source.attachmentId}/preview/`;
+
         if (preview.kind === "embed") {
           const mime = (preview.mime_type || "").toLowerCase();
-          // Build a Django proxy path for PDFs so the browser never loads
-          // the raw B2 presigned URL inside a canvas/frame — avoids Edge's
-          // cross-origin block ("Unsafe attempt to load URL https://s3.us-east-005...").
           const isPdf = mime === "application/pdf" || isPdfName(fileName);
-          const previewApiPath = isPdf
-            ? `/api/v1/bills/${source.billId}/payments/${source.paymentId}/attachments/${source.attachmentId}/preview/`
-            : undefined;
+          const previewApiPath = isPdf || isHeic(mime, fileName) ? proxyPath : undefined;
           setState({ status: "ready", url: preview.url, mime, previewApiPath });
           const sz = preview.file_size;
           if (sz != null && Number.isFinite(sz) && sz >= 0) {
@@ -286,7 +288,9 @@ function FetchedPreviewContent({
                 ? "image/gif"
                 : ext === "webp"
                   ? "image/webp"
-                  : "image/jpeg";
+                  : ext === "heic" || ext === "heif"
+                    ? `image/${ext}`
+                    : "image/jpeg";
           previewBlob = new Blob([await blob.arrayBuffer()], { type: imageType });
         }
         const objectUrl = URL.createObjectURL(previewBlob);
@@ -295,7 +299,12 @@ function FetchedPreviewContent({
           return;
         }
         blobObjectUrlRef.current = objectUrl;
-        setState({ status: "ready", url: objectUrl, mime: previewBlob.type || "" });
+        setState({
+          status: "ready",
+          url: objectUrl,
+          mime: previewBlob.type || "",
+          ...(isHeic(previewBlob.type, fileName) ? { previewApiPath: proxyPath } : {}),
+        });
         const sz = preview.file_size ?? previewBlob.size;
         if (Number.isFinite(sz) && sz >= 0) {
           onResolvedFileSize?.(sz);
@@ -985,7 +994,7 @@ export function BankSlipDetailsModal({
                         Click to upload or drag and drop
                       </p>
                       <p className="mt-1 px-2 text-center text-[12px] leading-tight text-text-disabled">
-                        PDF, JPEG, PNG, HTML (Max 10MB)
+                        PDF, JPEG, PNG, HEIC, HTML (Max 10MB)
                       </p>
                     </div>
                   </div>
