@@ -134,6 +134,14 @@ empty** (owner, 2026-11-23): after a read that filled anything, the supplier, ac
 the two dates still empty turn red at once with their own sentences (`lib/formMessages.ts`) - with
 no error summary and no focus move, which stay a refused Confirm's (`ErrorSummary` shows only once
 Confirm has been refused).
+**A wrong or poor invoice is warned about, never refused** (the user, 2026-11-24): every photo
+attached (picked or restored) gets the free photo check (`photoQuality`, no AI), and a finding is
+said under the upload by file name - "receipt.jpg looks blurry. Check that it can be read, or take
+a clearer one." (also "looks too dark" / "is very small"; PDFs are not checked). After a read,
+the API's `document_warning` says what the file may be instead ("This looks like a bank payment
+confirmation, not an invoice. ...", "This doesn't look like a receipt or invoice. ...", "This
+document is hard to read. ...") beside whatever filled; on a refused read it replaces the general
+no-evidence line. Nothing is blocked.
 
 - **Filling:** a suggestion fills the supplier (by its Xero id from the company's list), the
   invoice and due dates, the amount (in the company currency's places), the description and the

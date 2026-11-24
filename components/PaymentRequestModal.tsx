@@ -60,6 +60,11 @@ import {
   cleared,
   AiCaution,
   convertedText,
+  documentWarningText,
+  photoQuality,
+  photoQualityText,
+  type DocumentWarning,
+  type PhotoFinding,
   exchangeFailedOf,
   exchangeFields,
   exchangeKept,
@@ -369,6 +374,20 @@ export function PaymentRequestModal({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [uploadedFiles, setUploadedFiles] = useState<UploadedEntry[]>([]);
+  const [photoChecks, setPhotoChecks] = useState<ReadonlyMap<File, PhotoFinding | null>>(
+    () => new Map(),
+  );
+  // each photo attached (picked or restored from a draft) is checked once
+  const photosStarted = useRef(new WeakSet<File>());
+  useEffect(() => {
+    for (const { file } of uploadedFiles) {
+      if (photosStarted.current.has(file)) continue;
+      photosStarted.current.add(file);
+      void photoQuality(file).then((finding) =>
+        setPhotoChecks((prev) => new Map(prev).set(file, finding ?? null)),
+      );
+    }
+  }, [uploadedFiles]);
   const [previewFileId, setPreviewFileId] = useState<string | null>(null);
   const [previewObjectUrl, setPreviewObjectUrl] = useState<string | null>(null);
   const [viewerOpen, setViewerOpen] = useState(false);
@@ -540,6 +559,9 @@ export function PaymentRequestModal({
   // an invoice that isn't one record of a payment (owner, 2026-11-23): nothing filled, and the form
   // says why - a line under the upload, or an OK-only question for several invoices
   const [refused, setRefused] = useState<EvidenceRefusal | null>(null);
+  // a wrong or poor invoice (the user, 2026-11-24) - warnings only, nothing is stopped: what the
+  // read says it may be instead, and the free photo check (no AI) of every photo attached
+  const [documentWarning, setDocumentWarning] = useState<DocumentWarning | null>(null);
   const reader = useDocumentReader<InvoiceSuggestions>({
     field: "invoice",
     latch: INVOICE_LATCH,
@@ -580,6 +602,7 @@ export function PaymentRequestModal({
     },
     onStatus: setReaderStatus,
     onRefused: setRefused,
+    onWarning: setDocumentWarning,
   });
   const { cancel: cancelRead } = reader;
   // One file per read (owner, 2026-11-18): the person chooses it by selecting it in the list (the
@@ -603,6 +626,7 @@ export function PaymentRequestModal({
   };
   const dropSuggestions = () => {
     setRefused(null);
+    setDocumentWarning(null);
     setAiFilled(false);
     setExchange(null);
     setRateMissing(null);
@@ -734,6 +758,7 @@ export function PaymentRequestModal({
     setReadAsked(false);
     setAiFilled(false);
     setRefused(null);
+    setDocumentWarning(null);
     setExchange(null);
     setRateMissing(null);
     setReadName(null);
@@ -1281,9 +1306,18 @@ export function PaymentRequestModal({
               <ReadingNotice title={READING_TITLE} detail={READING_DETAIL} />
             ) : reader.failed ? (
               <ReadFailedLine text={READ_FAILED} />
+            ) : documentWarning ? (
+              // the more specific word on a refused read too: "a bank payment confirmation"
+              <ReadFailedLine text={documentWarningText(documentWarning, "invoice")} />
             ) : refused === "no_description" ? (
               <ReadFailedLine text={NO_EVIDENCE} />
             ) : null}
+            {uploadedFiles.map(({ id, file }) => {
+              const finding = photoChecks.get(file);
+              return finding ? (
+                <ReadFailedLine key={id} text={photoQualityText(finding, file.name)} />
+              ) : null;
+            })}
             {readerStatus?.enabled && fileToRead && !INVOICE_LATCH.readerOff() ? (
               <div>
                 {offerRead ? (
@@ -1299,6 +1333,7 @@ export function PaymentRequestModal({
                         setReadFileId(fileToRead.id);
                       }
                       setRefused(null);
+                      setDocumentWarning(null);
                       setReadAsked(true);
                       void reader.read(fileToRead.file);
                     }}

@@ -17,7 +17,7 @@ import { unsignedToken } from "@/lib/__fixtures__/tokens";
 import { setAuth } from "@/lib/auth";
 import { INVOICE_LATCH } from "@/lib/invoiceReader";
 import { todayLocalISODate, formatIsoDateAsDdMmmYyyy } from "@/lib/dateDisplayFormat";
-import { SUGGESTED_RING } from "@minty/shared/reader";
+import { photoQuality, SUGGESTED_RING } from "@minty/shared/reader";
 
 const ENTITY_ID = "360812e1-9f3a-4c21-8e5b-1a2b3c4d5e6f";
 
@@ -27,6 +27,11 @@ vi.mock("next/navigation", () => ({
 }));
 vi.mock("@/components/PdfJsCanvasPreview", () => ({
   PdfJsCanvasPreview: () => <div>pdf preview</div>,
+}));
+// jsdom can't decode a photo: the free photo check is stood in for (the user, 2026-11-24)
+vi.mock("@minty/shared/reader", async (original) => ({
+  ...(await original<typeof import("@minty/shared/reader")>()),
+  photoQuality: vi.fn(),
 }));
 
 const fetchMock = vi.fn<typeof fetch>();
@@ -116,6 +121,7 @@ beforeEach(() => {
   vi.stubGlobal("fetch", fetchMock);
   setAuth(unsignedToken({ role: "admin", system_role: "normal" }), ENTITY_ID, "Olive & Vine");
   INVOICE_LATCH.reset();
+  vi.mocked(photoQuality).mockResolvedValue(null); // a sharp photo, unless a test says otherwise
 });
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -721,5 +727,50 @@ describe("required fields the read left empty", () => {
     await attachAndRead(pdf());
     await waitFor(() => expect(byId("pr-amount")).toHaveValue("1,200.50"));
     expect(within(dialog()).queryByText(/is still empty/)).toBeNull();
+  });
+});
+
+describe("a wrong or poor invoice is warned about, never refused (the user, 2026-11-24)", () => {
+  const png = (name: string) =>
+    new File([new Uint8Array([137, 80, 78, 71])], name, { type: "image/png" });
+  const BANK =
+    "This looks like a bank payment confirmation, not an invoice. Check that you've attached the receipt or invoice before you save.";
+
+  it("a blurry photo is named the moment it is attached - no read, no AI", async () => {
+    const seen = serve();
+    vi.mocked(photoQuality).mockImplementation(async (f) =>
+      f.name === "soft.png" ? "blurry" : null,
+    );
+    show();
+    await attach(png("soft.png"));
+    expect(
+      await within(dialog()).findByText(
+        "soft.png looks blurry. Check that it can be read, or take a clearer one.",
+      ),
+    ).toHaveAttribute("role", "status");
+    expect(seen.extracts).toHaveLength(0);
+  });
+
+  it("a read that finds a bank payment confirmation still fills, and says what it looks like", async () => {
+    serve({ extract: () => json(200, { ...READ, document_warning: "bank_payment_confirmation" }) });
+    show();
+    await attachAndRead(pdf());
+    await waitFor(() => expect(byId("pr-amount")).toHaveValue("1,200.50"));
+    expect(within(dialog()).getByText(BANK)).toHaveAttribute("role", "status");
+  });
+
+  it("a refused read that looks like a bank confirmation says that, not the general line", async () => {
+    serve({
+      extract: () =>
+        json(200, {
+          suggestions: null,
+          reason: "no_description",
+          document_warning: "bank_payment_confirmation",
+        }),
+    });
+    show();
+    await attachAndRead(pdf());
+    expect(await within(dialog()).findByText(BANK)).toBeInTheDocument();
+    expect(within(dialog()).queryByText(NO_EVIDENCE)).toBeNull();
   });
 });
