@@ -19,7 +19,7 @@ import {
   edited as sharedEdited,
   exchangeNote,
   fillable,
-  noEvidenceText,
+  outlined,
   readerState,
   severalDocuments,
   type Band,
@@ -42,7 +42,8 @@ export type InvoiceSuggestions = {
   };
   account?: ReadField & { code?: string; name?: string };
   amount?: ReadField;
-  description?: ReadField;
+  /** `inferred`: the invoice lists no items, so the description was inferred (outlined to check). */
+  description?: ReadField & { inferred?: boolean };
   invoice_date?: ReadField;
   due_date?: ReadField;
   currency?: string;
@@ -54,12 +55,14 @@ export type InvoiceSuggestions = {
 };
 
 /**
- * The owner's launch decisions (2026-11-23, after IRD's "A Guide to Keeping Business Records"): an
- * invoice that doesn't say what was paid for (nothing filled, the form says why under the upload),
- * and several invoices in one file (an OK-only question). The file stays either way.
+ * Several invoices in one file - the only refusal (the user, 2026-11-25): an OK-only question,
+ * nothing filled, and the file stays. The description is not mandatory.
  */
-export const NO_EVIDENCE = noEvidenceText("invoice");
 export const SEVERAL_INVOICES = severalDocuments("invoice");
+
+/** Said with the line under a field outlined to check (the user, 2026-11-25). */
+export const INFERRED_DETAIL = "The invoice doesn't list the items, so this was inferred.";
+export const INFERRED_ACCOUNT_DETAIL = "Chosen to match the inferred description.";
 
 /** No rate for the invoice's currency (owner, 2026-11-19): the amount is the person's to type. */
 export function rateMissingText(currency: string, code: string | null | undefined): string {
@@ -381,7 +384,29 @@ export function withInvoiceSuggestions(
   if (s.exchange_failed?.currency)
     parts.push(rateMissingText(s.exchange_failed.currency, currency));
 
-  return { ...state, values, marks, notes, detectedName, announcement: parts.join(" ") };
+  // The outlines (the user, 2026-11-25): red where the read left a field empty (a warning only -
+  // nothing is blocked by it), orange "Please check" on an inferred description and its account,
+  // and on a supplier not on the list.
+  const empty = (
+    [
+      ["supplier", blank(values.contact) && blank(values.contactInput)],
+      ["invoiceDate", blank(values.invoiceDate)],
+      ["dueDate", blank(values.dueDate)],
+      ["amount", blank(values.amount)],
+      ["description", blank(values.description)],
+      ["account", blank(values.accountCode)],
+    ] as const
+  )
+    .filter(([, isBlank]) => isBlank)
+    .map(([field]) => field);
+  const check: InvoiceField[] = [];
+  if (s.description?.inferred) check.push("description", "account");
+  if (values.newContact && filled.includes("supplier")) check.push("supplier");
+
+  return outlined(
+    { ...state, values, marks, notes, detectedName, announcement: parts.join(" ") },
+    { empty, check },
+  );
 }
 
 /** Whether an answer showed the person anything (a filled field, a note, an offered supplier). */

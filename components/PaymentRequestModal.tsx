@@ -71,9 +71,11 @@ import {
   ReadButton,
   ReaderNote,
   ReadFailedLine,
+  outlineOf,
+  outlineRing,
+  PLEASE_CHECK,
   ReadingNotice,
   SuggestedLine,
-  SUGGESTED_RING,
   useDocumentReader,
   type ReaderStatus,
   usedNote,
@@ -85,8 +87,9 @@ import {
   INVOICE_LATCH,
   invoiceSpec,
   invoiceState,
+  INFERRED_ACCOUNT_DETAIL,
+  INFERRED_DETAIL,
   NEW_CONTACT_DETAIL,
-  NO_EVIDENCE,
   readNameDetail,
   readContact,
   READ_FAILED,
@@ -201,6 +204,15 @@ function isPositiveAmount(raw: string): boolean {
   if (!cleaned || cleaned === ".") return false;
   return /[1-9]/.test(cleaned);
 }
+
+/** A reader field's own required-field message, if it has one (its red border wins over the outline). */
+const ERROR_OF: Partial<Record<InvoiceField, ValidatedField>> = {
+  supplier: "contact",
+  account: "accountCode",
+  amount: "amount",
+  invoiceDate: "invoiceDate",
+  dueDate: "dueDate",
+};
 
 function validatePaymentRequestForm(values: {
   amount: string;
@@ -625,18 +637,26 @@ export function PaymentRequestModal({
   /** Under a reader field: the suggested line with Clear, or the note offering the invoice's reading. */
   const readerExtras = (field: InvoiceField) => {
     const band = readerAux.marks[field];
+    // the user, 2026-11-25: an inferred description and its account, or a new supplier - orange
+    const check = outlineOf(readerAux, field) === "check";
+    const said = check ? `${PLEASE_CHECK}.` : band ? suggestedText(band) : "";
     if (band)
       return (
         <SuggestedLine
           id={`pr-${field}-suggested`}
+          tone={check ? "check" : "suggested"}
           text={
             field === "amount" && converted
-              ? `${suggestedText(band)} ${convertedText(converted, entityCurrency).replace(/^c/, "C")}.`
+              ? `${said} ${convertedText(converted, entityCurrency).replace(/^c/, "C")}.`
               : field === "supplier" && readContactNow
-                ? `${suggestedText(band)} ${NEW_CONTACT_DETAIL}`
+                ? `${said} ${NEW_CONTACT_DETAIL}`
                 : field === "supplier" && contact && readSupplierDetail
-                  ? `${suggestedText(band)} ${readSupplierDetail}`
-                  : suggestedText(band)
+                  ? `${said} ${readSupplierDetail}`
+                  : check && field === "description"
+                    ? `${said} ${INFERRED_DETAIL}`
+                    : check && field === "account"
+                      ? `${said} ${INFERRED_ACCOUNT_DETAIL}`
+                      : said
           }
           clearLabel={CLEAR_LABEL}
           onClear={() => clearSuggestion(field)}
@@ -647,7 +667,13 @@ export function PaymentRequestModal({
       <ReaderNote text={note.text} action={USE_LABEL} onAction={() => takeSuggestion(field)} />
     ) : null;
   };
-  const ring = (field: InvoiceField) => (readerAux.marks[field] ? ` ${SUGGESTED_RING}` : "");
+  // the read's outline (the user, 2026-11-25): teal suggested, orange to check, red left empty -
+  // the red is a warning only, and gives way to a required field's own red border and sentence
+  const ring = (field: InvoiceField) => {
+    const error = ERROR_OF[field];
+    const outline = error && fieldErrors[error] ? "" : outlineRing(readerAux, field);
+    return outline ? ` ${outline}` : "";
+  };
   const describedBy = (field: InvoiceField) =>
     readerAux.marks[field] ? `pr-${field}-suggested` : undefined;
 
@@ -1285,8 +1311,6 @@ export function PaymentRequestModal({
             ) : documentWarning ? (
               // the more specific word on a refused read too: "a bank payment confirmation"
               <ReadFailedLine text={documentWarningText(documentWarning, "invoice")} />
-            ) : refused === "no_description" ? (
-              <ReadFailedLine text={NO_EVIDENCE} />
             ) : null}
             {uploadedFiles.map(({ id, file }) => {
               const finding = photoChecks.get(file);

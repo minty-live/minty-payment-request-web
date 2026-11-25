@@ -205,26 +205,27 @@ for (const size of [
   { width: 768, height: 1024 },
   { width: 1440, height: 900 },
 ]) {
-  test(`an invoice that doesn't say what was paid for fills nothing and says why (${size.width}px)`, async ({
+  test(`a read outlines an empty description red and the filled amount teal (${size.width}px)`, async ({
     page,
   }) => {
+    // the user, 2026-11-25: the description is not mandatory - red is a warning only
     await page.setViewportSize(size);
     const { dialog } = await openAddDialog(page, true, {
-      suggestions: null,
-      reason: "no_description",
+      suggestions: { ...READ.suggestions, description: field("", "medium") },
+      reason: null,
     });
     await dialog.locator('input[type="file"]').first().setInputFiles(PDF);
     await dialog.getByRole("button", { name: "Read invoice" }).click();
 
-    const line = dialog.getByText(
-      "We can't tell what this payment was for, so this document isn't sufficient as an invoice. Please attach a receipt or invoice that shows the goods or services.",
-    );
-    await expect(line).toBeVisible();
-    await expect(dialog.locator("#pr-amount")).toHaveValue("");
+    const amount = dialog.locator("#pr-amount");
+    await expect(amount).toHaveValue("1,200.50");
+    const description = dialog.locator("#pr-description");
+    await expect(description).toHaveClass(/ring-action-danger/);
+    await expect(amount).toHaveClass(/ring-border-selected/);
     await expectNoSideScroll(page, size.width);
-    await line.scrollIntoViewIfNeeded();
+    await description.scrollIntoViewIfNeeded();
     if (process.env.E2E_SHOTS)
-      await page.screenshot({ path: `${process.env.E2E_SHOTS}/prw-no-evidence-${size.width}.png` });
+      await page.screenshot({ path: `${process.env.E2E_SHOTS}/prw-outlines-${size.width}.png` });
   });
 
   test(`several invoices in one file ask for one at a time (${size.width}px)`, async ({ page }) => {
@@ -238,7 +239,7 @@ for (const size of [
 
     const question = page.getByRole("alertdialog", { name: "More than one invoice" });
     await expect(question).toContainText(
-      "This file contains more than one invoice. Please upload each invoice separately.",
+      "This file seems to contain more than one invoice. Please upload one invoice per entry.",
     );
     await expectNoSideScroll(page, size.width);
     if (process.env.E2E_SHOTS)

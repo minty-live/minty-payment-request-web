@@ -132,16 +132,20 @@ rate (minty-payment-request-api `docs/features/invoice-reader.md`), so it fills 
 stays the one sentence. Draft and Confirm send `exchange` (`exchangeFields`) only while the amount
 still holds the converted figure; another amount drops it. The description gets the original amount and the rate after what was read (owner, 2026-11-23): "Office chairs (PHP 10,000.00 @ 1 HKD = 7.43 PHP)" (`@minty/shared`'s `exchangeNote`, owner's launch decisions), or that alone - only when this read's converted amount filled the Amount box, never over a typed description. No rate: the amount stays empty with "I
 couldn't get an exchange rate for TWD. Enter the amount in HKD." under it.
-**An invoice that isn't one record of a payment** (owner's launch decisions, 2026-11-23, after IRD's
-"A Guide to Keeping Business Records"): the API answers `{suggestions: null}` with `no_description`
-(what was paid for can't be described or inferred) or `several_documents`, through
-`useDocumentReader`'s `onRefused`. `no_description` puts "We can't tell what this payment was for,
-so this document isn't sufficient as an invoice. Please attach a receipt or invoice that shows the
-goods or services." (`NO_EVIDENCE`) where the failure line goes; `several_documents` opens an
-OK-only question (`ConfirmDialog`, `acknowledgeOnly`): "More than one invoice" - "This file contains
-more than one invoice. Please upload each invoice separately." (`SEVERAL_INVOICES`). Nothing is
-filled, the file stays, and nothing is blocked; another read or file takes it away. An inferred
-description comes in the low band ("Check it before you submit."). **Required fields a read left
+**Several invoices in one file - the only refusal** (the user, 2026-11-25; `no_description` is
+gone, the description is not mandatory): the API answers `{suggestions: null, reason:
+"several_documents"}`, through `useDocumentReader`'s `onRefused`, and an OK-only question opens
+(`ConfirmDialog`, `acknowledgeOnly`): "More than one invoice" - "This file seems to contain more
+than one invoice. Please upload one invoice per entry." (`SEVERAL_INVOICES`). Nothing is filled,
+the file stays, and nothing is blocked; another read or file takes it away. **The outlines after a
+read** (the user, 2026-11-25; `@minty/shared` v0.38 `outlined`/`outlineRing`, set at the end of
+`withInvoiceSuggestions`): a field the read left empty is outlined red (`EMPTY_RING`) - a warning
+only (the Description included, never mandatory); a required field keeps its own red border and
+sentence instead. Orange (`CHECK_RING`), the line "Please check." in the warning ink: an inferred
+description ("Please check. The invoice doesn't list the items, so this was inferred.") and its
+account ("Please check. Chosen to match the inferred description."), and a supplier not on the list
+("Please check. It isn't in your suppliers yet, ..."). Other filled fields keep the teal ring.
+Typing takes a field's outline away; Clear its orange; another file all of them. **Required fields a read left
 empty** (owner, 2026-11-23): after a read that filled anything, the supplier, account, amount and
 the two dates still empty turn red at once with their own sentences (`lib/formMessages.ts`) - with
 no error summary and no focus move, which stay a refused Confirm's (`ErrorSummary` shows only once

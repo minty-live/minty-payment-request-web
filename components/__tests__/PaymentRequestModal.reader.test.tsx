@@ -276,10 +276,11 @@ describe("the invoice reader", () => {
     show();
     await attachAndRead(pdf());
     await waitFor(() => expect(byId("pr-contact")).toHaveValue("Corner Bakery"));
-    expect(byId("pr-contact")).toHaveClass(...SUGGESTED_RING.split(" "));
+    // the user, 2026-11-25: a supplier not on the list is outlined orange, "Please check"
+    expect(byId("pr-contact")).toHaveClass("ring-status-warning-ink");
     expect(
       within(dialog()).getByText(
-        "Suggested from the invoice. Check it before you submit. It isn't in your suppliers yet, so it's added when you save this payment.",
+        "Please check. It isn't in your suppliers yet, so it's added when you save this payment.",
       ),
     ).toBeInTheDocument();
 
@@ -666,27 +667,75 @@ describe("an invoice in another currency", () => {
   });
 });
 
-// The owner's launch decisions, 2026-11-23 (IRD "A Guide to Keeping Business Records").
-const NO_EVIDENCE =
-  "We can't tell what this payment was for, so this document isn't sufficient as an invoice. Please attach a receipt or invoice that shows the goods or services.";
-const SEVERAL = "This file contains more than one invoice. Please upload each invoice separately.";
+// The only refusal, in the user's words (2026-11-25).
+const SEVERAL =
+  "This file seems to contain more than one invoice. Please upload one invoice per entry.";
 
-describe("an invoice that isn't one record of a payment", () => {
-  it("one that doesn't say what was paid for fills nothing and says why; the file stays", async () => {
-    serve({ extract: () => json(200, { suggestions: null, reason: "no_description" }) });
+describe("the outlines after a read (the user, 2026-11-25)", () => {
+  const EMPTY_DESCRIPTION = field("", "medium");
+
+  it("an empty description is outlined red, a warning only: Confirm sends the bill", async () => {
+    const seen = serve({
+      extract: () =>
+        json(200, {
+          ...READ,
+          suggestions: { ...READ.suggestions, description: EMPTY_DESCRIPTION },
+        }),
+    });
     show();
     await attachAndRead(pdf());
-
-    expect(await within(dialog()).findByText(NO_EVIDENCE)).toHaveAttribute("role", "status");
-    expect(byId("pr-amount")).toHaveValue("");
-    expect(within(dialog()).queryByText(FAILED)).toBeNull();
-    expect(within(dialog()).queryByText(CAUTION)).toBeNull();
-    expect(within(dialog()).getAllByText("invoice.pdf").length).toBeGreaterThan(0);
-    expect(
-      within(dialog()).queryByText("The supplier is still empty. Choose a supplier to continue."),
-    ).toBeNull();
+    await waitFor(() => expect(byId("pr-amount")).toHaveValue("1,200.50"));
+    expect(byId("pr-description")).toHaveValue("");
+    expect(byId("pr-description")).toHaveClass("ring-action-danger");
+    expect(byId("pr-amount")).toHaveClass("ring-border-selected");
+    await userEvent.click(screen.getByRole("button", { name: /^Confirm/ }));
+    await waitFor(() => expect(seen.submits).toHaveLength(1));
   });
 
+  it("typing takes the red away", async () => {
+    serve({
+      extract: () =>
+        json(200, {
+          ...READ,
+          suggestions: { ...READ.suggestions, description: EMPTY_DESCRIPTION },
+        }),
+    });
+    show();
+    await attachAndRead(pdf());
+    await waitFor(() => expect(byId("pr-description")).toHaveClass("ring-action-danger"));
+    await userEvent.type(byId("pr-description"), "Chairs");
+    expect(byId("pr-description")).not.toHaveClass("ring-action-danger");
+  });
+
+  it("an inferred description and its account are outlined orange, Please check", async () => {
+    serve({
+      extract: () =>
+        json(200, {
+          ...READ,
+          suggestions: {
+            ...READ.suggestions,
+            description: field("Office chairs", "medium", { inferred: true }),
+          },
+        }),
+    });
+    show();
+    await attachAndRead(pdf());
+    await waitFor(() => expect(byId("pr-description")).toHaveValue("Office chairs"));
+    expect(byId("pr-description")).toHaveClass("ring-status-warning-ink");
+    expect(
+      within(dialog()).getByText(
+        "Please check. The invoice doesn't list the items, so this was inferred.",
+      ),
+    ).toBeInTheDocument();
+    expect(byId("pr-account").closest(".ring-status-warning-ink")).not.toBeNull(); // its box
+    expect(
+      within(dialog()).getByText("Please check. Chosen to match the inferred description."),
+    ).toBeInTheDocument();
+    expect(byId("pr-amount")).toHaveClass("ring-border-selected");
+  });
+});
+
+describe("several invoices in one file - the only refusal", () => {
   it("several in one file ask for one at a time in an OK-only question", async () => {
     serve({ extract: () => json(200, { suggestions: null, reason: "several_documents" }) });
     show();
@@ -699,18 +748,6 @@ describe("an invoice that isn't one record of a payment", () => {
     await userEvent.click(within(question).getByRole("button", { name: "OK" }));
     expect(screen.queryByRole("alertdialog")).toBeNull();
     expect(within(dialog()).getAllByText("two.pdf").length).toBeGreaterThan(0);
-  });
-
-  it("another read takes the sentence away", async () => {
-    let answer: unknown = { suggestions: null, reason: "no_description" };
-    serve({ extract: () => json(200, answer) });
-    show();
-    await attachAndRead(pdf());
-    await within(dialog()).findByText(NO_EVIDENCE);
-    answer = READ;
-    await attachAndRead(pdf("another.pdf"));
-    await waitFor(() => expect(byId("pr-amount")).toHaveValue("1,200.50"));
-    expect(within(dialog()).queryByText(NO_EVIDENCE)).toBeNull();
   });
 });
 
@@ -777,13 +814,13 @@ describe("a wrong or poor invoice is warned about, never refused (the user, 2026
       extract: () =>
         json(200, {
           suggestions: null,
-          reason: "no_description",
+          reason: "several_documents",
           document_warning: "bank_payment_confirmation",
         }),
     });
     show();
     await attachAndRead(pdf());
     expect(await within(dialog()).findByText(BANK)).toBeInTheDocument();
-    expect(within(dialog()).queryByText(NO_EVIDENCE)).toBeNull();
+    expect(within(dialog()).queryByText(FAILED)).toBeNull();
   });
 });
