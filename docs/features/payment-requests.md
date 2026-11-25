@@ -281,7 +281,7 @@ is fresh.
   the item's `aria-describedby`; 2026-11-20): a publish sends what is saved, not what is being
   typed. Void / Delete stay offered behind their question.
 - the attachment preview (`InvoiceAttachmentPreview.tsx`, PDFs rendered with pdf.js from
-  `/public/pdfjs` — `PdfJsCanvasPreview.tsx`; images inline) with upload / delete
+  `/public/pdfjs` — `@minty/shared/pdfPreview`'s `PdfJsCanvasPreview`; images inline) with upload / delete
   (`UploadInvoiceAttachmentModal`, `AttachmentDeleteConfirmModal`) — the bytes are fetched
   through the backend's `…/preview/` proxy;
 - the details card (`PaymentRequestDetailedInfo.tsx`, editable in place). Editing the
@@ -419,7 +419,11 @@ an `<a target="_blank">` (`FullFilePreviewLink`), so clicking a staged receipt l
 that component is gone, along with the unused `FileAttachmentPreviewLayer` and the
 "Open PDF in new tab" link in `PdfJsCanvasPreview`'s error state.
 
-- **One component:** `components/payment-request/AttachmentFullScreenViewer.tsx`. It owns
+- **One component, shared since `@minty/shared` v0.37** (2026-11-24, so Petty Cash's receipts
+  preview the same way): `@minty/shared/filePreview`, imported through `lib/filePreview.ts`,
+  which registers this app's outlined icon font and `fetchProxyBlob`; the pdf.js renderer is
+  `@minty/shared/pdfPreview` and `next.config.ts` copies its assets with the preset's
+  `copyPdfjsAssets`. Add Payment's inline pane is the package's `FilePreviewPane`. It owns
   `PreviewBlock` (image / pdf.js canvas / sandboxed iframe / "Preview is not available for
   this file type."), `usePinchZoom`, the `ViewFullButton` every inline pane puts in its
   top-right corner, and the overlay itself — a portal at `z-[340]`, above the modals'
@@ -431,7 +435,9 @@ that component is gone, along with the unused `FileAttachmentPreviewLayer` and t
   and leaves the modal open. Those modals deliberately have **no** `viewerOpen` branch.
 - **Focus** starts on Close, is trapped, and returns to the opener on unmount (with a
   fallback: the opener may have been removed, e.g. the file was deleted).
-- **The scroll lock is reference counted** (`lib/appScrollRoot.ts`). Save-and-restore was
+- **The scroll lock is reference counted** (`lib/appScrollRoot.ts`, which re-exports
+  `@minty/shared/scrollLock` since v0.37, so this app's modals and the packaged viewer share one
+  count). Save-and-restore was
   only safe if cleanups ran strictly LIFO, which React does not guarantee when a parent and
   child unmount in one commit; the out-of-order case left `overflow: hidden` on for good.
 - **The viewer creates no object URL.** The caller owns the URL's lifetime and renders the
@@ -448,9 +454,10 @@ that component is gone, along with the unused `FileAttachmentPreviewLayer` and t
 
 `__tests__/no_new_tab_file_links.test.ts` is the regression lock: it reads `components/`,
 `lib/`, `features/` and `app/` and fails on any `target="_blank"`, `window.open` or
-`download=` outside a short, self-checking list of genuine external links. Plus
-`AttachmentFullScreenViewer.test.tsx` (the dialog contract, the capture-phase Escape, focus
-return, mime resolution) and the preview cases in `PaymentRequestModal.test.tsx`,
+`download=` outside a short, self-checking list of genuine external links, and holds that this
+app draws no full-screen viewer of its own. The viewer's own tests (the dialog contract, the
+capture-phase Escape, focus return, mime resolution) live with it in `@minty/shared`
+(`src/filePreview/__tests__/FilePreview.test.tsx`), plus and the preview cases in `PaymentRequestModal.test.tsx`,
 `BankSlipDetailsModal.test.tsx` and `InvoiceAttachmentPreview.test.tsx`.
 
 `e2e/02_bill_lifecycle.spec.ts` (draft → listed under Draft; the amount is required;

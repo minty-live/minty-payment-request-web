@@ -16,7 +16,7 @@ import {
 
 // pdf.js needs a canvas, which jsdom has not got, so the PDF renderer is stubbed at its module
 // boundary and named instead - rendering one for real is e2e/10's job.
-vi.mock("@/components/PdfJsCanvasPreview", () => ({
+vi.mock("@minty/shared/pdfPreview", () => ({
   PdfJsCanvasPreview: ({ title, src }: { title?: string; src?: string }) => (
     <div data-pdf={src}>{`pdf: ${title}`}</div>
   ),

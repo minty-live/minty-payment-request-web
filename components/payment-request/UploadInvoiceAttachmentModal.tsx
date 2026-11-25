@@ -15,7 +15,7 @@ import {
   fileToPreviewItem,
   PreviewBlock,
   ViewFullButton,
-} from "./AttachmentFullScreenViewer";
+} from "@/lib/filePreview";
 import { filesNotOpenable, filesTooBig } from "@/lib/formMessages";
 
 export type UploadInvoiceAttachmentModalProps = {

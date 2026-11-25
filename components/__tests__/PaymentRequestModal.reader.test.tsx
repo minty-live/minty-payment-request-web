@@ -25,7 +25,7 @@ vi.mock("next/navigation", () => ({
   useParams: () => ({ ref: "360812e1", slug: "olive-and-vine" }),
   useRouter: () => ({ push: vi.fn(), replace: vi.fn(), back: vi.fn() }),
 }));
-vi.mock("@/components/PdfJsCanvasPreview", () => ({
+vi.mock("@minty/shared/pdfPreview", () => ({
   PdfJsCanvasPreview: () => <div>pdf preview</div>,
 }));
 // jsdom can't decode a photo: the free photo check is stood in for (the user, 2026-11-24)

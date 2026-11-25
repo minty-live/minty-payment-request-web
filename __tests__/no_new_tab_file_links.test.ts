@@ -2,7 +2,8 @@
 //
 // Every attachment preview in this app used to be wrapped in an `<a target="_blank">`, so
 // clicking a staged receipt left the app. That is now one full-screen viewer
-// (components/payment-request/AttachmentFullScreenViewer.tsx). This test is here so the habit
+// (`@minty/shared/filePreview`'s AttachmentFullScreenViewer, through lib/filePreview.ts, since
+// v0.37). This test is here so the habit
 // does not come back by copy-paste: it reads the source rather than rendering anything, which
 // is the only way to catch a branch no test happens to render.
 
@@ -92,9 +93,12 @@ describe("no file ever leaves the app", () => {
     }
   });
 
-  it("keeps the one full-screen viewer, and only one", () => {
+  it("keeps the one full-screen viewer, the shared one, and draws none of its own", () => {
     const overlays = FILES.filter((f) => /fixed inset-0 z-\[340\]/.test(f.text)).map((f) => f.path);
 
-    expect(overlays).toEqual(["components/payment-request/AttachmentFullScreenViewer.tsx"]);
+    expect(overlays).toEqual([]);
+    expect(FILES.find((f) => f.path === "lib/filePreview.ts")?.text).toMatch(
+      /from "@minty\/shared\/filePreview"/,
+    );
   });
 });

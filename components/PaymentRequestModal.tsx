@@ -11,17 +11,13 @@ import { currentDraftScope } from "@/lib/draftScope";
 import { useEntityCurrencyState } from "@/lib/entityCurrency";
 import { hubSettingsUrl } from "@/lib/mintyUrls";
 import { useClientValue } from "@/lib/useClientValue";
-import {
-  formatFileSize,
-  isAllowedAttachment,
-  ATTACHMENT_ACCEPT,
-} from "@/lib/fileAttachmentPreview";
+import { isAllowedAttachment, ATTACHMENT_ACCEPT } from "@/lib/fileAttachmentPreview";
 import {
   AttachmentFullScreenViewer,
+  FilePreviewPane,
+  fileIconInfo,
   fileToPreviewItem,
-  PreviewBlock,
-  ViewFullButton,
-} from "@/components/payment-request/AttachmentFullScreenViewer";
+} from "@/lib/filePreview";
 import { saveAttachmentBlobs } from "@/lib/paymentRequestAttachmentStore";
 import { parseAccountField } from "@/lib/paymentRequestBillMap";
 import { ThemedSelect, type ThemedSelectOption } from "@/components/ThemedSelect";
@@ -156,29 +152,6 @@ const READABLE = /\.(pdf|jpe?g|png|hei[cf])$/i;
 const isReadable = (file: File) =>
   /^(application\/pdf|image\/jpe?g|image\/png|image\/hei[cf])$/i.test(file.type) ||
   READABLE.test(file.name);
-
-/** Material Symbols icon + color for uploaded file row (Google Material Icons naming). */
-function getUploadedFileIconInfo(filename: string): { icon: string; iconClass: string } {
-  const ext = filename.trim().split(".").pop()?.toLowerCase() ?? "";
-  if (ext === "pdf") {
-    return { icon: "picture_as_pdf", iconClass: "text-status-danger-ink" };
-  }
-  if (
-    ext === "jpg" ||
-    ext === "jpeg" ||
-    ext === "png" ||
-    ext === "heic" ||
-    ext === "heif" ||
-    ext === "webp" ||
-    ext === "gif"
-  ) {
-    return { icon: "image", iconClass: "text-status-info-ink" };
-  }
-  if (ext === "html" || ext === "htm") {
-    return { icon: "html", iconClass: "text-status-warning-ink" };
-  }
-  return { icon: "draft", iconClass: "text-text-secondary" };
-}
 
 type ValidatedField =
   "billNo" | "amount" | "contact" | "accountCode" | "invoiceDate" | "dueDate" | "attachments";
@@ -1182,11 +1155,10 @@ export function PaymentRequestModal({
             />
             <div className="min-w-0">
               {previewFile && previewObjectUrl ? (
-                <PaymentRequestInlinePreview
-                  file={previewFile}
-                  objectUrl={previewObjectUrl}
-                  previewSubtitleId={previewSubtitleId}
-                  getUploadedFileIconInfo={getUploadedFileIconInfo}
+                <FilePreviewPane
+                  item={fileToPreviewItem(previewFile, previewObjectUrl)}
+                  size={previewFile.size}
+                  subtitleId={previewSubtitleId}
                   onViewFull={() => setViewerOpen(true)}
                 />
               ) : previewFile && !previewObjectUrl ? (
@@ -1213,7 +1185,7 @@ export function PaymentRequestModal({
             </div>
             <ul className="flex flex-col gap-2">
               {uploadedFiles.map(({ id, file }) => {
-                const { icon, iconClass } = getUploadedFileIconInfo(file.name);
+                const { icon, iconClass } = fileIconInfo(file.name);
                 const selected = previewFileId === id;
                 return (
                   <li
@@ -1687,47 +1659,5 @@ export function PaymentRequestModal({
       </ConfirmDialog>
     </div>,
     document.body,
-  );
-}
-
-function PaymentRequestInlinePreview({
-  file,
-  objectUrl,
-  previewSubtitleId,
-  getUploadedFileIconInfo,
-  onViewFull,
-}: {
-  file: File;
-  objectUrl: string;
-  previewSubtitleId: string;
-  getUploadedFileIconInfo: (filename: string) => { icon: string; iconClass: string };
-  onViewFull: () => void;
-}) {
-  const { icon, iconClass } = getUploadedFileIconInfo(file.name);
-  return (
-    <div className="flex h-full flex-col">
-      <div className="flex gap-3 pb-2">
-        <span
-          className={`material-symbols-outlined mt-0.5 shrink-0 text-[28px] leading-none sm:text-[32px] ${iconClass}`}
-          aria-hidden
-        >
-          {icon}
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-medium text-text-primary sm:text-base">{file.name}</p>
-          <p
-            id={previewSubtitleId}
-            className="mt-1 text-[11px] font-medium tracking-wide text-text-muted sm:text-xs"
-          >
-            Document preview<span className="text-text-disabled"> • </span>
-            {formatFileSize(file.size)}
-          </p>
-        </div>
-      </div>
-      <div className="relative mt-3 min-h-[min(60dvh,420px)] overflow-auto rounded-lg bg-state-hover p-2 sm:p-3">
-        <ViewFullButton name={file.name} onClick={onViewFull} />
-        <PreviewBlock {...fileToPreviewItem(file, objectUrl)} />
-      </div>
-    </div>
   );
 }

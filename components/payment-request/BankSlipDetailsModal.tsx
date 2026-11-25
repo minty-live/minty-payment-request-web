@@ -26,7 +26,7 @@ import {
   nameToPreviewMime,
   PreviewBlock,
   ViewFullButton,
-} from "./AttachmentFullScreenViewer";
+} from "@/lib/filePreview";
 import { AttachmentDeleteConfirmModal } from "./AttachmentDeleteConfirmModal";
 import { filesNotOpenable, filesTooBig } from "@/lib/formMessages";
 

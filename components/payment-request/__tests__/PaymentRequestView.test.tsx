@@ -28,7 +28,7 @@ vi.mock("next/navigation", () => ({
 }));
 
 // pdf.js wants a canvas; the attachment preview reaches for it through this.
-vi.mock("@/components/PdfJsCanvasPreview", () => ({
+vi.mock("@minty/shared/pdfPreview", () => ({
   PdfJsCanvasPreview: () => <div>pdf preview</div>,
 }));
 

@@ -29,7 +29,7 @@ vi.mock("next/navigation", () => ({
   useRouter: () => router,
 }));
 
-vi.mock("@/components/PdfJsCanvasPreview", () => ({
+vi.mock("@minty/shared/pdfPreview", () => ({
   PdfJsCanvasPreview: () => <div>pdf preview</div>,
 }));
 
