@@ -142,8 +142,8 @@ read** (the user, 2026-11-25; `@minty/shared` v0.38 `outlined`/`outlineRing`, se
 `withInvoiceSuggestions`): a field the read left empty is outlined red (`EMPTY_RING`) - a warning
 only (the Description included, never mandatory); a required field keeps its own red border and
 sentence instead. Orange (`CHECK_RING`), the line "Please check." in the warning ink: an inferred
-description ("Please check. The invoice doesn't list the items, so this was inferred.") and its
-account ("Please check. Chosen to match the inferred description."), and a supplier not on the list
+description ("Please check. Compare the description with the invoice." - it may be a summary of listed items) and its
+account ("Please check. Chosen to match the description."), and a supplier not on the list
 ("Please check. It isn't in your suppliers yet, ..."). Other filled fields keep the teal ring.
 Typing takes a field's outline away; Clear its orange; another file all of them. **Required fields a read left
 empty** (owner, 2026-11-23): after a read that filled anything, the supplier, account, amount and

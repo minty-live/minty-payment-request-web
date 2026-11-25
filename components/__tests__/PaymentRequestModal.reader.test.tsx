@@ -723,13 +723,11 @@ describe("the outlines after a read (the user, 2026-11-25)", () => {
     await waitFor(() => expect(byId("pr-description")).toHaveValue("Office chairs"));
     expect(byId("pr-description")).toHaveClass("ring-status-warning-ink");
     expect(
-      within(dialog()).getByText(
-        "Please check. The invoice doesn't list the items, so this was inferred.",
-      ),
+      within(dialog()).getByText("Please check. Compare the description with the invoice."),
     ).toBeInTheDocument();
     expect(byId("pr-account").closest(".ring-status-warning-ink")).not.toBeNull(); // its box
     expect(
-      within(dialog()).getByText("Please check. Chosen to match the inferred description."),
+      within(dialog()).getByText("Please check. Chosen to match the description."),
     ).toBeInTheDocument();
     expect(byId("pr-amount")).toHaveClass("ring-border-selected");
   });

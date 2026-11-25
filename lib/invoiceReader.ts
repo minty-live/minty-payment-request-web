@@ -60,9 +60,11 @@ export type InvoiceSuggestions = {
  */
 export const SEVERAL_INVOICES = severalDocuments("invoice");
 
-/** Said with the line under a field outlined to check (the user, 2026-11-25). */
-export const INFERRED_DETAIL = "The invoice doesn't list the items, so this was inferred.";
-export const INFERRED_ACCOUNT_DETAIL = "Chosen to match the inferred description.";
+/** Said with the line under a field outlined to check (the user, 2026-11-25). An inferred description
+ * may also be a summary of listed items, so the line asks for a check, never says the items are
+ * missing (the user, 2026-11-25). */
+export const INFERRED_DETAIL = "Compare the description with the invoice.";
+export const INFERRED_ACCOUNT_DETAIL = "Chosen to match the description.";
 
 /** No rate for the invoice's currency (owner, 2026-11-19): the amount is the person's to type. */
 export function rateMissingText(currency: string, code: string | null | undefined): string {
