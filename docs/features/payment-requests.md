@@ -76,8 +76,8 @@ is shorter - the API refuses the same, since `Bill.contact_name` holds 100), the
 `#pr-due-date`, native date inputs behind a formatted overlay — `DateTextField.tsx`), and
 the attachments drop zone (`input[aria-label="Choose files to attach"]`; pdf, jpg, png,
 html — **no spreadsheets since 2026-10-09**, so every accepted type is one the browser can
-draw; every file is uploaded exactly as chosen - no shrinking and no conversion, here or in
-the API (owner, 2026-11-04; `lib/compressImage.ts` is gone)). The allowlist is the shared
+draw; every file is uploaded exactly as chosen - no shrinking here (`lib/compressImage.ts` is gone);
+the API stores a photo as a 2048 px JPEG and any other file as uploaded (the user, 2026-11-26)). The allowlist is the shared
 `ATTACHMENT_ACCEPT` / `isAllowedAttachment` from `lib/fileAttachmentPreview.ts`, so this
 modal, the upload-invoice modal and the bank-slip modal agree by construction.
 
