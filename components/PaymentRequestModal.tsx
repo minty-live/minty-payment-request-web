@@ -68,13 +68,16 @@ import {
   type EvidenceRefusal,
   type Exchange,
   AllowanceNote,
-  ReadButton,
+  canRead,
   ReaderNote,
   ReadFailedLine,
+  ReadFailedNotice,
+  readFailureText,
   outlineOf,
   outlineRing,
   PLEASE_CHECK,
-  ReadingNotice,
+  ReadingCat,
+  readingCatSize,
   SuggestedLine,
   useDocumentReader,
   type ReaderStatus,
@@ -92,10 +95,6 @@ import {
   NEW_CONTACT_DETAIL,
   readNameDetail,
   readContact,
-  READ_FAILED,
-  READ_LABEL,
-  READING_DETAIL,
-  READING_TITLE,
   showedAnything,
   rateMissingText,
   SEVERAL_INVOICES,
@@ -142,8 +141,7 @@ const stagedEntry = (file: File): UploadedEntry => ({
   file,
 });
 
-/** The lines beside "Read invoice": which file it reads, and the company's AI allowance left. */
-const READ_TARGET_ID = "pr-ai-read-target";
+/** The reason nothing is read once the company's AI allowance is used up. */
 const ALLOWANCE_ID = "pr-ai-allowance";
 const AI_CAUTION_ID = "pr-ai-caution";
 
@@ -405,11 +403,15 @@ export function PaymentRequestModal({
   const [openedOn, setOpenedOn] = useState("");
   // The file whose read the form holds (its suggestions, or the read in flight).
   const [readFileId, setReadFileId] = useState<string | null>(null);
-  // "Read invoice" (owner, 2026-11-18): offered only when the API says the reader is on, with the
-  // company's AI allowance left (shared with Petty Cash); pressed for a file, the button goes, and comes
-  // back after a failed read or when another file is selected
+  // The user, 2026-11-26: the newest readable file attached is read at once (no "Read invoice"
+  // button), when the API says the reader is on and the company's AI allowance (shared with Petty
+  // Cash) is not used up; never the same file again (a failed read's message carries the tries)
   const [readerStatus, setReaderStatus] = useState<ReaderStatus | null>(null);
-  const [readAsked, setReadAsked] = useState(false);
+  // a file attached before the reader's status arrived: read when it does, if reading is allowed
+  const pendingRead = useRef<{ id: string; file: File } | null>(null);
+  // the status fetch (an effect's promise) starts that read through this - the latest render's
+  // `startRead`, set below once the reader exists
+  const startReadRef = useRef<(entry: { id: string; file: File }) => void>(() => undefined);
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<ValidatedField, string>>>({});
   /** Bumped on each refused Confirm, so the summary takes focus again (@minty/shared/ui ErrorSummary). */
   const [summaryAttempt, setSummaryAttempt] = useState(0);
@@ -460,7 +462,11 @@ export function PaymentRequestModal({
 
     fetchInvoiceReaderStatus()
       .then((status) => {
-        if (!cancelled) setReaderStatus(status);
+        if (cancelled) return;
+        setReaderStatus(status);
+        const waiting = pendingRead.current;
+        pendingRead.current = null;
+        if (waiting && canRead(status) && !INVOICE_LATCH.readerOff()) startReadRef.current(waiting);
       })
       // the status unknown: no button (the form works without the reader; the API logs its failure)
       .catch(() => {
@@ -594,18 +600,18 @@ export function PaymentRequestModal({
     onWarning: setDocumentWarning,
   });
   const { cancel: cancelRead } = reader;
-  // One file per read (owner, 2026-11-18): the person chooses it by selecting it in the list (the
-  // preview); with none selected that can be read, the newest file that can.
-  const readable = uploadedFiles.filter((x) => isReadable(x.file));
-  const fileToRead =
-    readable.find((x) => x.id === previewFileId) ?? readable[readable.length - 1] ?? null;
-  // (and never once a `disabled` answer has switched the reader off for the session)
-  const offerRead =
-    readerStatus?.enabled === true &&
-    fileToRead !== null &&
-    !reader.reading &&
-    (!readAsked || reader.failed || fileToRead.id !== readFileId) &&
-    !INVOICE_LATCH.readerOff();
+  /** Read `entry` now: the form holds its suggestions (the user, 2026-11-26: on attaching). */
+  const startRead = (entry: { id: string; file: File }) => {
+    setReadFileId(entry.id);
+    void reader.read(entry.file);
+  };
+  useEffect(() => {
+    startReadRef.current = startRead;
+  });
+  // the reading cat (the user, 2026-11-26), drawn in the drop zone's place while it reads: large
+  // in a person's first day of reading, small after
+  const catInZone = reader.reading;
+  const hasReadable = uploadedFiles.some((x) => isReadable(x.file));
 
   /** The person changed a reader field: it is theirs now (the field's own setter still runs). */
   const readerEdit = (field: InvoiceField, patch: Partial<InvoiceValues>) => {
@@ -758,7 +764,7 @@ export function PaymentRequestModal({
     setDueDate("");
     setReaderAux(invoiceState());
     setReadFileId(null);
-    setReadAsked(false);
+    pendingRead.current = null;
     setAiFilled(false);
     setRefused(null);
     setDocumentWarning(null);
@@ -823,18 +829,23 @@ export function PaymentRequestModal({
     setPreviewFileId(added[added.length - 1]?.id ?? null);
     clearFieldError("attachments");
     e.target.value = "";
-    // A new readable file (selected for preview above) is what "Read invoice" offers - read only on
-    // that press (owner, 2026-11-18); the previous read's suggestions go (what was typed stays).
-    if (added.some((x) => isReadable(x.file))) {
+    // The newest readable file just added is read at once (the user, 2026-11-26; it replaced the
+    // owner's 2026-11-18 "Read invoice" press); the previous read's suggestions go (what was typed
+    // stays). Used up or switched off: attached, not read. Before the status arrives: read then.
+    const newest = [...added].reverse().find((x) => isReadable(x.file));
+    if (newest) {
       cancelRead();
       dropSuggestions();
       setReadFileId(null);
-      setReadAsked(false);
+      pendingRead.current = null;
+      if (readerStatus === null) pendingRead.current = newest;
+      else if (canRead(readerStatus) && !INVOICE_LATCH.readerOff()) startRead(newest);
     }
   };
 
   const removeFile = (entryId: string) => {
     setUploadedFiles((prev) => prev.filter((x) => x.id !== entryId));
+    if (pendingRead.current?.id === entryId) pendingRead.current = null;
     if (entryId === readFileId) {
       cancelRead();
       dropSuggestions();
@@ -1271,27 +1282,40 @@ export function PaymentRequestModal({
                 aria-required="true"
                 aria-invalid={fieldErrors.attachments ? true : undefined}
                 aria-describedby={fieldErrors.attachments ? attachmentsErrorId : undefined}
+                // the large reading cat holds the zone's place: no file is taken meanwhile
+                disabled={catInZone}
               />
-              <div className="pointer-events-none">
-                <div
-                  className={`flex min-h-[156px] flex-col items-center justify-center gap-3 overflow-visible rounded-lg border-2 border-dashed px-4 py-5 sm:min-h-[176px] sm:gap-4 sm:py-6 ${fieldErrors.attachments ? "border-action-danger bg-status-danger-bg" : "border-border-input bg-surface-sunk"}`}
-                >
-                  <span
-                    className="material-symbols-outlined inline-block origin-center text-[48px] leading-none text-text-disabled [font-variation-settings:'FILL'_0,'wght'_400,'GRAD'_0,'opsz'_48] scale-[1.78] sm:text-[48px] sm:scale-[2.02]"
-                    aria-hidden
+              {catInZone ? (
+                // the user, 2026-11-26: the cat where "Click or drag files here to upload" was,
+                // the zone's size; the zone is back the moment the read ends
+                <ReadingCat
+                  size={readingCatSize(readerStatus)}
+                  document="invoice"
+                  place="zone"
+                  className="sm:min-h-[176px]"
+                />
+              ) : (
+                <div className="pointer-events-none">
+                  <div
+                    className={`flex min-h-[156px] flex-col items-center justify-center gap-3 overflow-visible rounded-lg border-2 border-dashed px-4 py-5 sm:min-h-[176px] sm:gap-4 sm:py-6 ${fieldErrors.attachments ? "border-action-danger bg-status-danger-bg" : "border-border-input bg-surface-sunk"}`}
                   >
-                    cloud_upload
-                  </span>
-                  <div className="flex flex-col items-center">
-                    <p className="px-2 text-center text-[14px] font-medium leading-tight text-text-secondary">
-                      Click or drag files here to upload
-                    </p>
-                    <p className="mt-1 px-2 text-center text-[12px] leading-tight text-text-disabled">
-                      PDF, JPEG, PNG, HEIC, HTML (Max 10MB)
-                    </p>
+                    <span
+                      className="material-symbols-outlined inline-block origin-center text-[48px] leading-none text-text-disabled [font-variation-settings:'FILL'_0,'wght'_400,'GRAD'_0,'opsz'_48] scale-[1.78] sm:text-[48px] sm:scale-[2.02]"
+                      aria-hidden
+                    >
+                      cloud_upload
+                    </span>
+                    <div className="flex flex-col items-center">
+                      <p className="px-2 text-center text-[14px] font-medium leading-tight text-text-secondary">
+                        Click or drag files here to upload
+                      </p>
+                      <p className="mt-1 px-2 text-center text-[12px] leading-tight text-text-disabled">
+                        PDF, JPEG, PNG, HEIC, HTML (Max 10MB)
+                      </p>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
             </div>
 
             {fieldErrors.attachments ? (
@@ -1304,10 +1328,25 @@ export function PaymentRequestModal({
               </p>
             ) : null}
 
-            {reader.reading ? (
-              <ReadingNotice title={READING_TITLE} detail={READING_DETAIL} />
-            ) : reader.failed ? (
-              <ReadFailedLine text={READ_FAILED} />
+            {/* while reading, the cat is in the drop zone's place above */}
+            {reader.reading ? null : reader.failure ? (
+              // why, with Try again while the invoice has tries left (the user, 2026-11-26)
+              <ReadFailedNotice
+                text={readFailureText(reader.failure, "invoice", reader.canRetry)}
+                onRetry={
+                  reader.canRetry
+                    ? () => {
+                        setRefused(null);
+                        setDocumentWarning(null);
+                        void reader.retry();
+                      }
+                    : undefined
+                }
+                onManual={() => {
+                  reader.dismiss();
+                  document.getElementById("pr-bill-no")?.focus();
+                }}
+              />
             ) : documentWarning ? (
               // the more specific word on a refused read too: "a bank payment confirmation"
               <ReadFailedLine text={documentWarningText(documentWarning, "invoice")} />
@@ -1318,34 +1357,9 @@ export function PaymentRequestModal({
                 <ReadFailedLine key={id} text={photoQualityText(finding, file.name)} />
               ) : null;
             })}
-            {readerStatus?.enabled && fileToRead && !INVOICE_LATCH.readerOff() ? (
-              <div>
-                {offerRead ? (
-                  <ReadButton
-                    label={READ_LABEL}
-                    disabled={!!readerStatus?.blocked}
-                    describedBy={`${READ_TARGET_ID} ${ALLOWANCE_ID}`}
-                    onClick={() => {
-                      if (fileToRead.id !== readFileId) {
-                        // another file: the last one's suggestions go before this one is read
-                        cancelRead();
-                        dropSuggestions();
-                        setReadFileId(fileToRead.id);
-                      }
-                      setRefused(null);
-                      setDocumentWarning(null);
-                      setReadAsked(true);
-                      void reader.read(fileToRead.file);
-                    }}
-                  />
-                ) : null}
-                {offerRead && readable.length > 1 ? (
-                  <p id={READ_TARGET_ID} className="mt-1 break-words text-sm text-text-muted">
-                    Reads {fileToRead.file.name}. To read another file, select it above.
-                  </p>
-                ) : null}
-                <AllowanceNote id={ALLOWANCE_ID} status={readerStatus} />
-              </div>
+            {/* used up: the reason (nothing while there is room; the user, 2026-11-26) */}
+            {hasReadable && !INVOICE_LATCH.readerOff() ? (
+              <AllowanceNote id={ALLOWANCE_ID} status={readerStatus} />
             ) : null}
             <div role="status" aria-live="polite" className="sr-only">
               {readerAux.announcement}

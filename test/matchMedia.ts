@@ -11,6 +11,15 @@ export const DEFAULT_TEST_WIDTH = 1440;
 type Listener = (event: MediaQueryListEvent) => void;
 
 /**
+ * `(prefers-reduced-motion: reduce)` - the shared reading cat asks it (2026-11-26) to choose the
+ * loop or its still frame. Motion on unless a test says otherwise with `setReducedMotion(true)`.
+ */
+let reducedMotion = false;
+export function setReducedMotion(on: boolean): void {
+  reducedMotion = on;
+}
+
+/**
  * Install a `matchMedia` that answers `(max-width: Npx)` and `(min-width: Npx)` against
  * `width`. Returns the width it installed, so a test can assert what it asked for.
  */
@@ -20,6 +29,7 @@ export function setViewportMatches(width: number): number {
     if (max) return width <= Number(max[1]);
     const min = /\(\s*min-width:\s*(\d+(?:\.\d+)?)px\s*\)/.exec(query);
     if (min) return width >= Number(min[1]);
+    if (/\(\s*prefers-reduced-motion:\s*reduce\s*\)/.test(query)) return reducedMotion;
     // An unrecognised query is not quietly answered "no": a test asking something this stub
     // cannot evaluate should see it, not read a false as a layout decision.
     throw new Error(`test/matchMedia.ts cannot evaluate ${JSON.stringify(query)}`);

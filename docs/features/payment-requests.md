@@ -91,7 +91,7 @@ browser can (Safari 17+); where the `<img>` fails, a saved one is fetched throug
 `/preview/?as=jpeg` (`lib/previewProxy.ts`), a JPEG made on the fly, and a staged one says "This
 photo can be viewed once it's saved." Saved invoice attachments carry the proxy path for HEIC
 as for PDF; a saved HEIC bank slip goes through the fetched preview, not its presigned URL. The
-reader offers "Read invoice" for a HEIC too. The server
+reader reads a HEIC too. The server
 (`attachment_service.py`) still accepts Excel — it is shared with bank slips and with Xero
 re-publish of bills that already hold one — so narrowing it is a separate decision.
 
@@ -106,19 +106,18 @@ is never blocked.
 
 **The invoice reader** (owner, 2026-11-04; `lib/invoiceReader.ts` on `@minty/shared/reader`,
 the rules shared with Petty Cash's receipt reader; the API side is minty-payment-request-api's
-`docs/features/invoice-reader.md`). **Read only on a press** (owner, 2026-11-18): staging a
-PDF, JPEG or PNG reads nothing; **Read invoice** (`ReadButton` from `@minty/shared/reader`) shows
-under the drop zone only when `GET /bills/extract/status/` (fetched as the dialog opens) says the
-reader is on. **One file per read, the person's choice:** it reads the file selected in the list
-(the preview), else the newest readable one; with two or more readable files a line says which
-("Reads invoice.pdf. To read another file, select it above."). The press sends that file to
-`POST /bills/extract/` (an HTML file is never offered). The button goes after the press and comes
-back after a failed read or when another file is selected; a new file offers it again.
-**The company's AI allowance** (its grants, shared with Petty Cash): "80% of your AI allowance
-left" beside the button (its description; it stays after the read), updated from each read's
-answer (`onStatus`); used up, the button is disabled with the reason beside it, and
-`limit_reached` is not the failure line. A failed read uses none of it. While it reads, "Minty is reading the
-invoice details." shows in its place and the form stays usable. **The caution** (owner,
+`docs/features/invoice-reader.md`). **Read on attaching** (the user, 2026-11-26; it replaced the
+owner's 2026-11-18 **Read invoice** press - there is no button): the newest readable file of each
+attach goes to `POST /bills/extract/` at once, when `GET /bills/extract/status/` (fetched as the
+dialog opens; a file attached before it answers is read when it does) says the reader is on and
+the company's allowance is not used up (`canRead`). Selecting a file in the list reads nothing;
+the same file is never read again (only a failure message's Try again, twice); a new file is (its
+predecessor's untouched suggestions go). An HTML file is never read. **The company's AI allowance** (its grants, shared with Petty Cash):
+nothing about how much is left is shown (the user, 2026-11-26); it is updated from each read's
+answer (`onStatus`), and used up, the button is disabled with the reason beside it, and
+`limit_reached` is not the failure line. A failed read uses none of it. While it reads, the reading
+cat (Minty at her laptop, a silent loop) takes the drop zone's place - "Minty is reading your
+invoice…" in a person's first 24 hours of reading, "Reading…" after - and the form stays usable. **The caution** (owner,
 2026-11-19): once a read has filled, noted or offered anything, `AiCaution` sits under the fields,
 above the buttons - "AI suggestions may be inaccurate." (one sentence since 2026-11-23, owner;
 the same in Petty Cash) - and is Confirm's and Save as Draft's

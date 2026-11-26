@@ -127,11 +127,7 @@ export type InvoiceDefaults = { invoiceDate: string; accountCode: string };
 export const INVOICE_LATCH = createReaderLatch("minty.prw.invoice-reader");
 
 // The words (Part 10 §10.25, Part 11 §11.22-11.25, Part 15 §15.14: no "AI", no confidence numbers).
-export const READING_TITLE = "Minty is reading the invoice details.";
-export const READING_DETAIL = "This can take a few seconds. You can keep filling in the form.";
-export const READ_FAILED = "I couldn't read this invoice. Enter the details yourself.";
-/** The press that reads the invoice: never read on attaching it (owner, 2026-11-18). */
-export const READ_LABEL = "Read invoice";
+// While reading: the shared reading cat's (2026-11-26).
 export const CLEAR_LABEL = "Clear the suggested value for this field";
 export const USE_LABEL = "Use the value from the invoice";
 

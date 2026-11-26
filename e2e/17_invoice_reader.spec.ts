@@ -1,7 +1,7 @@
-// The invoice reader is read only on a press (owner, 2026-11-18): staging an invoice reads
-// nothing; "Read invoice" appears under the drop zone when the API says the reader is on, with the
-// company's AI allowance left beside it, and reads the file the person selected
-// (`GET /bills/extract/status/`), and pressing it sends the file to `POST /bills/extract/`.
+// The invoice reader reads on attaching (the user, 2026-11-26; the owner's 2026-11-18 "Read invoice"
+// press is gone): when the API says the reader is on (`GET /bills/extract/status/`) and the
+// company's AI allowance is not used up, the newest file attached goes to `POST /bills/extract/` at
+// once, the reading cat in the drop zone's place meanwhile. Nothing says how much is left.
 //
 // STUBBED - every `/api/v1/**` call is answered from the fixtures, so this needs `npm run dev`
 // and nothing else. Phone first (360), then the tablet and desktop widths.
@@ -87,26 +87,17 @@ for (const size of [
   { width: 768, height: 1024 },
   { width: 1440, height: 900 },
 ]) {
-  test(`staging reads nothing; "Read invoice" reads it (${size.width}px)`, async ({ page }) => {
+  test(`attaching an invoice reads it at once, no button (${size.width}px)`, async ({ page }) => {
     await page.setViewportSize(size);
     const { dialog, reads } = await openAddDialog(page, true);
 
     await dialog.locator('input[type="file"]').first().setInputFiles(PDF);
-    const button = dialog.getByRole("button", { name: "Read invoice" });
-    await expect(button).toBeVisible();
-    expect((await button.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
-    await expect(button).toHaveAccessibleDescription("80% of your AI allowance left");
-    expect(reads).toHaveLength(0);
-    await expectNoSideScroll(page, size.width);
-    await button.scrollIntoViewIfNeeded();
-    if (process.env.E2E_SHOTS)
-      await page.screenshot({ path: `${process.env.E2E_SHOTS}/prw-read-${size.width}.png` });
-
-    await button.click();
     await expect(dialog.locator("#pr-amount")).toHaveValue("1,200.50");
     expect(reads).toHaveLength(1);
     expect(reads[0]).toContain('name="invoice"; filename="invoice.pdf"');
-    await expect(button).toHaveCount(0);
+    await expect(dialog.getByRole("button", { name: /Read invoice/ })).toHaveCount(0);
+    // no "% of your AI allowance left" while there is room (the user, 2026-11-26)
+    await expect(dialog.getByText(/AI allowance left/)).toHaveCount(0);
     // owner, 2026-11-19: the caution under the filled fields, read with Confirm
     const caution = dialog.getByText("AI suggestions may be inaccurate.", { exact: true });
     await expect(caution).toBeVisible();
@@ -120,38 +111,29 @@ for (const size of [
   });
 }
 
-test("the reader switched off on the API offers no button", async ({ page }) => {
+test("the reader switched off on the API reads nothing", async ({ page }) => {
   await page.setViewportSize({ width: 360, height: 740 });
   const { dialog, reads } = await openAddDialog(page, false);
 
   await dialog.locator('input[type="file"]').first().setInputFiles(PDF);
   await expect(dialog.getByRole("button", { name: "Preview invoice.pdf" })).toBeVisible();
-  await expect(dialog.getByRole("button", { name: "Read invoice" })).toHaveCount(0);
   expect(reads).toHaveLength(0);
 });
 
-test("with two files the person chooses which one is read (360px)", async ({ page }) => {
+test("each new invoice attached is read once; selecting one reads nothing (360px)", async ({
+  page,
+}) => {
   await page.setViewportSize({ width: 360, height: 740 });
   const { dialog, reads } = await openAddDialog(page, true);
   const input = dialog.locator('input[type="file"]').first();
   await input.setInputFiles(PDF);
-  await input.setInputFiles({ ...PDF, name: "statement.pdf" });
-
-  await expect(
-    dialog.getByText("Reads statement.pdf. To read another file, select it above."),
-  ).toBeVisible();
-  await dialog.getByRole("button", { name: "Preview invoice.pdf" }).click();
-  await expect(
-    dialog.getByText("Reads invoice.pdf. To read another file, select it above."),
-  ).toBeVisible();
-  await expectNoSideScroll(page, 360);
-  if (process.env.E2E_SHOTS)
-    await page.screenshot({ path: `${process.env.E2E_SHOTS}/prw-choose-file-360.png` });
-  await dialog.getByRole("button", { name: "Read invoice" }).click();
-
   await expect(dialog.locator("#pr-amount")).toHaveValue("1,200.50");
-  expect(reads).toHaveLength(1);
-  expect(reads[0]).toContain('filename="invoice.pdf"');
+  await input.setInputFiles({ ...PDF, name: "statement.pdf" });
+  await expect.poll(() => reads.length).toBe(2);
+  expect(reads[1]).toContain('filename="statement.pdf"');
+  await dialog.getByRole("button", { name: "Preview invoice.pdf" }).click();
+  expect(reads).toHaveLength(2);
+  await expectNoSideScroll(page, 360);
 });
 
 // Owner, 2026-11-19: an invoice in another currency comes back converted at Frankfurter's rate.
@@ -183,7 +165,6 @@ for (const size of [
     await page.setViewportSize(size);
     const { dialog } = await openAddDialog(page, true, CONVERTED);
     await dialog.locator('input[type="file"]').first().setInputFiles(PDF);
-    await dialog.getByRole("button", { name: "Read invoice" }).click();
 
     const amount = dialog.locator("#pr-amount");
     await expect(amount).toHaveValue("96.82");
@@ -215,7 +196,6 @@ for (const size of [
       reason: null,
     });
     await dialog.locator('input[type="file"]').first().setInputFiles(PDF);
-    await dialog.getByRole("button", { name: "Read invoice" }).click();
 
     const amount = dialog.locator("#pr-amount");
     await expect(amount).toHaveValue("1,200.50");
@@ -235,7 +215,6 @@ for (const size of [
       reason: "several_documents",
     });
     await dialog.locator('input[type="file"]').first().setInputFiles(PDF);
-    await dialog.getByRole("button", { name: "Read invoice" }).click();
 
     const question = page.getByRole("alertdialog", { name: "More than one invoice" });
     await expect(question).toContainText(
@@ -255,7 +234,6 @@ for (const size of [
     await page.setViewportSize(size);
     const { dialog } = await openAddDialog(page, true); // amount and description only
     await dialog.locator('input[type="file"]').first().setInputFiles(PDF);
-    await dialog.getByRole("button", { name: "Read invoice" }).click();
 
     await expect(dialog.locator("#pr-amount")).toHaveValue("1,200.50");
     const supplierLine = dialog.getByText(
