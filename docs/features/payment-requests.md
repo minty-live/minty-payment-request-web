@@ -254,7 +254,7 @@ address (Flask's `?request=<id>` hand-off, an old link) is replaced by the Payme
 edit that changes the Payment No. moves the address with it (`router.replace`, so Back is
 unchanged). A Payment No. the company does not have shows "I couldn't find that payment request".
 
-**"‹ Back"** in the header (`components/layout/Header.tsx`, "‹ Payments" until 2026-11-13) goes
+**"‹ Back"** in the header (`components/layout/Header.tsx`, "‹ Payments" until 2026-11-13; since 2026-11-27 every app's header back and company, `@minty/shared`'s `HeaderBack` and `HeaderCompany` - on hover the arrow and the word turn teal and only the word is underlined) goes
 back to the page the person came from - the list, or another request whose payment history linked
 here (`@minty/shared/backLink` v0.20). With nothing in this app before it (a link, a new tab, the
 hand-off), it goes to the list, which is also its `href` for a middle-click. The list's tabs and

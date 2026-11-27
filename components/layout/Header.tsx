@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { BackLink } from "@minty/shared/backLink";
+import { HeaderBack, HeaderCompany } from "@minty/shared/ui";
 import { NavMenu } from "@/components/ui/NavMenu";
 import { ViewerBadge } from "@/components/ui/ViewerBadge";
 
@@ -64,18 +64,8 @@ export function Header({
   const leftSection =
     showBack && backHref ? (
       <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-2 sm:gap-3">
-        <BackLink
-          href={backHref}
-          className="inline-flex shrink-0 items-center gap-0.5 text-sm font-medium text-text-secondary transition-colors hover:text-text-link sm:text-base"
-        >
-          <span
-            className="material-symbols-outlined text-[22px] leading-none sm:text-[24px]"
-            aria-hidden
-          >
-            chevron_left
-          </span>
-          {backLabel}
-        </BackLink>
+        {/* The way back, the same in every app (@minty/shared's HeaderBack, 2026-11-27). */}
+        <HeaderBack href={backHref} label={backLabel} />
         <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
           {showLogo ? (
             <Image
@@ -136,20 +126,7 @@ export function Header({
         <div
           className={`flex min-w-0 shrink-0 items-center justify-end gap-1.5 sm:gap-3 ${statusBadge ? "ml-auto" : ""}`}
         >
-          <span className="relative inline-flex shrink-0">
-            <span
-              className="material-symbols-outlined text-[22px] leading-none text-text-secondary sm:text-[26px]"
-              aria-hidden
-            >
-              corporate_fare
-            </span>
-          </span>
-          {/* A plain 6.5rem, not min(100%,6.5rem): a percentage cap counts as no cap while the
-              shrink-0 block around it is sized, so on a phone a long name made it cover the way
-              back (fixed in minty-web's AppHeader and Flask's port too). */}
-          <span className="min-w-0 max-w-[6.5rem] truncate text-sm font-medium text-text-secondary sm:max-w-[9rem] sm:text-base md:max-w-[14rem] lg:max-w-md">
-            {companyName}
-          </span>
+          <HeaderCompany name={companyName} />
           {/* The sidebar's two doors (components/ui/Sidebar.tsx, copied from minty-web): the
               initials open My Profile, the ≡ the menu. The menu's Logout is the app's. */}
           <div className="flex shrink-0 items-center gap-1.5 pl-0.5 sm:gap-2 sm:pl-2">
