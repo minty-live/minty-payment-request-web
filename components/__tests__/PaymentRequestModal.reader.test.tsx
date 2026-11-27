@@ -15,6 +15,7 @@ import { SUPPLIERS } from "@/lib/__fixtures__/contacts";
 import { entityBillAccount, entityBillAccounts } from "@/lib/__fixtures__/accounts";
 import { unsignedToken } from "@/lib/__fixtures__/tokens";
 import { setAuth } from "@/lib/auth";
+import { DUE_FALLBACK_DETAIL } from "@/lib/invoiceReader";
 import { INVOICE_LATCH } from "@/lib/invoiceReader";
 import { todayLocalISODate, formatIsoDateAsDdMmmYyyy } from "@/lib/dateDisplayFormat";
 import { photoQuality, SUGGESTED_RING } from "@minty/shared/reader";
@@ -823,6 +824,34 @@ describe("the outlines after a read (the user, 2026-11-25)", () => {
       within(dialog()).getByText("Please check. Chosen to match the description."),
     ).toBeInTheDocument();
     expect(byId("pr-amount")).toHaveClass("ring-border-selected");
+  });
+
+  it("a due date that fell back to the invoice date is outlined orange, Please check", async () => {
+    // the user's bill-date rules, 2026-11-27
+    serve({
+      extract: () =>
+        json(200, {
+          ...READ,
+          suggestions: {
+            ...READ.suggestions,
+            due_date: field("2026-10-20", "medium", { fallback: true }),
+          },
+        }),
+    });
+    show();
+    await attachAndRead(pdf());
+    await waitFor(() => expect(byId("pr-due-date")).toHaveValue("2026-10-20"));
+    expect(byId("pr-due-date").closest(".ring-status-warning-ink")).not.toBeNull();
+    expect(within(dialog()).getByText(`Please check. ${DUE_FALLBACK_DETAIL}`)).toBeInTheDocument();
+  });
+
+  it("a printed or terms due date keeps the suggested teal", async () => {
+    serve({ extract: () => json(200, READ) });
+    show();
+    await attachAndRead(pdf());
+    await waitFor(() => expect(byId("pr-amount")).toHaveClass("ring-border-selected"));
+    expect(byId("pr-due-date").closest(".ring-status-warning-ink")).toBeNull();
+    expect(within(dialog()).queryByText(`Please check. ${DUE_FALLBACK_DETAIL}`)).toBeNull();
   });
 });
 

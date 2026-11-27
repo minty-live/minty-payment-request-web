@@ -143,7 +143,12 @@ only (the Description included, never mandatory); a required field keeps its own
 sentence instead. Orange (`CHECK_RING`), the line "Please check." in the warning ink: an inferred
 description ("Please check. Compare the description with the invoice." - it may be a summary of listed items) and its
 account ("Please check. Chosen to match the description."), and a supplier not on the list
-("Please check. It isn't in your suppliers yet, ..."). Other filled fields keep the teal ring.
+("Please check. It isn't in your suppliers yet, ..."), and a due date that fell back to the
+invoice date (`due_date.fallback`, the user's bill-date rules 2026-11-27: no due date and no
+payment terms printed; "Please check. No due date on the invoice, so it's set to the invoice
+date. The bill may show as overdue once saved." - `DUE_FALLBACK_DETAIL`). The API always fills
+the due date once it has an invoice date (printed, else invoice date + terms, else the invoice
+date); a period-only bill's invoice date is the period's last day. Other filled fields keep the teal ring.
 Typing takes a field's outline away; Clear its orange; another file all of them. **Required fields a read left
 empty** (owner, 2026-11-23): after a read that filled anything, the supplier, account, amount and
 the two dates still empty turn red at once with their own sentences (`lib/formMessages.ts`) - with

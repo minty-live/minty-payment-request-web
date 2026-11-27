@@ -45,7 +45,8 @@ export type InvoiceSuggestions = {
   /** `inferred`: the invoice lists no items, so the description was inferred (outlined to check). */
   description?: ReadField & { inferred?: boolean };
   invoice_date?: ReadField;
-  due_date?: ReadField;
+  /** `fallback`: no due date or terms were printed, so it is the invoice date (outlined to check). */
+  due_date?: ReadField & { fallback?: boolean };
   currency?: string;
   entity_currency?: string | null;
   /** The amount was converted from the invoice's currency (owner, 2026-11-19): how. */
@@ -65,6 +66,9 @@ export const SEVERAL_INVOICES = severalDocuments("invoice");
  * missing (the user, 2026-11-25). */
 export const INFERRED_DETAIL = "Compare the description with the invoice.";
 export const INFERRED_ACCOUNT_DETAIL = "Chosen to match the description.";
+/** The due date fell back to the invoice date (the user, 2026-11-27): the bill may show overdue. */
+export const DUE_FALLBACK_DETAIL =
+  "No due date on the invoice, so it's set to the invoice date. The bill may show as overdue once saved.";
 
 /** No rate for the invoice's currency (owner, 2026-11-19): the amount is the person's to type. */
 export function rateMissingText(currency: string, code: string | null | undefined): string {
@@ -399,6 +403,7 @@ export function withInvoiceSuggestions(
     .map(([field]) => field);
   const check: InvoiceField[] = [];
   if (s.description?.inferred) check.push("description", "account");
+  if (s.due_date?.fallback && filled.includes("dueDate")) check.push("dueDate");
   if (values.newContact && filled.includes("supplier")) check.push("supplier");
 
   return outlined(

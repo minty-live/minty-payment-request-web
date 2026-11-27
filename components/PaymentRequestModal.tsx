@@ -90,6 +90,7 @@ import {
   INVOICE_LATCH,
   invoiceSpec,
   invoiceState,
+  DUE_FALLBACK_DETAIL,
   INFERRED_ACCOUNT_DETAIL,
   INFERRED_DETAIL,
   NEW_CONTACT_DETAIL,
@@ -662,7 +663,9 @@ export function PaymentRequestModal({
                     ? `${said} ${INFERRED_DETAIL}`
                     : check && field === "account"
                       ? `${said} ${INFERRED_ACCOUNT_DETAIL}`
-                      : said
+                      : check && field === "dueDate"
+                        ? `${said} ${DUE_FALLBACK_DETAIL}`
+                        : said
           }
           clearLabel={CLEAR_LABEL}
           onClear={() => clearSuggestion(field)}
